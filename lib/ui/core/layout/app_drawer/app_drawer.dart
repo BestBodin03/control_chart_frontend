@@ -23,7 +23,7 @@ class AppDrawer extends StatelessWidget {
           padding: EdgeInsets.zero,
           children: [
             SizedBox(
-              height: 80.0,
+              height: 72.0,
               child:
                 DrawerHeader(
                   curve: Curves.decelerate,

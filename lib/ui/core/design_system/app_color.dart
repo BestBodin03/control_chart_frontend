@@ -5,7 +5,7 @@ class AppColors {
   AppColors._();
 
   /// The color white
-  static const colorBg = Color(0xFFF2F2F2);
+  static const colorBg = Color.fromARGB(255, 248, 248, 248);
   static const colorBrand = Color(0xFF1A174A);
   static const colorBlack = Color(0xFF181818);
   static const colorBrandTp = Color.fromARGB(255, 160, 217, 252);

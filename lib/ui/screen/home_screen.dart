@@ -39,11 +39,11 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
           builder: (context) {
           return 
           Padding(
-            padding: const EdgeInsets.only(left: 16.0, top: 16.0),
+            padding: const EdgeInsets.only(left: 16.0),
             child: SizedBox(
               child: 
                 IconButton(
-                  iconSize: 56, // Set to match the size of your ClipOval if needed
+                  iconSize: 80.0, 
                   padding: EdgeInsets.zero, // Prevent extra default padding from IconButton
                   constraints: const BoxConstraints(), // Remove default constraints to avoid extra space
                   icon: DecoratedBox(
