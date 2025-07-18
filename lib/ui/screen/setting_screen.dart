@@ -1,3 +1,4 @@
+import 'package:control_chart/ui/core/shared/gradient_background.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/setting_content.dart';
 import 'package:flutter/material.dart';
 
@@ -17,6 +18,9 @@ class SettingScreenBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SettingContent();
+    return GradientBackground(
+      child:
+        SettingContent(),
+    );
   }
 }

@@ -23,7 +23,7 @@ class AppDrawer extends StatelessWidget {
           padding: EdgeInsets.zero,
           children: [
             SizedBox(
-              height: 72.0,
+              height: 80.0,
               child:
                 DrawerHeader(
                   curve: Curves.decelerate,
@@ -56,7 +56,7 @@ class AppDrawer extends StatelessWidget {
                         ),
                       ),
                 
-                                        MouseRegion(
+                      MouseRegion(
                         cursor: SystemMouseCursors.click,
                         child: Material(
                           color: Colors.transparent,

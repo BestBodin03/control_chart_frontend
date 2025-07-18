@@ -15,6 +15,7 @@ class AppTypography {
   static const textDisplay1WBold = TextStyle(fontSize: 80.0, color: AppColors.colorBg, fontWeight: FontWeight.bold);
   static const textDisplay2WBold = TextStyle(fontSize: 56.0, color: AppColors.colorBg, fontWeight: FontWeight.bold);
 
+
   static const textHeading1B = TextStyle(fontSize: 36.0, color: AppColors.colorBlack);
   static const textHeading2B = TextStyle(fontSize: 28.0, color: AppColors.colorBlack);
   static const textHeading1W = TextStyle(fontSize: 36.0, color: AppColors.colorBg);
@@ -32,6 +33,7 @@ class AppTypography {
   static const textBody2BBold = TextStyle(fontSize: 16.0, color: AppColors.colorBlack, fontWeight: FontWeight.bold);
   static const textBody1WBold = TextStyle(fontSize: 20.0, color: AppColors.colorBg, fontWeight: FontWeight.bold);
   static const textBody2WBold = TextStyle(fontSize: 16.0, color: AppColors.colorBg, fontWeight: FontWeight.bold);
+
 
 }
 
