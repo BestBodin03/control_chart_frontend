@@ -25,9 +25,9 @@ import 'package:flutter/material.dart';
     );
   }
 
-  Widget buildDataTable() {
+  Widget buildDataTable(int dataLenght) {
     return Column(
-      children: List.generate(8, (index) {
+      children: List.generate(dataLenght, (index) {
         return Container(
           decoration: BoxDecoration(
             border: Border(

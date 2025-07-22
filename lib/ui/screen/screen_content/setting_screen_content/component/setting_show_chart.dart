@@ -30,17 +30,11 @@ class SettingShowChart extends StatelessWidget {
                 ),
               ],
             ),
-              child: Expanded(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(8.0, 0, 32.0, 0.0),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: FurnaceReportLayout(),
-                  ),
-                ),
-              ),
-            ),
+            
+            child: FurnaceReportLayout(),
+            
           ),
+        ),
     );
   }
 

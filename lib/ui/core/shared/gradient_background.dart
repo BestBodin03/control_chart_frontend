@@ -6,9 +6,10 @@ class GradientBackground extends StatelessWidget {
   final List<Color> colors;
   final AlignmentGeometry center;
   final double radius;
+  final double opacity; 
 
   const GradientBackground({
-    Key? key,
+    super.key,
     required this.child,
     this.colors = const [
       Color.fromARGB(255, 189, 219, 255),
@@ -16,7 +17,8 @@ class GradientBackground extends StatelessWidget {
     ],
     this.center = Alignment.center,
     this.radius = 0.5,
-  }) : super(key: key);
+    this.opacity = 0.5
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +27,7 @@ class GradientBackground extends StatelessWidget {
         gradient: RadialGradient(
           center: center,
           radius: radius,
-          colors: colors,
+          colors: colors.map((color) => color.withValues(alpha: opacity)).toList(),
           tileMode: TileMode.clamp,
           stops: const [0.0, 1.0],
         ),
