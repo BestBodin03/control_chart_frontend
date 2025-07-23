@@ -6,6 +6,7 @@ import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/gradient_background.dart';
 import 'package:control_chart/ui/core/shared/table_component.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class FurnaceReportLayout extends StatelessWidget {
   const FurnaceReportLayout({super.key});
@@ -13,8 +14,9 @@ class FurnaceReportLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => SettingCubit((getIt<SettingFilteringApi>())
-        ..loadChartDetailCount(),
+      create: (context) => SettingCubit(
+        context.read<SettingFilteringApi>()
+      )..loadChartDetailCount(),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Center(

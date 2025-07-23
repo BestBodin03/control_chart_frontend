@@ -1,9 +1,11 @@
+import 'package:control_chart/apis/settings/setting_filtering.dart';
 import 'package:control_chart/ui/core/shared/gradient_background.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/setting_content.dart';
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart'; // เพิ่ม import
+import 'package:dio/dio.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-class SettingScreen extends StatefulWidget { // เปลี่ยนเป็น StatefulWidget
+class SettingScreen extends StatefulWidget {
   const SettingScreen({super.key});
 
   @override
@@ -13,7 +15,10 @@ class SettingScreen extends StatefulWidget { // เปลี่ยนเป็�
 class _SettingScreenState extends State<SettingScreen> {
   @override
   Widget build(BuildContext context) {
-    return SettingScreenBody();
+    return RepositoryProvider<SettingFilteringApi>(
+      create: (context) => SettingFilteringApi(),
+      child: SettingScreenBody(),
+    );
   }
 }
 

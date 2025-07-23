@@ -1,6 +1,30 @@
+import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
+import 'package:control_chart/ui/core/shared/control_chart_template.dart';
 import 'package:flutter/material.dart';
+    final sampleData = [
+      ChartDataPoint(label: 'B06', value: 12),
+      ChartDataPoint(label: 'C17', value: 28),
+      ChartDataPoint(label: 'C24', value: 12),
+      ChartDataPoint(label: '630', value: 16),
+      ChartDataPoint(label: '901', value: 30),
+      ChartDataPoint(label: 'A30', value: 33),
+      ChartDataPoint(label: 'A05', value: 26),
+      ChartDataPoint(label: 'A11', value: 10),
+      ChartDataPoint(label: 'B30', value: 21),
+      ChartDataPoint(label: 'B06', value: 12),
+      ChartDataPoint(label: 'C17', value: 28),
+      ChartDataPoint(label: 'C24', value: 32),
+    ];
 
+    final controlLimits = ControlLimits(
+      usl: 32,  // Upper Specification Limit
+      ucl: 30,  // Upper Control Limit  
+      average: 19, // Average
+      lcl: 8,   // Lower Control Limit
+      lsl: 2,   // Lower Specification Limit
+    );
+    
   Widget buildHeaderTable() {
     return SizedBox(
       height: 32, // Fixed height for performance
@@ -25,21 +49,24 @@ import 'package:flutter/material.dart';
     );
   }
 
-  Widget buildDataTable(int dataLenght) {
+  Widget buildDataTable(int dataLength) {
+    // Limit to maximum 8 rows
+    final int displayLength = dataLength > 8 ? 8 : dataLength;
+    
     return Column(
-      children: List.generate(dataLenght, (index) {
+      children: List.generate(displayLength, (index) {
         return Container(
           decoration: BoxDecoration(
             border: Border(
-              bottom: index < 8 
+              bottom: index < displayLength - 1 
                 ? BorderSide(color: Colors.black26, width: 0.5)
                 : BorderSide.none,
             ),
-            borderRadius: index == 8
+            borderRadius: index == displayLength - 1
               ? BorderRadius.vertical(bottom: Radius.circular(10.0))
               : null,
           ),
-          child: _buildTableRow(['5', '2400ui9987', 'SPRING', 'U*0wwk872548', '32'], isHeader: false),
+          child: _buildTableRow(['5', '2400ui9987', 'SPRING', 'U*0wwk872548', dataLength.toString()], isHeader: false),
         );
       }),
     );
@@ -206,16 +233,13 @@ import 'package:flutter/material.dart';
                 border: Border.all(color: Colors.grey.shade300),
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Center(
-                child: Text(
-                  'Chart Area\n(Empty for now)',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
+              child:         ControlChartTemplate(
+          dataPoints: sampleData,
+          controlLimits: controlLimits,
+          xAxisLabel: 'Date',
+          yAxisLabel: 'Temperature',
+          dataLineColor: Colors.blue,
+        ),
             ),
           ),
         ],
