@@ -29,6 +29,10 @@ class ControlChartTemplate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final useWidget = ControlChartComponent(
+      dataPoints: dataPoints, // Pass your data points
+      controlLimits: controlLimits, // Pass your control limits
+    );
     return Container(
       height: height,
       width: width,
@@ -45,23 +49,23 @@ class ControlChartTemplate extends StatelessWidget {
           Expanded(
             child: LineChart(
               LineChartData(
-                gridData: buildGridData(),
-                titlesData: buildTitlesData(),
-                borderData: buildBorderData(),
-                lineBarsData: buildLineBarsData(),
+                gridData: useWidget.buildGridData(),
+                titlesData: useWidget.buildTitlesData(),
+                borderData: useWidget.buildBorderData(),
+                lineBarsData: useWidget.buildLineBarsData(),
                 minX: 0,
                 maxX: dataPoints.length.toDouble() - 1,
-                minY: getMinY(),
-                maxY: getMaxY(),
-                extraLinesData: buildControlLines(),
-                lineTouchData: buildTouchData(),
+                minY: useWidget.getMinY(),
+                maxY: useWidget.getMaxY(),
+                extraLinesData: useWidget.buildControlLines(),
+                lineTouchData: useWidget.buildTouchData(),
               ),
             ),
           ),
           
           // Legend
           const SizedBox(height: 12),
-          buildLegend(),
+          useWidget.buildLegend(),
         ],
       ),
     );

@@ -1,9 +1,9 @@
 import 'package:bloc/bloc.dart';
-import 'package:control_chart/apis/settings/setting_filtering.dart';
+import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/cubit/setting_cubit_state.dart' show SettingCubitError, SettingCubitInitial, SettingCubitLoaded, SettingCubitLoading, SettingCubitState;
 
 class SettingCubit extends Cubit<SettingCubitState> {
-  final SettingFilteringApi  _apiService;
+  final SettingApis  _apiService;
   
   SettingCubit(this._apiService) : super(SettingCubitInitial());
   

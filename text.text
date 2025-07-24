@@ -4,16 +4,6 @@ const mongoose = require('mongoose');
 const app = express();
 const PORT = 3001;
 
-// Option 1: Use MongoDB Atlas (recommended for production)
-// Get your connection string from https://cloud.mongodb.com
-// const MONGO_URI = 'mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/your-database-name?retryWrites=true&w=majority';
-
-// Option 2: Use local MongoDB instance
-const MONGO_URI = 'mongodb://localhost:27017/sample_data';
-
-// Option 3: Use MongoDB with authentication
-// const MONGO_URI = 'mongodb://username:password@localhost:27017/your-database-name';
-
 mongoose.connect(MONGO_URI)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch((err) => console.error('❌ MongoDB connection error:', err));

@@ -33,7 +33,7 @@ Widget buildSectionTitle(String title) {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Colors.blue),
+            borderSide: const BorderSide(color: AppColors.colorBrandTp),
           ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -45,14 +45,18 @@ Widget buildSectionTitle(String title) {
   }
 
   Widget buildDropdownField({
-    required String value,
+    String? value, // เปลี่ยนเป็น nullable
     required List<String> items,
-    required Function(String?) onChanged, required BuildContext context,
+    required Function(String?) onChanged,
+    required BuildContext context,
+    String? hint, // เพิ่ม hint parameter
+    String? label, // เพิ่ม label parameter
   }) {
     return SizedBox(
       height: 42.0,
       child: DropdownButtonFormField<String>(
-        value: value,
+        value: (value != null && items.contains(value)) ? value : null, // ตรวจสอบว่า value อยู่ใน items
+        hint: hint != null ? Text(hint) : null, // แสดง hint เมื่อไม่มีค่าเลือก
         items: items.map((String item) {
           return DropdownMenuItem<String>(
             value: item,
@@ -61,6 +65,7 @@ Widget buildSectionTitle(String title) {
         }).toList(),
         onChanged: onChanged,
         decoration: InputDecoration(
+          labelText: label, // เพิ่ม label
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
@@ -73,7 +78,7 @@ Widget buildSectionTitle(String title) {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Colors.blue),
+            borderSide: const BorderSide(color: AppColors.colorBrandTp),
           ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
@@ -84,6 +89,7 @@ Widget buildSectionTitle(String title) {
           Icons.keyboard_arrow_down,
           color: Colors.grey,
         ),
+        dropdownColor: AppColors.colorBg,
       ),
     );
   }
@@ -211,7 +217,7 @@ Widget buildSectionTitle(String title) {
           child: Text(
             label,
             style: const TextStyle(
-              fontSize: 16,
+              fontSize: 12,
               color: AppColors.colorBlack,
             ),
           ),

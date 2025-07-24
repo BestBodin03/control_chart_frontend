@@ -1,4 +1,5 @@
-import 'package:control_chart/apis/settings/setting_filtering.dart';
+
+import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/cubit/setting_cubit.dart';
 import 'package:control_chart/data/cubit/setting_cubit_state.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
@@ -15,7 +16,7 @@ class FurnaceReportLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => SettingCubit(
-        context.read<SettingFilteringApi>()
+        context.read<SettingApis>()
       )..loadChartDetailCount(),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
