@@ -1,34 +1,52 @@
-class FormState {
+// domain/types/form_state.dart
+import 'package:equatable/equatable.dart';
+
+class FormState extends Equatable {
   final DateTime startDate;
   final DateTime endDate;
   final String selectedItem;
-  final String selectedMatNo;
-  final String periodValue;
-  final List<String> selectedConditions;
   final String limitValue;
+  final String periodValue;
+  final String selectedMatNo;
+  final List<String> selectedConditions;
   final String startDateLabel;
   final String endDateLabel;
 
-  FormState({
+  const FormState({
     required this.startDate,
     required this.endDate,
     required this.selectedItem,
-    required this.selectedMatNo,
-    required this.periodValue,
-    required this.selectedConditions,
     required this.limitValue,
+    required this.periodValue,
+    required this.selectedMatNo,
+    required this.selectedConditions,
     required this.startDateLabel,
     required this.endDateLabel,
   });
+
+  // Factory constructor for initial state
+  factory FormState.initial() {
+    return FormState(
+      startDate: DateTime(2024, 12, 30),
+      endDate: DateTime(2024, 2, 24),
+      selectedItem: '',
+      limitValue: '9',
+      periodValue: '1 เดือน',
+      selectedMatNo: '',
+      selectedConditions: const [],
+      startDateLabel: '',
+      endDateLabel: '',
+    );
+  }
 
   FormState copyWith({
     DateTime? startDate,
     DateTime? endDate,
     String? selectedItem,
-    String? selectedMatNo,
-    String? periodValue,
-    List<String>? selectedConditions,
     String? limitValue,
+    String? periodValue,
+    String? selectedMatNo,
+    List<String>? selectedConditions,
     String? startDateLabel,
     String? endDateLabel,
   }) {
@@ -36,12 +54,25 @@ class FormState {
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       selectedItem: selectedItem ?? this.selectedItem,
-      selectedMatNo: selectedMatNo ?? this.selectedMatNo,
-      periodValue: periodValue ?? this.periodValue,
-      selectedConditions: selectedConditions ?? this.selectedConditions,
       limitValue: limitValue ?? this.limitValue,
+      periodValue: periodValue ?? this.periodValue,
+      selectedMatNo: selectedMatNo ?? this.selectedMatNo,
+      selectedConditions: selectedConditions ?? this.selectedConditions,
       startDateLabel: startDateLabel ?? this.startDateLabel,
       endDateLabel: endDateLabel ?? this.endDateLabel,
     );
   }
+
+  @override
+  List<Object> get props => [
+        startDate,
+        endDate,
+        selectedItem,
+        limitValue,
+        periodValue,
+        selectedMatNo,
+        selectedConditions,
+        startDateLabel,
+        endDateLabel,
+      ];
 }

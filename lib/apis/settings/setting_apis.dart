@@ -35,16 +35,16 @@ Future<int> getChartDetailCount() async {
   }
 
   Future<Map<String, dynamic>> getFilteringChartDetails({
-    required int furnaceNo,
-    required String matNo,
-    required DateTime startDate,
-    required DateTime endDate,
+     int? furnaceNo,
+     String? matNo,
+     DateTime? startDate,
+     DateTime? endDate,
   }) async {
-    return await ApiConfig().get<Map<String, dynamic>>(
+    return await ApiConfig().getQueryParam<Map<String, dynamic>>(
       '/chart-details/filter',
       queryParameters: {
-        'startDate': startDate.toIso8601String(),
-        'endDate': endDate.toIso8601String(),
+        'startDate': startDate!.toIso8601String(),
+        'endDate': endDate!.toIso8601String(),
         'furnaceNo': furnaceNo,
         'matNo': matNo,
       },

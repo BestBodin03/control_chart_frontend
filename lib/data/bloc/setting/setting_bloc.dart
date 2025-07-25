@@ -1,3 +1,4 @@
+// data/bloc/setting/setting_bloc.dart
 import 'package:bloc/bloc.dart';
 import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/bloc/setting/setting_event.dart';
@@ -12,51 +13,70 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
 
   SettingBloc({required SettingApis settingApis}) 
       : _settingApis = settingApis,
-        super(FormDataState(
-          formState: FormState(
-            startDate: DateTime(2025, 12, 30),
-            endDate: DateTime(2025, 7, 24),
-            selectedItem: '',
-            selectedMatNo: '',
-            periodValue: '',
-            selectedConditions: [],
-            limitValue: '',
-            startDateLabel: '',
-            endDateLabel: '',
-          ))) {
+        super(SettingInitial()) {
     
     on<LoadChartDetailCount>(_onLoadChartDetailCount);
     on<LoadAllFurnaces>(_onLoadAllFurnaces);
     on<LoadAllMatNo>(_onLoadAllMatNo);
     on<LoadAllData>(_onLoadAllData);
-    on<SearchChartData>(_onSearchChartData);
-    on<UpdatePeriod>(_onUpdatePeriod);
-    on<UpdateStartDate>(_onUpdateStartDate);
-    on<UpdateEndDate>(_onUpdateEndDate);
-    on<UpdateSelectedItem>(_onUpdateSelectedItem);
-    on<UpdateSelectedMatNo>(_onUpdateSelectedMatNo);
-    on<UpdateSelectedConditions>(_onUpdateSelectedConditions);
-    on<UpdateLimitValue>(_onUpdateLimitValue);
+    // on<SearchChartData>(_onSearchChartData);
+    
+    // Form event handlers
+    on<InitializeForm>(_onInitializeForm);
     on<SaveFormData>(_onSaveFormData);
   }
 
-  Future<void> _onSearchChartData(
-    SearchChartData event,
-    Emitter<SettingState> emit,
-  ) async {
+  // Form event handlers
+  void _onInitializeForm(InitializeForm event, Emitter<SettingState> emit) async {
     try {
-      emit(SearchLoading());
+      emit(SettingLoading());
       
-      final data = await _settingApis.getFilteringChartDetails(
-        furnaceNo: event.request.furnaceNo,
-        matNo: event.request.matNo,
-        startDate: event.request.startDate,
-        endDate: event.request.endDate,
+      // Load initial data
+      final results = await Future.wait([
+        _settingApis.getAllFurnaces(),
+        _settingApis.getAllMatNo(),
+      ]);
+
+      final furnaces = results[0] as List<Furnace>;
+      final matNumbers = results[1] as List<CustomerProduct>;
+
+      // Initialize form with default values and calculate initial dates
+      final initialFormState = FormState.initial();
+      final dateRanges = DateAutoComplete.calculateDateRange(initialFormState.periodValue);
+      
+      final updatedFormState = initialFormState.copyWith(
+        startDate: dateRanges['startDate']!.date,
+        endDate: dateRanges['endDate']!.date,
+        startDateLabel: DateAutoComplete.formatDateLabel(dateRanges['startDate']!.date, true),
+        endDateLabel: DateAutoComplete.formatDateLabel(dateRanges['endDate']!.date, false),
       );
-      
-      emit(SearchSuccess(data));
+
+      emit(FormDataState(
+        formState: updatedFormState,
+        furnaces: furnaces,
+        matNumbers: matNumbers,
+      ));
     } catch (e) {
-      emit(SearchError(e.toString()));
+      emit(SettingError(e.toString()));
+    }
+  }
+
+  void _onSaveFormData(SaveFormData event, Emitter<SettingState> emit) async {
+    if (state is FormDataState) {
+      final currentState = state as FormDataState;
+      emit(currentState.copyWith(isLoading: true));
+      
+      try {
+        // Add your save logic here
+        // For example: await _settingApis.saveFormData(currentState.formState);
+        
+        // Simulate API call
+        await Future.delayed(const Duration(seconds: 1));
+        
+        emit(currentState.copyWith(isLoading: false, isSaved: true));
+      } catch (e) {
+        emit(currentState.copyWith(isLoading: false, errorMessage: e.toString()));
+      }
     }
   }
 
@@ -126,7 +146,6 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
         _settingApis.getChartDetailCount(),
         _settingApis.getAllFurnaces(),
         _settingApis.getAllMatNo(),
-        _settingApis.getChartDetails()
       ]);
 
       emit(SettingLoaded(
@@ -138,123 +157,4 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
       emit(SettingError(e.toString()));
     }
   }
-void _onUpdatePeriod(UpdatePeriod event, Emitter<SettingState> emit) {
-    if (state is FormDataState) {
-      final currentState = state as FormDataState;
-      
-      // อัปเดต period และคำนวณวันที่ใหม่ถ้าไม่ใช่ "กำหนดเอง"
-      DateTime newStartDate = currentState.formState.startDate;
-      DateTime newEndDate = currentState.formState.endDate;
-      String newStartLabel = currentState.formState.startDateLabel;
-      String newEndLabel = currentState.formState.endDateLabel;
-      
-      if (event.period != 'กำหนดเอง') {
-        final dateRanges = DateAutoComplete.calculateDateRange(event.period);
-        newStartDate = dateRanges['startDate']!.date;
-        newEndDate = dateRanges['endDate']!.date;
-        newStartLabel = DateAutoComplete.formatDateLabel(newStartDate, true);
-        newEndLabel = DateAutoComplete.formatDateLabel(newEndDate, false);
-      }
-      
-      emit(currentState.copyWith(
-        formState: currentState.formState.copyWith(
-          periodValue: event.period,
-          startDate: newStartDate,
-          endDate: newEndDate,
-          startDateLabel: newStartLabel,
-          endDateLabel: newEndLabel,
-        ),
-      ));
-    }
-  }
-
-  void _onUpdateStartDate(UpdateStartDate event, Emitter<SettingState> emit) {
-    if (state is FormDataState) {
-      final currentState = state as FormDataState;
-      final newLabel = DateAutoComplete.formatDateLabel(event.date, true);
-      
-      emit(currentState.copyWith(
-        formState: currentState.formState.copyWith(
-          startDate: event.date,
-          startDateLabel: newLabel,
-        ),
-      ));
-    }
-  }
-
-  void _onUpdateEndDate(UpdateEndDate event, Emitter<SettingState> emit) {
-    if (state is FormDataState) {
-      final currentState = state as FormDataState;
-      final newLabel = DateAutoComplete.formatDateLabel(event.date, false);
-      
-      emit(currentState.copyWith(
-        formState: currentState.formState.copyWith(
-          endDate: event.date,
-          endDateLabel: newLabel,
-        ),
-      ));
-    }
-  }
-
-  void _onUpdateSelectedItem(UpdateSelectedItem event, Emitter<SettingState> emit) {
-    if (state is FormDataState) {
-      final currentState = state as FormDataState;
-      emit(currentState.copyWith(
-        formState: currentState.formState.copyWith(selectedItem: event.item),
-      ));
-    }
-  }
-
-  void _onUpdateSelectedMatNo(UpdateSelectedMatNo event, Emitter<SettingState> emit) {
-    if (state is FormDataState) {
-      final currentState = state as FormDataState;
-      emit(currentState.copyWith(
-        formState: currentState.formState.copyWith(selectedMatNo: event.matNo),
-      ));
-    }
-  }
-
-  void _onUpdateSelectedConditions(UpdateSelectedConditions event, Emitter<SettingState> emit) {
-    if (state is FormDataState) {
-      final currentState = state as FormDataState;
-      emit(currentState.copyWith(
-        formState: currentState.formState.copyWith(selectedConditions: event.conditions),
-      ));
-    }
-  }
-
-  void _onUpdateLimitValue(UpdateLimitValue event, Emitter<SettingState> emit) {
-    if (state is FormDataState) {
-      final currentState = state as FormDataState;
-      emit(currentState.copyWith(
-        formState: currentState.formState.copyWith(limitValue: event.value),
-      ));
-    }
-  }
-
-  void _onSaveFormData(SaveFormData event, Emitter<SettingState> emit) {
-    if (state is FormDataState) {
-      final currentState = state as FormDataState;
-      
-      // แค่บันทึก - ไม่ส่ง URL
-      print('Form saved with:');
-      print('Start Date: ${currentState.formState.startDate}');
-      print('End Date: ${currentState.formState.endDate}');
-      print('Selected Item: ${currentState.formState.selectedItem}');
-      print('Selected MatNo: ${currentState.formState.selectedMatNo}');
-      print('Conditions: ${currentState.formState.selectedConditions}');
-      print('Limit Value: ${currentState.formState.limitValue}');
-      
-      emit(currentState.copyWith(isSaved: true));
-      
-      // Reset saved state หลัง 2 วินาที
-      Future.delayed(Duration(seconds: 2), () {
-        if (state is FormDataState) {
-          emit((state as FormDataState).copyWith(isSaved: false));
-        }
-      });
-    }
-  }
-
 }
-

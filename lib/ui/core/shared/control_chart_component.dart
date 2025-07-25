@@ -1,4 +1,6 @@
 import 'package:control_chart/domain/models/chart_data_point.dart';
+import 'package:control_chart/ui/core/design_system/app_color.dart';
+import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/dashed_line_painter.dart' show DashedLinePainter;
 import 'package:control_chart/ui/core/shared/table_component.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -43,7 +45,7 @@ class ControlChartComponent extends StatelessWidget {
     this.controlLimits,
     this.xAxisLabel = 'Date',
     this.yAxisLabel = 'Attr.',
-    this.dataLineColor = Colors.blue,
+    this.dataLineColor = AppColors.colorBrand,
     this.backgroundColor = Colors.white,
     this.height = 300,
     this.width,
@@ -57,10 +59,10 @@ class ControlChartComponent extends StatelessWidget {
   FlGridData buildGridData() {
     return FlGridData(
       show: true,
-      drawVerticalLine: true,
       drawHorizontalLine: true,
-      horizontalInterval: (controlLimits!.usl - controlLimits!.lsl) / 6,
-      verticalInterval: dataPoints!.length / 8,
+      drawVerticalLine: true,
+      horizontalInterval: (controlLimits!.usl - controlLimits!.lsl) / 12,
+      verticalInterval: dataPoints!.length / 12,
       getDrawingHorizontalLine: (value) {
         return FlLine(
           color: Colors.grey.shade300,
@@ -81,7 +83,7 @@ class ControlChartComponent extends StatelessWidget {
       leftTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 24,
+          reservedSize:32,
           interval: (controlLimits!.usl - controlLimits!.lsl) / 4,
           getTitlesWidget: (value, meta) {
             return Text(
@@ -93,23 +95,23 @@ class ControlChartComponent extends StatelessWidget {
             );
           },
         ),
-        axisNameWidget: RotatedBox(
-          quarterTurns: 3,
-          child: Text(
-            yAxisLabel,
-            style: const TextStyle(
-              color: Colors.black87,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
+        // axisNameWidget: RotatedBox(
+        //   quarterTurns: 3,
+        //   child: Text(
+        //     yAxisLabel,
+        //     style: const TextStyle(
+        //       color: Colors.black87,
+        //       fontSize: 12,
+        //       fontWeight: FontWeight.w500,
+        //     ),
+        //   ),
+        // ),
       ),
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 40,
-          interval: dataPoints!.length > 10 ? dataPoints!.length / 8 : 1,
+          reservedSize: 32,
+          interval: dataPoints!.length > 10 ? dataPoints!.length / 12 : 1,
           getTitlesWidget: (value, meta) {
             final index = value.toInt();
             if (index >= 0 && index < dataPoints!.length) {
@@ -127,17 +129,17 @@ class ControlChartComponent extends StatelessWidget {
             return const SizedBox.shrink();
           },
         ),
-        axisNameWidget: Padding(
-          padding: const EdgeInsets.only(top: 8.0),
-          child: Text(
-            xAxisLabel,
-            style: const TextStyle(
-              color: Colors.black87,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
+        // axisNameWidget: Padding(
+        //   padding: const EdgeInsets.only(top: 8.0),
+        //   child: Text(
+        //     xAxisLabel,
+        //     style: const TextStyle(
+        //       color: Colors.black87,
+        //       fontSize: 14,
+        //       fontWeight: FontWeight.w500,
+        //     ),
+        //   ),
+        // ),
       ),
       topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -154,7 +156,108 @@ class ControlChartComponent extends StatelessWidget {
     );
   }
 
-  List<LineChartBarData> buildLineBarsData() {
+  ExtraLinesData buildControlLines() {
+    return ExtraLinesData(
+      extraLinesOnTop: false,
+      horizontalLines: [
+        // USL (Upper Specification Limit)
+        HorizontalLine(
+          y: controlLimits!.usl,
+          color: AppColors.colorAlert1,
+          strokeWidth: 2,
+          dashArray: [5,5],
+          // label: HorizontalLineLabel(
+          //   show: true,
+          //   alignment: Alignment.topRight,
+          //   padding: const EdgeInsets.only(right: 8, top: 4),
+          //   style: const TextStyle(
+          //     color: Colors.red,
+          //     fontWeight: FontWeight.bold,
+          //     fontSize: 12,
+          //   ),
+          //   // labelResolver: (line) => 'USL = ${controlLimits!.usl.toStringAsFixed(2)}',
+          // ),
+        ),
+        
+        // UCL (Upper Control Limit)
+        HorizontalLine(
+          y: controlLimits!.ucl,
+          color: Colors.amberAccent,
+          strokeWidth: 1.5,
+          // dashArray: [3, 3],
+          // label: HorizontalLineLabel(
+          //   show: true,
+          //   alignment: Alignment.topRight,
+          //   padding: const EdgeInsets.only(right: 8, top: 4),
+          //   style: const TextStyle(
+          //     color: Colors.orange,
+          //     fontWeight: FontWeight.bold,
+          //     fontSize: 12,
+          //   ),
+          //   // labelResolver: (line) => 'ULC = ${controlLimits!.ucl.toStringAsFixed(2)}',
+          // ),
+        ),
+        
+        // Average Line
+        HorizontalLine(
+          y: controlLimits!.average,
+          color: AppColors.colorSuccess1,
+          strokeWidth: 2,
+          // label: HorizontalLineLabel(
+          //   show: true,
+          //   alignment: Alignment.centerRight,
+          //   padding: const EdgeInsets.only(right: 8),
+            // style: const TextStyle(
+            //   color: Colors.green,
+            //   fontWeight: FontWeight.bold,
+            //   fontSize: 12,
+            // ),
+            // labelResolver: (line) => 'AVG = ${controlLimits!.average.toStringAsFixed(2)}',
+          ),
+        
+        // LCL (Lower Control Limit)
+        HorizontalLine(
+          y: controlLimits!.lcl,
+          color: Colors.amberAccent,
+          strokeWidth: 1.5,
+          // dashArray: [3, 3],
+          // label: HorizontalLineLabel(
+          //   show: true,
+          //   alignment: Alignment.bottomRight,
+          //   padding: const EdgeInsets.only(right: 8, bottom: 4),
+          //   style: const TextStyle(
+          //     color: Colors.orange,
+          //     fontWeight: FontWeight.bold,
+          //     fontSize: 12,
+          //   ),
+          //   // labelResolver: (line) => 'LC = ${controlLimits!.lcl.toStringAsFixed(2)}',
+          // ),
+        // ),
+        ),
+        
+        // LSL (Lower Specification Limit)
+        HorizontalLine(
+          y: controlLimits!.lsl,
+          color: AppColors.colorAlert1,
+          strokeWidth: 2,
+          dashArray: [5, 5],
+          // label: HorizontalLineLabel(
+          //   show: true,
+          //   alignment: Alignment.bottomRight,
+          //   padding: const EdgeInsets.only(right: 8, bottom: 4),
+          //   style: const TextStyle(
+          //     color: Colors.red,
+          //     fontWeight: FontWeight.bold,
+          //     fontSize: 12,
+          //   ),
+            // labelResolver: (line) => 'LSL = ${controlLimits!.lsl.toStringAsFixed(2)}',
+          ),
+        // ),
+      ],
+    );
+  }
+
+    List<LineChartBarData> buildLineBarsData() {
     return [
       LineChartBarData(
         spots: dataPoints!
@@ -162,9 +265,10 @@ class ControlChartComponent extends StatelessWidget {
             .entries
             .map((entry) => FlSpot(entry.key.toDouble(), entry.value.value))
             .toList(),
+        
         isCurved: false,
         color: dataLineColor,
-        barWidth: 2,
+        barWidth: 4,
         isStrokeCapRound: true,
         dotData: FlDotData(
           show: true,
@@ -192,106 +296,6 @@ class ControlChartComponent extends StatelessWidget {
     ];
   }
 
-  ExtraLinesData buildControlLines() {
-    return ExtraLinesData(
-      horizontalLines: [
-        // USL (Upper Specification Limit)
-        HorizontalLine(
-          y: controlLimits!.usl,
-          color: Colors.red,
-          strokeWidth: 2,
-          dashArray: [5, 5],
-          label: HorizontalLineLabel(
-            show: true,
-            alignment: Alignment.topRight,
-            padding: const EdgeInsets.only(right: 8, top: 4),
-            style: const TextStyle(
-              color: Colors.red,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-            labelResolver: (line) => 'USL = ${controlLimits!.usl.toStringAsFixed(2)}',
-          ),
-        ),
-        
-        // UCL (Upper Control Limit)
-        HorizontalLine(
-          y: controlLimits!.ucl,
-          color: Colors.orange,
-          strokeWidth: 1.5,
-          dashArray: [3, 3],
-          label: HorizontalLineLabel(
-            show: true,
-            alignment: Alignment.topRight,
-            padding: const EdgeInsets.only(right: 8, top: 4),
-            style: const TextStyle(
-              color: Colors.orange,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-            labelResolver: (line) => 'ULC = ${controlLimits!.ucl.toStringAsFixed(2)}',
-          ),
-        ),
-        
-        // Average Line
-        HorizontalLine(
-          y: controlLimits!.average,
-          color: Colors.green,
-          strokeWidth: 2,
-          label: HorizontalLineLabel(
-            show: true,
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: 8),
-            style: const TextStyle(
-              color: Colors.green,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-            labelResolver: (line) => 'AVG = ${controlLimits!.average.toStringAsFixed(2)}',
-          ),
-        ),
-        
-        // LCL (Lower Control Limit)
-        HorizontalLine(
-          y: controlLimits!.lcl,
-          color: Colors.orange,
-          strokeWidth: 1.5,
-          dashArray: [3, 3],
-          label: HorizontalLineLabel(
-            show: true,
-            alignment: Alignment.bottomRight,
-            padding: const EdgeInsets.only(right: 8, bottom: 4),
-            style: const TextStyle(
-              color: Colors.orange,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-            labelResolver: (line) => 'LC = ${controlLimits!.lcl.toStringAsFixed(2)}',
-          ),
-        ),
-        
-        // LSL (Lower Specification Limit)
-        HorizontalLine(
-          y: controlLimits!.lsl,
-          color: Colors.red,
-          strokeWidth: 2,
-          dashArray: [5, 5],
-          label: HorizontalLineLabel(
-            show: true,
-            alignment: Alignment.bottomRight,
-            padding: const EdgeInsets.only(right: 8, bottom: 4),
-            style: const TextStyle(
-              color: Colors.red,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-            labelResolver: (line) => 'LSL = ${controlLimits!.lsl.toStringAsFixed(2)}',
-          ),
-        ),
-      ],
-    );
-  }
-
   LineTouchData buildTouchData() {
     return LineTouchData(
       touchTooltipData: LineTouchTooltipData(
@@ -302,11 +306,8 @@ class ControlChartComponent extends StatelessWidget {
             final index = barSpot.x.toInt();
             if (index >= 0 && index < dataPoints!.length) {
               return LineTooltipItem(
-                '${dataPoints![index].label}\n${dataPoints![index].value.toStringAsFixed(2)}',
-                const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+                '${dataPoints![index].label}\n${dataPoints![index].value.toStringAsFixed(3)}',
+                AppTypography.textBody3WBold
               );
             }
             return null;
@@ -322,12 +323,12 @@ class ControlChartComponent extends StatelessWidget {
       spacing: 16,
       runSpacing: 8,
       children: [
-        buildLegendItem('USL', Colors.red, true),
-        buildLegendItem('ULC', Colors.orange, true),
-        buildLegendItem('AVG', Colors.green, false),
-        buildLegendItem('LC', Colors.orange, true),
-        buildLegendItem('LSL', Colors.red, true),
-        buildLegendItem('Data', dataLineColor!, false),
+        buildLegendItem('USL = ${controlLimits!.usl.toStringAsFixed(3)}', Colors.red, true),
+        buildLegendItem('ULC = ${controlLimits!.ucl.toStringAsFixed(3)}', Colors.orange, false),
+        buildLegendItem('AVG = ${controlLimits!.average.toStringAsFixed(3)}', Colors.green, false),
+        buildLegendItem('LCL = ${controlLimits!.lcl.toStringAsFixed(3)}', Colors.orange, false),
+        buildLegendItem('LSL = ${controlLimits!.lsl.toStringAsFixed(3)}', Colors.red, true),
+        // buildLegendItem('Data', dataLineColor!, false),
       ],
     );
   }
@@ -354,7 +355,7 @@ class ControlChartComponent extends StatelessWidget {
           label,
           style: const TextStyle(
             fontSize: 12,
-            color: Colors.black87,
+            color: AppColors.colorBlack,
           ),
         ),
       ],

@@ -50,6 +50,7 @@ class ControlChartTemplate extends StatelessWidget {
             child: LineChart(
               LineChartData(
                 gridData: useWidget.buildGridData(),
+                extraLinesData: useWidget.buildControlLines(),
                 titlesData: useWidget.buildTitlesData(),
                 borderData: useWidget.buildBorderData(),
                 lineBarsData: useWidget.buildLineBarsData(),
@@ -57,7 +58,6 @@ class ControlChartTemplate extends StatelessWidget {
                 maxX: dataPoints.length.toDouble() - 1,
                 minY: useWidget.getMinY(),
                 maxY: useWidget.getMaxY(),
-                extraLinesData: useWidget.buildControlLines(),
                 lineTouchData: useWidget.buildTouchData(),
               ),
             ),

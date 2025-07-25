@@ -61,11 +61,24 @@ class HomeContentState extends State<HomeContent> {
 
           const SizedBox(width: 16.0),
 
-          ControlChartTemplate(
-            dataPoints: sampleData,
-            controlLimits: controlLimits,
-            dataLineColor: AppColors.colorBrand,
-            width: 300*21/9,
+          Column(
+            children: [
+              SizedBox(
+                width: 300,
+                height: 200,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppColors.colorBrandTp
+                  ),
+                  ),
+              ),
+              ControlChartTemplate(
+                dataPoints: sampleData,
+                controlLimits: controlLimits,
+                dataLineColor: AppColors.colorBrand,
+                width: 300*21/9,
+              ),
+            ],
           ),
         ], 
       ),
