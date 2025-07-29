@@ -69,6 +69,8 @@ class FormDataState extends SettingState {
   final bool isLoading;
   final String? errorMessage;
   final bool isSaved;
+  final DateTime? endDate;
+  final DateTime? startDate;
 
   const FormDataState({
     required this.formState,
@@ -77,8 +79,22 @@ class FormDataState extends SettingState {
     this.isLoading = false,
     this.errorMessage,
     this.isSaved = false,
+    this.endDate,
+    this.startDate
   });
 
+    @override
+  List<Object?> get props => [
+    formState,
+    furnaces,
+    matNumbers,
+    isLoading,
+    errorMessage,
+    isSaved,
+    endDate,
+    startDate
+  ];
+  
   FormDataState copyWith({
     FormState? formState,
     List<Furnace>? furnaces,
@@ -86,6 +102,8 @@ class FormDataState extends SettingState {
     bool? isLoading,
     String? errorMessage,
     bool? isSaved,
+    DateTime? endDate,
+    DateTime? startDate
   }) {
     return FormDataState(
       formState: formState ?? this.formState,
@@ -94,6 +112,8 @@ class FormDataState extends SettingState {
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage ?? this.errorMessage,
       isSaved: isSaved ?? this.isSaved,
+      endDate: endDate ?? this.endDate,
+      startDate: startDate ?? this.startDate
     );
   }
 }

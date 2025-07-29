@@ -1,86 +1,136 @@
-import 'package:bloc/bloc.dart';
 import 'package:control_chart/apis/search_chart_details/search_chart_details_apis.dart';
-import 'package:control_chart/data/bloc/search_chart_details/search-event.dart';
+import 'package:control_chart/data/bloc/search_chart_details/search_event.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_state.dart';
-import 'package:control_chart/domain/models/chart_detail.dart';
 import 'package:control_chart/domain/types/chart_filter_query.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SearchBloc extends Bloc<SearchEvent, SearchState> {
-  final SearchChartDetailsApis _apis;
+  final SearchChartDetailsApis _searchApiService = SearchChartDetailsApis();
+  
+  // เก็บ current filter state
   ChartFilterQuery _currentQuery = const ChartFilterQuery();
 
-  SearchBloc(this._apis) : super(SearchInitial()) {
-    // ใช้ debounce เพื่อป้องกันการเรียก API บ่อยเกินไป
-    on<SearchQueryChanged>(
-      _onSearchQueryChanged
-    );
-    
-    on<SearchPeriodChanged>(_onSearchPeriodChanged);
-    on<SearchFurnaceNoChanged>(_onSearchFurnaceNoChanged);
-    on<SearchMatNoChanged>(_onSearchMatNoChanged);
-    on<SearchCleared>(_onSearchCleared);
+  SearchBloc() : super(SearchInitial()) {
+    on<LoadFilteredChartData>(_onLoadFilteredChartData);
+    on<UpdateFurnaceNo>(_onUpdateFurnaceNo);
+    // on<UpdatePeriod>(_onUpdatePeriod);
+    on<UpdatePeriodStartDate>(_onUpdatePeriodStartDate);
+    on<UpdatePeriodEndDate>(_onUpdatePeriodEndDate);
+    on<UpdateMaterialNo>(_onUpdateMaterialNo);
+    on<ClearFilters>(_onClearFilters);
   }
 
-  void _onSearchPeriodChanged(
-    SearchPeriodChanged event,
-    Emitter<SearchState> emit,
-  ) {
-    _currentQuery = _currentQuery.copyWith(startDate: event.startDate, endDate: event.endDate );
-    add(SearchQueryChanged(_currentQuery));
-  }
-
-  void _onSearchFurnaceNoChanged(
-    SearchFurnaceNoChanged event,
-    Emitter<SearchState> emit,
-  ) {
-    _currentQuery = _currentQuery.copyWith(
-      furnaceNo: event.furnaceNo,
-    );
-    add(SearchQueryChanged(_currentQuery));
-  }
-
-  void _onSearchMatNoChanged(
-    SearchMatNoChanged event,
-    Emitter<SearchState> emit,
-  ) {
-    _currentQuery = _currentQuery.copyWith(
-      matNo: event.matNo,
-    );
-    add(SearchQueryChanged(_currentQuery));
-  }
-
-  void _onSearchCleared(
-    SearchCleared event,
-    Emitter<SearchState> emit,
-  ) {
-    _currentQuery = const ChartFilterQuery();
-    emit(SearchInitial());
-  }
-
-  Future<void> _onSearchQueryChanged(
-    SearchQueryChanged event,
+  Future<void> _onLoadFilteredChartData(
+    LoadFilteredChartData event,
     Emitter<SearchState> emit,
   ) async {
-    if (event.query.isEmpty) {
-      emit(SearchInitial());
-      return;
-    }
-
-    // แสดง loading state พร้อมข้อมูลเก่า (ถ้ามี)
-    final previousResults = state is SearchSuccess 
-        ? (state as SearchSuccess).filterdChartDetails 
-        : <ChartDetail>[];
-    
-    emit(SearchLoading(previousResults: previousResults));
+    emit(SearchLoading());
 
     try {
-      final filterdChartDetails = await _apis.getFilteringChartDetails(event.query);
-      emit(SearchSuccess(filterdChartDetails: filterdChartDetails, query: event.query));
+      _currentQuery = ChartFilterQuery(
+        startDate: event.startDate,
+        endDate: event.endDate,
+        furnaceNo: event.furnaceNo,
+        materialNo: event.materialNo,
+        page: event.page ?? 1,
+        limit: event.limit ?? 50,
+      );
+
+      final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
+      emit(SearchLoaded(chartDetails, _currentQuery));
     } catch (e) {
-      emit(SearchError(
-        message: e.toString(),
-        previousResults: previousResults,
-      ));
+      emit(SearchError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateFurnaceNo(
+    UpdateFurnaceNo event,
+    Emitter<SearchState> emit,
+  ) async {
+    emit(SearchLoading());
+
+    try {
+      _currentQuery = _currentQuery.copyWith(
+        furnaceNo: event.furnaceNo,
+        page: 1, // reset to first page
+      );
+
+      final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
+      emit(SearchLoaded(chartDetails, _currentQuery));
+    } catch (e) {
+      emit(SearchError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdatePeriodStartDate(
+    UpdatePeriodStartDate event,
+    Emitter<SearchState> emit,
+  ) async {
+    emit(SearchLoading());
+
+    try {
+      _currentQuery = _currentQuery.copyWith(
+        startDate: event.startDate,
+        page: 1, // reset to first page
+      );
+
+      final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
+      emit(SearchLoaded(chartDetails, _currentQuery));
+    } catch (e) {
+      emit(SearchError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdatePeriodEndDate(
+    UpdatePeriodEndDate event,
+    Emitter<SearchState> emit,
+  ) async {
+    emit(SearchLoading());
+
+    try {
+      _currentQuery = _currentQuery.copyWith(
+        endDate: event.endDate,
+        page: 1, // reset to first page
+      );
+
+      final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
+      emit(SearchLoaded(chartDetails, _currentQuery));
+    } catch (e) {
+      emit(SearchError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateMaterialNo(
+    UpdateMaterialNo event,
+    Emitter<SearchState> emit,
+  ) async {
+    emit(SearchLoading());
+
+    try {
+      _currentQuery = _currentQuery.copyWith(
+        materialNo: event.materialNo,
+        page: 1, // reset to first page
+      );
+
+      final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
+      emit(SearchLoaded(chartDetails, _currentQuery));
+    } catch (e) {
+      emit(SearchError(e.toString()));
+    }
+  }
+
+  Future<void> _onClearFilters(
+    ClearFilters event,
+    Emitter<SearchState> emit,
+  ) async {
+    emit(SearchLoading());
+
+    try {
+      _currentQuery = const ChartFilterQuery(page: 1, limit: 50);
+      final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
+      emit(SearchLoaded(chartDetails, _currentQuery));
+    } catch (e) {
+      emit(SearchError(e.toString()));
     }
   }
 }

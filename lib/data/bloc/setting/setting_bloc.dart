@@ -1,6 +1,8 @@
 // data/bloc/setting/setting_bloc.dart
 import 'package:bloc/bloc.dart';
 import 'package:control_chart/apis/settings/setting_apis.dart';
+import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
+import 'package:control_chart/data/bloc/search_chart_details/search_event.dart';
 import 'package:control_chart/data/bloc/setting/setting_event.dart';
 import 'package:control_chart/data/bloc/setting/setting_state.dart';
 import 'package:control_chart/domain/models/customer_product.dart';
@@ -10,16 +12,21 @@ import 'package:control_chart/utils/date_autocomplete.dart';
 
 class SettingBloc extends Bloc<SettingEvent, SettingState> {
   final SettingApis _settingApis;
+  final SearchBloc? searchBloc;
 
-  SettingBloc({required SettingApis settingApis}) 
+  SettingBloc({required SettingApis settingApis, this.searchBloc}) 
       : _settingApis = settingApis,
         super(SettingInitial()) {
     
-    on<LoadChartDetailCount>(_onLoadChartDetailCount);
+    // on<LoadChartDetailCount>(_onLoadChartDetailCount);
     on<LoadAllFurnaces>(_onLoadAllFurnaces);
     on<LoadAllMatNo>(_onLoadAllMatNo);
     on<LoadAllData>(_onLoadAllData);
     // on<SearchChartData>(_onSearchChartData);
+
+    on<UpdatePeriodS>(_onUpdatePeriodS);
+    on<UpdateStartDate>(_onUpdateStartDate);
+    on<UpdateEndDate>(_onUpdateEndDate);
     
     // Form event handlers
     on<InitializeForm>(_onInitializeForm);
@@ -80,23 +87,23 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
     }
   }
 
-  Future<void> _onLoadChartDetailCount(
-    LoadChartDetailCount event,
-    Emitter<SettingState> emit,
-  ) async {
-    try {
-      emit(SettingLoading());
-      final count = await _settingApis.getChartDetailCount();
+  // Future<void> _onLoadChartDetailCount(
+  //   LoadChartDetailCount event,
+  //   Emitter<SettingState> emit,
+  // ) async {
+  //   try {
+  //     emit(SettingLoading());
+  //     // final count = await _settingApis.getChartDetailCount();
       
-      if (state is SettingLoaded) {
-        emit((state as SettingLoaded).copyWith(chartDetailCount: count));
-      } else {
-        emit(SettingLoaded(chartDetailCount: count));
-      }
-    } catch (e) {
-      emit(SettingError(e.toString()));
-    }
-  }
+  //     if (state is SettingLoaded) {
+  //       emit((state as SettingLoaded).copyWith(chartDetailCount: count));
+  //     } else {
+  //       emit(SettingLoaded(chartDetailCount: count));
+  //     }
+  //   } catch (e) {
+  //     emit(SettingError(e.toString()));
+  //   }
+  // }
 
   Future<void> _onLoadAllFurnaces(
     LoadAllFurnaces event,
@@ -157,4 +164,57 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
       emit(SettingError(e.toString()));
     }
   }
+
+  Future<void> _onUpdatePeriodS(
+    UpdatePeriodS event,
+    Emitter<SettingState> emit,
+  ) async {
+    if (state is FormDataState) {
+      final currentState = state as FormDataState;
+      
+      // อัพเดท UI state
+      final updatedFormState = currentState.formState.copyWith(
+        periodValue: event.period,
+      );
+      
+      emit(currentState.copyWith(formState: updatedFormState));
+
+      if (searchBloc != null) {
+        final dateRange = DateAutoComplete.calculateDateRange(event.period);
+        if (dateRange.isNotEmpty) {
+          searchBloc!.add(UpdatePeriodStartDate(startDate: dateRange['startDate']!.date));
+          searchBloc!.add(UpdatePeriodEndDate(endDate: dateRange['endDate']!.date));
+        }
+      }
+    }
+  }
+
+  void _onUpdateStartDate(UpdateStartDate event, Emitter<SettingState> emit) {
+    if (state is FormDataState) {
+      final currentState = state as FormDataState;
+      final newLabel = DateAutoComplete.formatDateLabel(event.startDate, true);
+      
+      emit(currentState.copyWith(
+        formState: currentState.formState.copyWith(
+          startDate: event.startDate,
+          startDateLabel: newLabel,
+        ),
+      ));
+    }
+  }
+
+  void _onUpdateEndDate(UpdateEndDate event, Emitter<SettingState> emit) {
+    if (state is FormDataState) {
+      final currentState = state as FormDataState;
+      final newLabel = DateAutoComplete.formatDateLabel(event.endDate, false);
+      
+      emit(currentState.copyWith(
+        formState: currentState.formState.copyWith(
+          endDate: event.endDate,
+          endDateLabel: newLabel,
+        ),
+      ));
+    }
+  }
+
 }

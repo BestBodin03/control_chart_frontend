@@ -19,19 +19,19 @@ class SettingShowChart extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.white.withOpacity(0.6),
+                  color: Colors.white.withValues(alpha: 0.6),
                   blurRadius: 10,
                   offset: Offset(-5, -5),
                 ),
                 BoxShadow(
-                  color: AppColors.colorBrandTp.withOpacity(0.4),
+                  color: AppColors.colorBrandTp.withValues(alpha: 0.4),
                   blurRadius: 15,
                   offset: Offset(5, 5),
                 ),
               ],
             ),
             
-            child: FurnaceReportLayout(),
+            // child: FurnaceReportLayout(),
             
           ),
         ),

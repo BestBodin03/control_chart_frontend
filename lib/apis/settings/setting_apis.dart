@@ -9,7 +9,7 @@ import 'package:dio/dio.dart';
 class SettingApis {
 Future<int> getChartDetailCount() async {
     try {
-      final response = await ApiConfig().get<List<dynamic>>('/test/chart-details');
+      final response = await ApiConfig().get<Response<dynamic>>('/test/chart-details');
       return CountExtractor.extractCountFromResponse(response);
     } catch (e) {
       throw Exception('Failed to get chart status: $e');
@@ -18,8 +18,12 @@ Future<int> getChartDetailCount() async {
 
   Future<List<Furnace>> getAllFurnaces() async {
     try {
-      final response = await ApiConfig().get<List<dynamic>>('/all-furnaces');
-      return response.map((json) => Furnace.fromJson(json)).toList();
+      final response = await ApiConfig().get<Response<dynamic>>('/all-furnaces');
+      
+      // Extract the actual data from the Response object
+      final List<dynamic> data = response.data; // or whatever property contains the list
+      
+      return data.map((json) => Furnace.fromJson(json)).toList();
     } catch (e) {
       throw Exception('Failed to get all furnaces: $e');
     }
@@ -27,8 +31,9 @@ Future<int> getChartDetailCount() async {
 
   Future<List<CustomerProduct>> getAllMatNo() async {
     try {
-      final response = await ApiConfig().get<List<dynamic>>('/all-material-no');
-      return response.map((json) => CustomerProduct.fromJson(json)).toList();
+      final response = await ApiConfig().get<Response<dynamic>>('/all-material-no');
+      final List<dynamic> data = response.data;
+      return data.map((json) => CustomerProduct.fromJson(json)).toList();
     } catch (e) {
       throw Exception('Failed to get all material no: $e');
     }

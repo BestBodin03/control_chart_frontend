@@ -9,13 +9,16 @@ class SearchChartDetailsApis {
         '/chart-details/filter',
         queryParameters: query.toQueryParams(),
       );
+      print('QUERY PARAMS IS ${query.toQueryParams()}');
 
       if (response.containsKey('chartDetails') || response.containsKey('data')) {
         final List<dynamic> data = response['chartDetails'] ?? response['data'] ?? [];
+        print('✅ Found ${data.length} items');
         return data.map((json) => ChartDetail.fromJson(json)).toList();
       }
       
       return [];
+      
       
     } catch (e) {
       throw Exception('Failed to get filtering chart details: $e');

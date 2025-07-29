@@ -5,27 +5,19 @@ abstract class SearchState {}
 
 class SearchInitial extends SearchState {}
 
-class SearchLoading extends SearchState {
-  final List<ChartDetail> previousResults;
-  SearchLoading({this.previousResults = const []});
-}
+class SearchLoading extends SearchState {}
 
-class SearchSuccess extends SearchState {
-  final List<ChartDetail> filterdChartDetails;
-  final ChartFilterQuery query;
-  
-  SearchSuccess({
-    required this.filterdChartDetails,
-    required this.query,
-  });
+class SearchLoaded extends SearchState {
+  final List<ChartDetail> chartDetails;
+  final ChartFilterQuery currentQuery; // เพิ่มเพื่อให้ UI รู้ current filter
+
+  SearchLoaded(this.chartDetails, this.currentQuery);
 }
 
 class SearchError extends SearchState {
   final String message;
-  final List<ChartDetail> previousResults;
-  
-  SearchError({
-    required this.message,
-    this.previousResults = const [],
-  });
+  SearchError(this.message);
 }
+
+
+
