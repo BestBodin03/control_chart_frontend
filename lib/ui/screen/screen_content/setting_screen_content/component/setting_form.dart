@@ -97,6 +97,31 @@ class _SettingFormState extends State<SettingForm> {
                   searchBloc.add(UpdatePeriodEndDate(endDate: state.formState.endDate));
                 }
               }
+            }
+          ),
+
+          BlocListener<SettingBloc, SettingState>(
+          listenWhen: (previous, current) {
+            // Only listen when dates actually change
+            if (previous is FormDataState && current is FormDataState) {
+              return previous.formState.startDate != current.formState.startDate ||
+                     previous.formState.endDate != current.formState.endDate;
+            }
+            return false;
+          },
+          listener: (context, state) {
+            if (state is FormDataState) {
+              final startDate = state.formState.startDate;
+              final endDate = state.formState.endDate;
+              
+              if (startDate != null && endDate != null) {
+                print('🔄 Updating SearchBloc with dates: $startDate to $endDate');
+                context.read<SearchBloc>().add(UpdateDateRange(
+                  startDate: startDate,
+                  endDate: endDate,
+                ));
+              }
+            }
             },
           ),
         ],

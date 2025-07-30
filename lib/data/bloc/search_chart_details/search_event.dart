@@ -1,4 +1,6 @@
 
+import 'dart:async';
+
 import 'package:control_chart/utils/date_autocomplete.dart';
 
 abstract class SearchEvent {}
