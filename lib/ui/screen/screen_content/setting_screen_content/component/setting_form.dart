@@ -118,7 +118,7 @@ class _SettingFormState extends State<SettingForm> {
               final endDate = state.formState.endDate;
               
               if (startDate != null && endDate != null) {
-                print('🔄 Updating SearchBloc with dates: $startDate to $endDate');
+                // print('🔄 Updating SearchBloc with dates: $startDate to $endDate');
                 context.read<SearchBloc>().add(UpdateDateRange(
                   startDate: startDate,
                   endDate: endDate,
@@ -186,7 +186,7 @@ class _SettingFormState extends State<SettingForm> {
                                   value: formState.periodValue,
                                   items: ['1 เดือน', '3 เดือน', '6 เดือน', '1 ปี', 'ตลอดเวลา', 'กำหนดเอง'],
                                   onChanged: (value) {
-                                    print('📅 Period selected: $value');
+                                    // print('📅 Period selected: $value');
                                     context.read<SettingBloc>().add(UpdatePeriodS(value!));
                                   },
                               ),
@@ -206,7 +206,7 @@ class _SettingFormState extends State<SettingForm> {
                                         date: formState.startDate,
                                         onTap: () => _selectDate(context, true),
                                         onChanged: (date) {
-                                          print('📅 Start Date selected: $date');
+                                          // print('📅 Start Date selected: $date');
                                           context.read<SearchBloc>().add(
                                             UpdatePeriodStartDate(startDate: date!)
                                           );
@@ -239,7 +239,7 @@ class _SettingFormState extends State<SettingForm> {
                                         date: formState.endDate,
                                         onTap: () => _selectDate(context, false),
                                         onChanged: (date) {
-                                          print('📅 End Date selected: $date');
+                                          // print('📅 End Date selected: $date');
                                           context.read<SearchBloc>().add(
                                             UpdatePeriodEndDate(endDate: date!)
                                           );
@@ -263,7 +263,7 @@ class _SettingFormState extends State<SettingForm> {
                                   value: formState.selectedItem.isEmpty ? null : formState.selectedItem,
                                   items: _getFurnaceNumbers(furnaces),
                                   onChanged: (value) {
-                                    print('🔥 Furnace selected: $value');
+                                    // print('🔥 Furnace selected: $value');
                                     context.read<SearchBloc>().add(UpdateFurnaceNo(value));
                                   },
                                 );
@@ -282,7 +282,7 @@ class _SettingFormState extends State<SettingForm> {
                                   value: formState.selectedMatNo.isEmpty ? null : formState.selectedMatNo,
                                   items: _getMatNumbers(matNumbers),
                                   onChanged: (value) {
-                                    print('🧪 Material selected: $value');
+                                    // print('🧪 Material selected: $value');
                                     context.read<SearchBloc>().add(UpdateMaterialNo(value));
                                   },
                                 );
@@ -366,11 +366,6 @@ class _SettingFormState extends State<SettingForm> {
     final furnaceNumbers = furnaces.map((furnace) => furnace.furnaceNo).toList();
     furnaceNumbers.sort();
     return furnaceNumbers.map((num) => num.toString()).toList();
-  }
-
-  ChartFilterQuery _getCurrentQuery(SearchState state) {
-  if (state is SearchLoaded) return state.currentQuery;
-  return const ChartFilterQuery();
   }
 
   List<String> _getMatNumbers(List<CustomerProduct> matNumbers) {

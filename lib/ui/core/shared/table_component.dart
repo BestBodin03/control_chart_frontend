@@ -1,29 +1,8 @@
 import 'package:control_chart/domain/models/chart_data_point.dart';
+import 'package:control_chart/domain/models/control_chart_stat.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/control_chart_template.dart';
 import 'package:flutter/material.dart';
-    final sampleData = [
-      ChartDataPoint(label: 'B06', value: 12),
-      ChartDataPoint(label: 'C17', value: 28),
-      ChartDataPoint(label: 'C24', value: 12),
-      ChartDataPoint(label: '630', value: 16),
-      ChartDataPoint(label: '901', value: 30),
-      ChartDataPoint(label: 'A30', value: 33),
-      ChartDataPoint(label: 'A05', value: 26),
-      ChartDataPoint(label: 'A11', value: 10),
-      ChartDataPoint(label: 'B30', value: 21),
-      ChartDataPoint(label: 'B06', value: 12),
-      ChartDataPoint(label: 'C17', value: 28),
-      ChartDataPoint(label: 'C24', value: 32),
-    ];
-
-    final controlLimits = ControlLimits(
-      usl: 32,  // Upper Specification Limit
-      ucl: 30,  // Upper Control Limit  
-      average: 19, // Average
-      lcl: 8,   // Lower Control Limit
-      lsl: 2,   // Lower Specification Limit
-    );
     
   Widget buildHeaderTable() {
     return SizedBox(
@@ -234,8 +213,13 @@ import 'package:flutter/material.dart';
                 borderRadius: BorderRadius.circular(4),
               ),
             child:ControlChartTemplate(
-              dataPoints: sampleData,
-              controlLimits: controlLimits,
+              dataPoints: [],
+              controlLimits: ControlChartStat(
+                numberOfSpots: 0, average: 0, mrAverage: 0, 
+                controlLimitIChart: ControlLimitIChart(cl: 0, ucl: 0, lcl: 0, usl: 0, lsl: 0), 
+                sigmaIChart: SigmaIChart(sigmaMinus3: 0, sigmaMinus2: 0, sigmaMinus1: 0,
+                 sigmaPlus1: 0, sigmaPlus2: 0, sigmaPlus3: 0), 
+                 controlLimitMRChart: ControlLimitMRChart(cl: 0, ucl: 0, lcl: 0)),
               xAxisLabel: 'Date',
               yAxisLabel: 'Temperature',
               dataLineColor: Colors.blue,

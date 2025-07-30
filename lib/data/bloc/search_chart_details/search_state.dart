@@ -1,4 +1,5 @@
 import 'package:control_chart/domain/models/chart_detail.dart';
+import 'package:control_chart/domain/models/control_chart_stat.dart';
 import 'package:control_chart/domain/types/chart_filter_query.dart';
 
 abstract class SearchState {}
@@ -9,9 +10,10 @@ class SearchLoading extends SearchState {}
 
 class SearchLoaded extends SearchState {
   final List<ChartDetail> chartDetails;
+  final List<ControlChartStat> controlChartStat;
   final ChartFilterQuery currentQuery; // เพิ่มเพื่อให้ UI รู้ current filter
 
-  SearchLoaded(this.chartDetails, this.currentQuery);
+  SearchLoaded(this.chartDetails, this.controlChartStat, this.currentQuery);
 }
 
 class SearchError extends SearchState {

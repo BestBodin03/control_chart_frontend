@@ -1,13 +1,14 @@
 
 import 'package:control_chart/domain/models/chart_data_point.dart';
+import 'package:control_chart/domain/models/control_chart_stat.dart';
 import 'package:control_chart/ui/core/shared/control_chart_component.dart';
 import 'package:control_chart/ui/core/shared/dashed_line_painter.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 class ControlChartTemplate extends StatelessWidget {
-  final List<ChartDataPoint> dataPoints;
-  final ControlLimits controlLimits;
+  final List<ChartDataPoint>? dataPoints;
+  final ControlChartStat? controlLimits;
   final String xAxisLabel;
   final String yAxisLabel;
   final Color? dataLineColor;
@@ -17,8 +18,8 @@ class ControlChartTemplate extends StatelessWidget {
 
   const ControlChartTemplate({
     super.key,
-    required this.dataPoints,
-    required this.controlLimits,
+    this.dataPoints,
+    this.controlLimits,
     this.xAxisLabel = 'Date',
     this.yAxisLabel = 'Attr.',
     this.dataLineColor = Colors.blue,
@@ -55,7 +56,7 @@ class ControlChartTemplate extends StatelessWidget {
                 borderData: useWidget.buildBorderData(),
                 lineBarsData: useWidget.buildLineBarsData(),
                 minX: 0,
-                maxX: dataPoints.length.toDouble() - 1,
+                maxX: dataPoints!.length.toDouble() - 1,
                 minY: useWidget.getMinY(),
                 maxY: useWidget.getMaxY(),
                 lineTouchData: useWidget.buildTouchData(),

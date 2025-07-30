@@ -24,11 +24,10 @@ class ChartFilterQuery {
     final Map<String, dynamic> params = {};
     
     if (startDate != null) {
-      // ✅ ใช้ jsonEncode เพื่อให้ได้ string พร้อม quotes
-      params['startDate'] = jsonEncode(startDate!.toUtc().toIso8601String());
+      params['startDate'] = jsonEncode(startDate!.toIso8601String());
     }
     if (endDate != null) {
-      params['endDate'] = jsonEncode(endDate!.toUtc().toIso8601String());
+      params['endDate'] = jsonEncode(endDate!.toIso8601String());
     }
     if (furnaceNo != null && furnaceNo!.isNotEmpty) {
       params['furnaceNo'] = furnaceNo;

@@ -68,3 +68,25 @@ Map<String, dynamic> _$CDEToJson(CDE instance) => <String, dynamic>{
   'CDEX': instance.cdex,
   'CDEY': instance.cdey,
 };
+
+Filters _$FiltersFromJson(Map<String, dynamic> json) => Filters(
+  period: Period.fromJson(json['period'] as Map<String, dynamic>),
+  furnaceNo: (json['furnaceNo'] as num?)?.toInt(),
+  matNo: json['matNo'] as String,
+);
+
+Map<String, dynamic> _$FiltersToJson(Filters instance) => <String, dynamic>{
+  'period': instance.period,
+  'furnaceNo': instance.furnaceNo,
+  'matNo': instance.matNo,
+};
+
+Period _$PeriodFromJson(Map<String, dynamic> json) => Period(
+  startDate: json['startDate'] as String,
+  endDate: json['endDate'] as String,
+);
+
+Map<String, dynamic> _$PeriodToJson(Period instance) => <String, dynamic>{
+  'startDate': instance.startDate,
+  'endDate': instance.endDate,
+};

@@ -1,6 +1,7 @@
 import 'package:control_chart/apis/search_chart_details/search_chart_details_apis.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_event.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_state.dart';
+import 'package:control_chart/domain/models/control_chart_stat.dart';
 import 'package:control_chart/domain/types/chart_filter_query.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -38,7 +39,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       );
 
       final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
-      emit(SearchLoaded(chartDetails, _currentQuery));
+      final chartStatistics = await _searchApiService.getControlChartStat(_currentQuery);
+      emit(SearchLoaded(chartDetails, chartStatistics, _currentQuery));
     } catch (e) {
       emit(SearchError(e.toString()));
     }
@@ -59,7 +61,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       );
 
       final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
-      emit(SearchLoaded(chartDetails, _currentQuery));
+      final chartStatistics = await _searchApiService.getControlChartStat(_currentQuery);
+      emit(SearchLoaded(chartDetails, chartStatistics, _currentQuery));
     } catch (e) {
       emit(SearchError(e.toString()));
     }
@@ -79,7 +82,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       );
 
       final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
-      emit(SearchLoaded(chartDetails, _currentQuery));
+      final chartStatistics = await _searchApiService.getControlChartStat(_currentQuery);
+      emit(SearchLoaded(chartDetails, chartStatistics, _currentQuery));
     } catch (e) {
       emit(SearchError(e.toString()));
     }
@@ -99,7 +103,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       );
 
       final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
-      emit(SearchLoaded(chartDetails, _currentQuery));
+      final chartStatistics = await _searchApiService.getControlChartStat(_currentQuery);
+      emit(SearchLoaded(chartDetails, chartStatistics, _currentQuery));
     } catch (e) {
       emit(SearchError(e.toString()));
     }
@@ -118,7 +123,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       );
 
       final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
-      emit(SearchLoaded(chartDetails, _currentQuery));
+      final chartStatistics = await _searchApiService.getControlChartStat(_currentQuery);
+      emit(SearchLoaded(chartDetails, chartStatistics, _currentQuery));
     } catch (e) {
       emit(SearchError(e.toString()));
     }
@@ -133,7 +139,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     try {
       _currentQuery = const ChartFilterQuery(page: 1, limit: 50);
       final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
-      emit(SearchLoaded(chartDetails, _currentQuery));
+      final chartStatistics = await _searchApiService.getControlChartStat(_currentQuery);
+      emit(SearchLoaded(chartDetails, chartStatistics, _currentQuery));
     } catch (e) {
       emit(SearchError(e.toString()));
     }
@@ -160,9 +167,10 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     print('Query params: ${_currentQuery.toQueryParams()}');
 
       final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
+      final chartStatistics = await _searchApiService.getControlChartStat(_currentQuery);
     
     print('✅ API call successful, emitting SearchLoaded');
-      emit(SearchLoaded(chartDetails, _currentQuery));
+      emit(SearchLoaded(chartDetails, chartStatistics, _currentQuery));
     } catch (e) {
     print('❌ API call failed: $e');
       emit(SearchError(e.toString()));

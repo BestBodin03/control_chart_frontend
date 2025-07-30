@@ -89,3 +89,69 @@ class CDE {
 
   Map<String, dynamic> toJson() => _$CDEToJson(this);
 }
+
+@JsonSerializable()
+class Filters {
+  final Period period;
+  final int? furnaceNo;
+  final String matNo;
+
+  const Filters({
+    required this.period,
+    this.furnaceNo,
+    required this.matNo,
+  });
+
+  factory Filters.fromJson(Map<String, dynamic> json) =>
+      _$FiltersFromJson(json);
+
+  Map<String, dynamic> toJson() => _$FiltersToJson(this);
+
+  @override
+  String toString() {
+    return 'Filters(period: $period, furnaceNo: $furnaceNo, matNo: $matNo)';
+  }
+
+  Filters copyWith({
+    Period? period,
+    int? furnaceNo,
+    String? matNo,
+  }) {
+    return Filters(
+      period: period ?? this.period,
+      furnaceNo: furnaceNo ?? this.furnaceNo,
+      matNo: matNo ?? this.matNo,
+    );
+  }
+}
+
+@JsonSerializable()
+class Period {
+  final String startDate;
+  final String endDate;
+
+  const Period({
+    required this.startDate,
+    required this.endDate,
+  });
+
+  factory Period.fromJson(Map<String, dynamic> json) =>
+      _$PeriodFromJson(json);
+
+  Map<String, dynamic> toJson() => _$PeriodToJson(this);
+
+  @override
+  String toString() {
+    return 'Period(startDate: $startDate, endDate: $endDate)';
+  }
+
+  Period copyWith({
+    String? startDate,
+    String? endDate,
+  }) {
+    return Period(
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+    );
+  }
+}
