@@ -2,6 +2,7 @@
 import 'package:control_chart/domain/types/chart_filter_query.dart';
 import 'package:control_chart/domain/types/form_state.dart';
 import 'package:control_chart/utils/date_autocomplete.dart';
+import 'package:flutter/src/widgets/framework.dart';
 
 abstract class SettingEvent {}
 
@@ -24,12 +25,20 @@ class UpdatePeriodS extends SettingEvent {
 }
 
 class UpdateStartDate extends SettingEvent {
+  // final String startDateLabel;
   final DateTime startDate;
   
-  UpdateStartDate({required this.startDate});
+  UpdateStartDate({
+    required this.startDate,
+    // required this.startDateLabel
+    });
 }
 
 class UpdateEndDate extends SettingEvent {
   final DateTime endDate;
-  UpdateEndDate({required this.endDate});
+  // final String endDateLabel;
+  UpdateEndDate({
+    required this.endDate,
+    // required this.endDateLabel
+    });
 }

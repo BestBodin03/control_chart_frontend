@@ -188,7 +188,8 @@ Widget buildSectionTitle(String title) {
     required DateTime date,
     required VoidCallback onTap,
     Function(DateTime?)? onChanged,
-    String? value,
+    DateTime? value,
+    required BuildContext context,
     
   }) {
     return SizedBox(

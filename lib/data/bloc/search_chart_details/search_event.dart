@@ -1,6 +1,4 @@
 
-import 'dart:async';
-
 import 'package:control_chart/utils/date_autocomplete.dart';
 
 abstract class SearchEvent {}
@@ -53,6 +51,17 @@ class UpdateMaterialNo extends SearchEvent {
   final String? materialNo;
 
   UpdateMaterialNo(this.materialNo);
+
 }
 
 class ClearFilters extends SearchEvent {}
+
+class UpdateDateRange extends SearchEvent {
+  final DateTime startDate;
+  final DateTime endDate;
+
+  UpdateDateRange({
+    required this.startDate,
+    required this.endDate,
+  });
+}

@@ -18,6 +18,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     on<UpdatePeriodEndDate>(_onUpdatePeriodEndDate);
     on<UpdateMaterialNo>(_onUpdateMaterialNo);
     on<ClearFilters>(_onClearFilters);
+    on<UpdateDateRange>(_onUpdateDateRange);
   }
 
   Future<void> _onLoadFilteredChartData(
@@ -48,6 +49,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     Emitter<SearchState> emit,
   ) async {
     emit(SearchLoading());
+    print(event.furnaceNo);
+
 
     try {
       _currentQuery = _currentQuery.copyWith(
@@ -67,6 +70,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     Emitter<SearchState> emit,
   ) async {
     emit(SearchLoading());
+    // print('QUERY: $event.startDate');
 
     try {
       _currentQuery = _currentQuery.copyWith(
@@ -86,6 +90,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     Emitter<SearchState> emit,
   ) async {
     emit(SearchLoading());
+    // print('QUERY: $event.endDate');
 
     try {
       _currentQuery = _currentQuery.copyWith(
@@ -133,4 +138,35 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       emit(SearchError(e.toString()));
     }
   }
+
+    Future<void> _onUpdateDateRange(
+    UpdateDateRange event,
+    Emitter<SearchState> emit,
+  ) async {
+  print('🔄 SearchBloc received UpdateDateRange');
+  print('Start: ${event.startDate}');
+  print('End: ${event.endDate}');
+  
+    emit(SearchLoading());
+
+    try {
+      _currentQuery = _currentQuery.copyWith(
+        startDate: event.startDate,
+        endDate: event.endDate,
+        page: 1,
+      );
+    
+    print('📋 Updated _currentQuery: $_currentQuery');
+    print('Query params: ${_currentQuery.toQueryParams()}');
+
+      final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
+    
+    print('✅ API call successful, emitting SearchLoaded');
+      emit(SearchLoaded(chartDetails, _currentQuery));
+    } catch (e) {
+    print('❌ API call failed: $e');
+      emit(SearchError(e.toString()));
+    }
+  }
+
 }

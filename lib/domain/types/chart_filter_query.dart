@@ -1,4 +1,8 @@
 // models/chart_filter_query.dart
+import 'dart:convert';
+
+import 'package:intl/intl.dart';
+
 class ChartFilterQuery {
   final DateTime? startDate;
   final DateTime? endDate;
@@ -20,10 +24,11 @@ class ChartFilterQuery {
     final Map<String, dynamic> params = {};
     
     if (startDate != null) {
-      params['startDate'] = startDate!.toIso8601String();
+      // ✅ ใช้ jsonEncode เพื่อให้ได้ string พร้อม quotes
+      params['startDate'] = jsonEncode(startDate!.toUtc().toIso8601String());
     }
     if (endDate != null) {
-      params['endDate'] = endDate!.toIso8601String();
+      params['endDate'] = jsonEncode(endDate!.toUtc().toIso8601String());
     }
     if (furnaceNo != null && furnaceNo!.isNotEmpty) {
       params['furnaceNo'] = furnaceNo;

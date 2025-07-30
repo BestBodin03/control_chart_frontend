@@ -9,10 +9,13 @@ import 'package:control_chart/data/bloc/setting/setting_event.dart';
 import 'package:control_chart/data/bloc/setting/setting_state.dart';
 import 'package:control_chart/domain/models/customer_product.dart';
 import 'package:control_chart/domain/models/furnace.dart';
+import 'package:control_chart/domain/types/chart_filter_query.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/form_component.dart';
 import 'package:control_chart/ui/core/shared/gradient_background.dart';
+import 'package:control_chart/ui/core/shared/table_component.dart';
+import 'package:control_chart/utils/date_autocomplete.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -79,26 +82,26 @@ class _SettingFormState extends State<SettingForm> {
           ),
           
           // Listener สำหรับ sync วันที่ไปยัง SearchBloc
-          BlocListener<SettingBloc, SettingState>(
-            listenWhen: (previous, current) {
-              if (previous is FormDataState && current is FormDataState) {
-                return previous.formState.startDate != current.formState.startDate ||
-                       previous.formState.endDate != current.formState.endDate;
-              }
-              return false;
-            },
-            listener: (context, state) {
-              if (state is FormDataState) {
-                print('🗓️ Date changed - Start: ${state.formState.startDate}, End: ${state.formState.endDate}');
+          // BlocListener<SettingBloc, SettingState>(
+          //   listenWhen: (previous, current) {
+          //     if (previous is FormDataState && current is FormDataState) {
+          //       return previous.formState.startDate != current.formState.startDate ||
+          //              previous.formState.endDate != current.formState.endDate;
+          //     }
+          //     return false;
+          //   },
+          //   listener: (context, state) {
+          //     if (state is FormDataState) {
+          //       print('🗓️ Date changed - Start: ${state.formState.startDate}, End: ${state.formState.endDate}');
                 
-                if (state.formState.startDate != null && state.formState.endDate != null) {
-                  final searchBloc = context.read<SearchBloc>();
-                  searchBloc.add(UpdatePeriodStartDate(startDate: state.formState.startDate));
-                  searchBloc.add(UpdatePeriodEndDate(endDate: state.formState.endDate));
-                }
-              }
-            }
-          ),
+          //       if (state.formState.startDate != null && state.formState.endDate != null) {
+          //         final searchBloc = context.read<SearchBloc>();
+          //         searchBloc.add(UpdatePeriodStartDate(startDate: state.formState.startDate));
+          //         searchBloc.add(UpdatePeriodEndDate(endDate: state.formState.endDate));
+          //       }
+          //     }
+          //   }
+          // ),
 
           BlocListener<SettingBloc, SettingState>(
           listenWhen: (previous, current) {
@@ -122,8 +125,8 @@ class _SettingFormState extends State<SettingForm> {
                 ));
               }
             }
-            },
-          ),
+          },
+        ),
         ],
         child: BlocBuilder<SettingBloc, SettingState>(
           builder: (context, state) {
@@ -139,8 +142,6 @@ class _SettingFormState extends State<SettingForm> {
             if (state is! FormDataState) {
               return const Center(child: Text('กำลังโหลด...'));
             }
-
-            
 
             final formState = state.formState;
             final furnaces = state.furnaces ?? <Furnace>[];
@@ -180,34 +181,39 @@ class _SettingFormState extends State<SettingForm> {
                             const SizedBox(height: 8.0),
                           
                             // Period Dropdown
-                            buildDropdownField(
-                              context: context,
-                              value: formState.periodValue,
-                              items: ['1 เดือน', '3 เดือน', '6 เดือน', '1 ปี', 'ตลอดเวลา', 'กำหนดเอง'],
-                              onChanged: (value) {
-                                print('📅 Period selected: $value');
-                                context.read<SettingBloc>().add(UpdatePeriodS(value!));
-                              },
-                            ),
+                              buildDropdownField(
+                                  context: context,
+                                  value: formState.periodValue,
+                                  items: ['1 เดือน', '3 เดือน', '6 เดือน', '1 ปี', 'ตลอดเวลา', 'กำหนดเอง'],
+                                  onChanged: (value) {
+                                    print('📅 Period selected: $value');
+                                    context.read<SettingBloc>().add(UpdatePeriodS(value!));
+                                  },
+                              ),
 
                             const SizedBox(height: 16.0),
 
-                            // Date range selector
                             Row(
                               children: [
-                                Expanded(
-                                  child: buildDateField(
-                                    value: formState.startDateLabel,
-                                    label: formState.startDateLabel,
-                                    date: formState.startDate,
-                                    onTap: () => _selectDate(context, true),
-                                    onChanged: (date) {
-                                      // แก้จาก formState.endDate เป็น date
-                                      context.read<SearchBloc>().add(
-                                        UpdatePeriodStartDate(startDate: date)
-                                      );
-                                    }
-                                  ),
+                                // Start Date
+                                BlocBuilder<SearchBloc, SearchState>(
+                                  builder: (context, searchState) {
+                                    return Expanded(
+                                      child: buildDateField(
+                                        context: context,
+                                        value: formState.startDate, // ใช้ formState เหมือน dropdown
+                                        label: formState.startDateLabel,
+                                        date: formState.startDate,
+                                        onTap: () => _selectDate(context, true),
+                                        onChanged: (date) {
+                                          print('📅 Start Date selected: $date');
+                                          context.read<SearchBloc>().add(
+                                            UpdatePeriodStartDate(startDate: date!)
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  },
                                 ),
 
                                 const SizedBox(width: 16),
@@ -222,16 +228,25 @@ class _SettingFormState extends State<SettingForm> {
                                 ),
                                 const SizedBox(width: 16),
                                 
-                                Expanded(
-                                  child: buildDateField(
-                                    value: formState.endDateLabel,
-                                    label: formState.endDateLabel,
-                                    date: formState.endDate,
-                                    onTap: () => _selectDate(context, false),
-                                    onChanged: (date) {
-                                      context.read<SearchBloc>().add(UpdatePeriodEndDate(endDate: date));
-                                    }
-                                  ),
+                                // End Date
+                                BlocBuilder<SearchBloc, SearchState>(
+                                  builder: (context, searchState) {
+                                    return Expanded(
+                                      child: buildDateField(
+                                        context: context,
+                                        value: formState.endDate, // ใช้ formState เหมือน dropdown
+                                        label: formState.endDateLabel,
+                                        date: formState.endDate,
+                                        onTap: () => _selectDate(context, false),
+                                        onChanged: (date) {
+                                          print('📅 End Date selected: $date');
+                                          context.read<SearchBloc>().add(
+                                            UpdatePeriodEndDate(endDate: date!)
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  },
                                 ),
                               ],
                             ),
@@ -353,6 +368,11 @@ class _SettingFormState extends State<SettingForm> {
     return furnaceNumbers.map((num) => num.toString()).toList();
   }
 
+  ChartFilterQuery _getCurrentQuery(SearchState state) {
+  if (state is SearchLoaded) return state.currentQuery;
+  return const ChartFilterQuery();
+  }
+
   List<String> _getMatNumbers(List<CustomerProduct> matNumbers) {
     final matNoNumbers = matNumbers.map((mat) => mat.cpNo).toList();
     matNoNumbers.sort();
@@ -378,9 +398,13 @@ class _SettingFormState extends State<SettingForm> {
       print(picked);
     try {
       if (isStartDate) {
-        context.read<SearchBloc>().add(UpdatePeriodStartDate(startDate: picked));
+        context.read<SettingBloc>().add(UpdateStartDate(
+          // startDateLabel: DateAutoComplete.formatDateLabel(picked, isStartDate),
+          startDate: picked));
       } else {
-        context.read<SearchBloc>().add(UpdatePeriodEndDate(endDate: picked));
+        context.read<SettingBloc>().add(UpdateEndDate(
+          // endDateLabel: DateAutoComplete.formatDateLabel(picked, true),
+          endDate: picked));
       }
     } catch (e) {
       }

@@ -165,7 +165,7 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
     }
   }
 
-  Future<void> _onUpdatePeriodS(
+Future<void> _onUpdatePeriodS(
     UpdatePeriodS event,
     Emitter<SettingState> emit,
   ) async {
@@ -179,12 +179,18 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
       
       emit(currentState.copyWith(formState: updatedFormState));
 
-      if (searchBloc != null) {
-        final dateRange = DateAutoComplete.calculateDateRange(event.period);
-        if (dateRange.isNotEmpty) {
-          searchBloc!.add(UpdatePeriodStartDate(startDate: dateRange['startDate']!.date));
-          searchBloc!.add(UpdatePeriodEndDate(endDate: dateRange['endDate']!.date));
-        }
+      // Calculate date range and update dates + labels
+      final dateRange = DateAutoComplete.calculateDateRange(event.period);
+      if (dateRange.isNotEmpty) {
+        // Call the existing methods to update start and end dates with labels
+        _onUpdateStartDate(
+          UpdateStartDate(startDate: dateRange['startDate']!.date), 
+          emit
+        );
+        _onUpdateEndDate(
+          UpdateEndDate(endDate: dateRange['endDate']!.date), 
+          emit
+        );
       }
     }
   }
