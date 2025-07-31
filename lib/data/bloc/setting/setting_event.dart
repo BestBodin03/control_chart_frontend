@@ -1,44 +1,90 @@
-// data/bloc/setting/setting_event.dart
-import 'package:control_chart/domain/types/chart_filter_query.dart';
-import 'package:control_chart/domain/types/form_state.dart';
-import 'package:control_chart/utils/date_autocomplete.dart';
-import 'package:flutter/src/widgets/framework.dart';
+// setting_event.dart
+part of 'setting_bloc.dart';
 
-abstract class SettingEvent {}
+sealed class SettingEvent extends Equatable {
+  const SettingEvent();
+}
 
-class LoadChartDetailCount extends SettingEvent {}
-class LoadAllFurnaces extends SettingEvent {}
-class LoadAllMatNo extends SettingEvent {}
-class LoadAllData extends SettingEvent {}
+// Data Loading Events
+final class LoadChartDetailCount extends SettingEvent {
+  const LoadChartDetailCount();
 
+  @override
+  List<Object> get props => [];
+}
+
+final class LoadAllFurnaces extends SettingEvent {
+  const LoadAllFurnaces();
+
+  @override
+  List<Object> get props => [];
+}
+
+final class LoadAllMatNo extends SettingEvent {
+  const LoadAllMatNo();
+
+  @override
+  List<Object> get props => [];
+}
+
+final class LoadAllData extends SettingEvent {
+  const LoadAllData();
+
+  @override
+  List<Object> get props => [];
+}
 
 // Form Events
-class InitializeForm extends SettingEvent {}
-class SaveFormData extends SettingEvent {}
+final class InitializeForm extends SettingEvent {
+  const InitializeForm();
 
-//
-class FilterChartDetailLoading extends SettingEvent {}
+  @override
+  List<Object> get props => [];
+}
 
-class UpdatePeriodS extends SettingEvent {
+final class SaveFormData extends SettingEvent {
+  const SaveFormData();
+
+  @override
+  List<Object> get props => [];
+}
+
+// Search Events
+final class FilterChartDetailLoading extends SettingEvent {
+  const FilterChartDetailLoading();
+
+  @override
+  List<Object> get props => [];
+}
+
+// Form Update Events
+final class UpdatePeriodS extends SettingEvent {
+  const UpdatePeriodS(this.period);
+
   final String period;
-  UpdatePeriodS(this.period);
+
+  @override
+  List<Object> get props => [period];
 }
 
-class UpdateStartDate extends SettingEvent {
-  // final String startDateLabel;
-  final DateTime startDate;
-  
-  UpdateStartDate({
+final class UpdateStartDate extends SettingEvent {
+  const UpdateStartDate({
     required this.startDate,
-    // required this.startDateLabel
-    });
+  });
+
+  final DateTime startDate;
+
+  @override
+  List<Object> get props => [startDate];
 }
 
-class UpdateEndDate extends SettingEvent {
-  final DateTime endDate;
-  // final String endDateLabel;
-  UpdateEndDate({
+final class UpdateEndDate extends SettingEvent {
+  const UpdateEndDate({
     required this.endDate,
-    // required this.endDateLabel
-    });
+  });
+
+  final DateTime endDate;
+
+  @override
+  List<Object> get props => [endDate];
 }

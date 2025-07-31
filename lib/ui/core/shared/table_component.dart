@@ -1,5 +1,5 @@
 import 'package:control_chart/domain/models/chart_data_point.dart';
-import 'package:control_chart/domain/models/control_chart_stat.dart';
+import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/control_chart_template.dart';
 import 'package:flutter/material.dart';
@@ -214,7 +214,7 @@ import 'package:flutter/material.dart';
               ),
             child:ControlChartTemplate(
               dataPoints: [],
-              controlLimits: ControlChartStat(
+              controlChartStats: ControlChartStats(
                 numberOfSpots: 0, average: 0, mrAverage: 0, 
                 controlLimitIChart: ControlLimitIChart(cl: 0, ucl: 0, lcl: 0, usl: 0, lsl: 0), 
                 sigmaIChart: SigmaIChart(sigmaMinus3: 0, sigmaMinus2: 0, sigmaMinus1: 0,

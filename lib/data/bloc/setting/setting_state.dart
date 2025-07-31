@@ -1,119 +1,87 @@
-import 'package:control_chart/domain/models/customer_product.dart';
-import 'package:control_chart/domain/models/furnace.dart';
-import 'package:control_chart/domain/types/form_state.dart';
-import 'package:equatable/equatable.dart';
+// setting_state.dart
+part of 'setting_bloc.dart';
 
-abstract class SettingState extends Equatable {
-  const SettingState();
-  
-  @override
-  List<Object?> get props => [];
+enum SettingStatus { 
+  initial, 
+  loading, 
+  loaded, 
+  formInitialized,
+  saving,
+  saved,
+  error 
 }
 
-class SettingInitial extends SettingState {}
-
-class SettingLoading extends SettingState {}
-
-class SettingLoaded extends SettingState {
-  final int? chartDetailCount;
-  final List<Furnace>? furnaces;
-  final List<CustomerProduct>? matNumbers;
-
-  const SettingLoaded({
+final class SettingState extends Equatable {
+  const SettingState({
+    this.status = SettingStatus.initial,
     this.chartDetailCount,
-    this.furnaces,
-    this.matNumbers,
+    this.furnaces = const [],
+    this.matNumbers = const [],
+    this.formState = const FormState(
+      startDate: null,
+      endDate: null,
+      selectedItem: '',
+      limitValue: '',
+      periodValue: '', 
+      selectedMatNo: '', 
+      selectedConditions: [], 
+      startDateLabel: 'Start Date', 
+      endDateLabel: 'End Date', 
+    ),
+    this.errorMessage,
+    this.searchData,
   });
 
-  @override
-  List<Object?> get props => [chartDetailCount, furnaces, matNumbers];
+  final SettingStatus status;
+  final int? chartDetailCount;
+  final List<Furnace> furnaces;
+  final List<CustomerProduct> matNumbers;
+  final FormState formState;
+  final String? errorMessage;
+  final Map<String, dynamic>? searchData;
 
-  SettingLoaded copyWith({
-    int? chartDetailCount,
-    List<Furnace>? furnaces,
-    List<CustomerProduct>? matNumbers,
+  // Computed properties for convenience
+  bool get isInitial => status == SettingStatus.initial;
+  bool get isLoading => status == SettingStatus.loading;
+  bool get isLoaded => status == SettingStatus.loaded;
+  bool get isFormInitialized => status == SettingStatus.formInitialized;
+  bool get isSaving => status == SettingStatus.saving;
+  bool get isSaved => status == SettingStatus.saved;  
+  bool get hasError => status == SettingStatus.error;
+  bool get hasFurnaces => furnaces.isNotEmpty;
+  bool get hasMatNumbers => matNumbers.isNotEmpty;
+  bool get hasChartDetailCount => chartDetailCount != null;
+  bool get hasSearchData => searchData != null;
+
+  SettingState copyWith({
+    SettingStatus Function()? status,
+    int? Function()? chartDetailCount,
+    List<Furnace> Function()? furnaces,
+    List<CustomerProduct> Function()? matNumbers,
+    FormState Function()? formState,
+    String? Function()? errorMessage,
+    Map<String, dynamic>? Function()? searchData,
   }) {
-    return SettingLoaded(
-      chartDetailCount: chartDetailCount ?? this.chartDetailCount,
-      furnaces: furnaces ?? this.furnaces,
-      matNumbers: matNumbers ?? this.matNumbers,
+    return SettingState(
+      status: status != null ? status() : this.status,
+      chartDetailCount: chartDetailCount != null 
+          ? chartDetailCount() : this.chartDetailCount,
+      furnaces: furnaces != null ? furnaces() : this.furnaces,
+      matNumbers: matNumbers != null ? matNumbers() : this.matNumbers,
+      formState: formState != null ? formState() : this.formState,
+      errorMessage: errorMessage != null ? errorMessage() : this.errorMessage,
+      searchData: searchData != null ? searchData() : this.searchData,
     );
   }
-}
-
-class SettingError extends SettingState {
-  final String message;
-
-  const SettingError(this.message);
 
   @override
-  List<Object> get props => [message];
-}
-
-class SearchLoading extends SettingState {}
-
-class SearchSuccess extends SettingState {
-  final Map<String, dynamic> data;
-  const SearchSuccess(this.data);
-}
-
-class SearchError extends SettingState {
-  final String message;
-  const SearchError(this.message);
-}
-
-class FormDataState extends SettingState {
-  final FormState formState;
-  final List<Furnace>? furnaces;
-  final List<CustomerProduct>? matNumbers;
-  final bool isLoading;
-  final String? errorMessage;
-  final bool isSaved;
-  final DateTime? endDate;
-  final DateTime? startDate;
-
-  const FormDataState({
-    required this.formState,
-    this.furnaces,
-    this.matNumbers,
-    this.isLoading = false,
-    this.errorMessage,
-    this.isSaved = false,
-    this.endDate,
-    this.startDate
-  });
-
-    @override
   List<Object?> get props => [
-    formState,
+    status,
+    chartDetailCount,
     furnaces,
     matNumbers,
-    isLoading,
+    formState,
     errorMessage,
-    isSaved,
-    endDate,
-    startDate
+    searchData,
   ];
-  
-  FormDataState copyWith({
-    FormState? formState,
-    List<Furnace>? furnaces,
-    List<CustomerProduct>? matNumbers,
-    bool? isLoading,
-    String? errorMessage,
-    bool? isSaved,
-    DateTime? endDate,
-    DateTime? startDate
-  }) {
-    return FormDataState(
-      formState: formState ?? this.formState,
-      furnaces: furnaces ?? this.furnaces,
-      matNumbers: matNumbers ?? this.matNumbers,
-      isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage ?? this.errorMessage,
-      isSaved: isSaved ?? this.isSaved,
-      endDate: endDate ?? this.endDate,
-      startDate: startDate ?? this.startDate
-    );
-  }
 }

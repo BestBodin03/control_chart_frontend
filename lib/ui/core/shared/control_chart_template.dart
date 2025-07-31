@@ -1,6 +1,5 @@
-
 import 'package:control_chart/domain/models/chart_data_point.dart';
-import 'package:control_chart/domain/models/control_chart_stat.dart';
+import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/shared/control_chart_component.dart';
 import 'package:control_chart/ui/core/shared/dashed_line_painter.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -8,7 +7,7 @@ import 'package:flutter/material.dart';
 
 class ControlChartTemplate extends StatelessWidget {
   final List<ChartDataPoint>? dataPoints;
-  final ControlChartStat? controlLimits;
+  final ControlChartStats? controlChartStats;
   final String xAxisLabel;
   final String yAxisLabel;
   final Color? dataLineColor;
@@ -19,7 +18,7 @@ class ControlChartTemplate extends StatelessWidget {
   const ControlChartTemplate({
     super.key,
     this.dataPoints,
-    this.controlLimits,
+    this.controlChartStats,
     this.xAxisLabel = 'Date',
     this.yAxisLabel = 'Attr.',
     this.dataLineColor = Colors.blue,
@@ -31,9 +30,10 @@ class ControlChartTemplate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final useWidget = ControlChartComponent(
-      dataPoints: dataPoints, // Pass your data points
-      controlLimits: controlLimits, // Pass your control limits
+      dataPoints: dataPoints,
+      controlChartStats: controlChartStats,
     );
+    
     return Container(
       height: height,
       width: width,

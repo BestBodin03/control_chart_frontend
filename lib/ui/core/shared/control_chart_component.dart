@@ -1,5 +1,5 @@
 import 'package:control_chart/domain/models/chart_data_point.dart';
-import 'package:control_chart/domain/models/control_chart_stat.dart';
+import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/dashed_line_painter.dart' show DashedLinePainter;
@@ -32,7 +32,7 @@ import 'package:flutter/material.dart';
   
 class ControlChartComponent extends StatelessWidget {
   final List<ChartDataPoint>? dataPoints;
-  final ControlChartStat? controlLimits;
+  final ControlChartStats? controlChartStats;
   final String xAxisLabel;
   final String yAxisLabel;
   final Color? dataLineColor;
@@ -43,7 +43,7 @@ class ControlChartComponent extends StatelessWidget {
   const ControlChartComponent({
     super.key,
     this.dataPoints,
-    this.controlLimits,
+    this.controlChartStats,
     this.xAxisLabel = 'Date',
     this.yAxisLabel = 'Attr.',
     this.dataLineColor = AppColors.colorBrand,
@@ -62,7 +62,8 @@ class ControlChartComponent extends StatelessWidget {
       show: true,
       drawHorizontalLine: true,
       drawVerticalLine: true,
-      horizontalInterval: (controlLimits!.controlLimitIChart.ucl * 1.2 - controlLimits!.controlLimitIChart.lcl * 0.8) / 12,
+      // horizontalInterval: ((controlLimits?.controlLimitIChart?.ucl ?? 0.0) * 1.2 - (controlLimits?.controlLimitIChart?.lcl ?? 0.0) * 0.8) / 12,
+      horizontalInterval: 50.0,
       verticalInterval: dataPoints!.length / 12,
       getDrawingHorizontalLine: (value) {
         return FlLine(
@@ -85,7 +86,8 @@ class ControlChartComponent extends StatelessWidget {
         sideTitles: SideTitles(
           showTitles: true,
           reservedSize:32,
-          interval: (controlLimits!.controlLimitIChart.ucl * 1.2 - controlLimits!.controlLimitIChart.lcl * 0.8) / 4,
+          // interval: ((controlLimits?.controlLimitIChart?.ucl ?? 0.0) * 1.2 - (controlLimits?.controlLimitIChart?.lcl ?? 0.0) * 0.8) / 4,
+          interval: 30.4,
           getTitlesWidget: (value, meta) {
             return Text(
               value.toStringAsFixed(1),
@@ -112,7 +114,8 @@ class ControlChartComponent extends StatelessWidget {
         sideTitles: SideTitles(
           showTitles: true,
           reservedSize: 32,
-          interval: dataPoints!.length > 10 ? dataPoints!.length / 12 : 1,
+          // interval: dataPoints!.length > 10 ? dataPoints!.length / 12 : 1,
+          interval: 20,
           getTitlesWidget: (value, meta) {
             final index = value.toInt();
             if (index >= 0 && index < dataPoints!.length) {
@@ -163,7 +166,7 @@ class ControlChartComponent extends StatelessWidget {
       horizontalLines: [
         // USL (Upper Specification Limit)
         HorizontalLine(
-          y: controlLimits!.controlLimitIChart.ucl * 1.2,
+          y: (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2,
           color: AppColors.colorAlert1,
           strokeWidth: 2,
           dashArray: [5,5],
@@ -182,7 +185,7 @@ class ControlChartComponent extends StatelessWidget {
         
         // UCL (Upper Control Limit)
         HorizontalLine(
-          y: controlLimits!.controlLimitIChart.ucl,
+          y: controlChartStats?.controlLimitIChart?.ucl ?? 0.0,
           color: Colors.amberAccent,
           strokeWidth: 1.5,
           // dashArray: [3, 3],
@@ -201,7 +204,7 @@ class ControlChartComponent extends StatelessWidget {
         
         // Average Line
         HorizontalLine(
-          y: controlLimits!.average,
+          y: controlChartStats?.average ?? 0.0,
           color: AppColors.colorSuccess1,
           strokeWidth: 2,
           // label: HorizontalLineLabel(
@@ -218,7 +221,7 @@ class ControlChartComponent extends StatelessWidget {
         
         // LCL (Lower Control Limit)
         HorizontalLine(
-          y: controlLimits!.controlLimitIChart.lcl,
+          y: controlChartStats?.controlLimitIChart?.lcl ?? 0.0,
           color: Colors.amberAccent,
           strokeWidth: 1.5,
           // dashArray: [3, 3],
@@ -238,7 +241,7 @@ class ControlChartComponent extends StatelessWidget {
         
         // LSL (Lower Specification Limit)
         HorizontalLine(
-          y: controlLimits!.controlLimitIChart.lcl * 0.8,
+          y: (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.8,
           color: AppColors.colorAlert1,
           strokeWidth: 2,
           dashArray: [5, 5],
@@ -278,9 +281,9 @@ class ControlChartComponent extends StatelessWidget {
             Color dotColor = dataLineColor!;
             
             // Color dots based on control limits
-            if (value > controlLimits!.controlLimitIChart.ucl * 1.2 || value < controlLimits!.controlLimitIChart.lcl * 0.8) {
+            if (value > (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2 || value < (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.8) {
               dotColor = Colors.red; // Out of control
-            } else if (value > controlLimits!.controlLimitIChart.ucl || value < controlLimits!.controlLimitIChart.lcl) {
+            } else if (value > (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) || value < (controlChartStats?.controlLimitIChart?.lcl ?? 0.0)) {
               dotColor = Colors.orange; // Warning zone
             }
             
@@ -324,11 +327,11 @@ class ControlChartComponent extends StatelessWidget {
       spacing: 16,
       runSpacing: 8,
       children: [
-        buildLegendItem('USL = ${(controlLimits!.controlLimitIChart.ucl * 1.2).toStringAsFixed(3)}', Colors.red, true),
-        buildLegendItem('ULC = ${controlLimits!.controlLimitIChart.ucl.toStringAsFixed(3)}', Colors.orange, false),
-        buildLegendItem('AVG = ${controlLimits!.average.toStringAsFixed(3)}', Colors.green, false),
-        buildLegendItem('LCL = ${controlLimits!.controlLimitIChart.lcl.toStringAsFixed(3)}', Colors.orange, false),
-        buildLegendItem('LSL = ${(controlLimits!.controlLimitIChart.lcl * 0.8).toStringAsFixed(3)}', Colors.red, true),
+        buildLegendItem('USL = ${((controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2).toStringAsFixed(3)}', Colors.red, true),
+buildLegendItem('UCL = ${controlChartStats?.controlLimitIChart?.ucl?.toStringAsFixed(3)}', Colors.orange, false),
+buildLegendItem('AVG = ${controlChartStats?.average?.toStringAsFixed(3)}', Colors.green, false),
+buildLegendItem('LCL = ${controlChartStats?.controlLimitIChart?.lcl?.toStringAsFixed(3)}', Colors.orange, false),
+        buildLegendItem('LSL = ${(controlChartStats?.controlLimitIChart?.lcl ?? 0.0 * 0.8).toStringAsFixed(3)}', Colors.red, true),
         // buildLegendItem('Data', dataLineColor!, false),
       ],
     );
@@ -365,11 +368,11 @@ class ControlChartComponent extends StatelessWidget {
 
   double getMinY() {
     final dataMin = dataPoints!.map((e) => e.value).reduce((a, b) => a < b ? a : b);
-    return [dataMin, controlLimits!.controlLimitIChart.lcl * 0.8].reduce((a, b) => a < b ? a : b) - 2;
+    return [dataMin, controlChartStats?.controlLimitIChart?.lcl ?? 0.0 * 0.8].reduce((a, b) => a < b ? a : b) - 2;
   }
   double getMaxY() {
     final dataMax = dataPoints!.map((e) => e.value).reduce((a, b) => a > b ? a : b);
-    return [dataMax, controlLimits!.controlLimitIChart.ucl * 0.8].reduce((a, b) => a > b ? a : b) + 2;
+    return [dataMax, controlChartStats?.controlLimitIChart?.ucl ?? 0.0 * 0.8].reduce((a, b) => a > b ? a : b) + 2;
   }
 
 }

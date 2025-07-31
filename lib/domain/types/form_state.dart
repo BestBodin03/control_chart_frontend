@@ -2,8 +2,8 @@
 import 'package:equatable/equatable.dart';
 
 class FormState extends Equatable {
-  final DateTime startDate;
-  final DateTime endDate;
+  final DateTime? startDate;
+  final DateTime? endDate;
   final String selectedItem;
   final String limitValue;
   final String periodValue;
@@ -13,8 +13,8 @@ class FormState extends Equatable {
   final String endDateLabel;
 
   const FormState({
-    required this.startDate,
-    required this.endDate,
+    this.startDate,
+    this.endDate,
     required this.selectedItem,
     required this.limitValue,
     required this.periodValue,
@@ -27,8 +27,8 @@ class FormState extends Equatable {
   // Factory constructor for initial state
   factory FormState.initial() {
     return FormState(
-      startDate: DateTime(2024, 12, 30),
-      endDate: DateTime(2024, 2, 24),
+      startDate: null,
+      endDate: null,
       selectedItem: '',
       limitValue: '9',
       periodValue: '1 เดือน',
@@ -65,8 +65,8 @@ class FormState extends Equatable {
 
   @override
   List<Object> get props => [
-        startDate,
-        endDate,
+        startDate ?? DateTime(2024, 12, 30),
+        endDate ?? DateTime(2020, 1, 1),
         selectedItem,
         limitValue,
         periodValue,

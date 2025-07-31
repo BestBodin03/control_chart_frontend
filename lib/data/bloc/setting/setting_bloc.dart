@@ -1,43 +1,53 @@
-// data/bloc/setting/setting_bloc.dart
+// setting_bloc.dart
 import 'package:bloc/bloc.dart';
 import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
-import 'package:control_chart/data/bloc/search_chart_details/search_event.dart';
-import 'package:control_chart/data/bloc/setting/setting_event.dart';
-import 'package:control_chart/data/bloc/setting/setting_state.dart';
 import 'package:control_chart/domain/models/customer_product.dart';
 import 'package:control_chart/domain/models/furnace.dart';
 import 'package:control_chart/domain/types/form_state.dart';
 import 'package:control_chart/utils/date_autocomplete.dart';
+import 'package:equatable/equatable.dart';
+
+part 'setting_event.dart';
+part 'setting_state.dart';
 
 class SettingBloc extends Bloc<SettingEvent, SettingState> {
   final SettingApis _settingApis;
   final SearchBloc? searchBloc;
 
-  SettingBloc({required SettingApis settingApis, this.searchBloc}) 
-      : _settingApis = settingApis,
-        super(SettingInitial()) {
+  SettingBloc({
+    required SettingApis settingApis, 
+    this.searchBloc,
+  }) : _settingApis = settingApis,
+       super(const SettingState()) {
     
-    // on<LoadChartDetailCount>(_onLoadChartDetailCount);
+    // Data loading events
+    on<LoadChartDetailCount>(_onLoadChartDetailCount);
     on<LoadAllFurnaces>(_onLoadAllFurnaces);
     on<LoadAllMatNo>(_onLoadAllMatNo);
     on<LoadAllData>(_onLoadAllData);
-    // on<SearchChartData>(_onSearchChartData);
-
+    
+    // Form events
+    on<InitializeForm>(_onInitializeForm);
+    on<SaveFormData>(_onSaveFormData);
+    
+    // Form update events
     on<UpdatePeriodS>(_onUpdatePeriodS);
     on<UpdateStartDate>(_onUpdateStartDate);
     on<UpdateEndDate>(_onUpdateEndDate);
     
-    // Form event handlers
-    on<InitializeForm>(_onInitializeForm);
-    on<SaveFormData>(_onSaveFormData);
+    // Search events
+    on<FilterChartDetailLoading>(_onFilterChartDetailLoading);
   }
 
   // Form event handlers
-  void _onInitializeForm(InitializeForm event, Emitter<SettingState> emit) async {
+  Future<void> _onInitializeForm(
+    InitializeForm event,
+    Emitter<SettingState> emit,
+  ) async {
+    emit(state.copyWith(status: () => SettingStatus.loading));
+
     try {
-      emit(SettingLoading());
-      
       // Load initial data
       final results = await Future.wait([
         _settingApis.getAllFurnaces(),
@@ -58,68 +68,89 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
         endDateLabel: DateAutoComplete.formatDateLabel(dateRanges['endDate']!.date, false),
       );
 
-      emit(FormDataState(
-        formState: updatedFormState,
-        furnaces: furnaces,
-        matNumbers: matNumbers,
+      emit(state.copyWith(
+        status: () => SettingStatus.formInitialized,
+        formState: () => updatedFormState,
+        furnaces: () => furnaces,
+        matNumbers: () => matNumbers,
+        errorMessage: () => null, // Clear any previous errors
       ));
     } catch (e) {
-      emit(SettingError(e.toString()));
+      emit(state.copyWith(
+        status: () => SettingStatus.error,
+        errorMessage: () => e.toString(),
+      ));
     }
   }
 
-  void _onSaveFormData(SaveFormData event, Emitter<SettingState> emit) async {
-    if (state is FormDataState) {
-      final currentState = state as FormDataState;
-      emit(currentState.copyWith(isLoading: true));
+  Future<void> _onSaveFormData(
+    SaveFormData event,
+    Emitter<SettingState> emit,
+  ) async {
+    emit(state.copyWith(status: () => SettingStatus.saving));
+
+    try {
+      // Add your save logic here
+      // For example: await _settingApis.saveFormData(state.formState);
       
-      try {
-        // Add your save logic here
-        // For example: await _settingApis.saveFormData(currentState.formState);
-        
-        // Simulate API call
-        await Future.delayed(const Duration(seconds: 1));
-        
-        emit(currentState.copyWith(isLoading: false, isSaved: true));
-      } catch (e) {
-        emit(currentState.copyWith(isLoading: false, errorMessage: e.toString()));
-      }
+      // Simulate API call
+      await Future.delayed(const Duration(seconds: 1));
+      
+      emit(state.copyWith(
+        status: () => SettingStatus.saved,
+        errorMessage: () => null,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: () => SettingStatus.error,
+        errorMessage: () => e.toString(),
+      ));
     }
   }
 
-  // Future<void> _onLoadChartDetailCount(
-  //   LoadChartDetailCount event,
-  //   Emitter<SettingState> emit,
-  // ) async {
-  //   try {
-  //     emit(SettingLoading());
-  //     // final count = await _settingApis.getChartDetailCount();
+  // Data loading event handlers
+  Future<void> _onLoadChartDetailCount(
+    LoadChartDetailCount event,
+    Emitter<SettingState> emit,
+  ) async {
+    // Keep existing data while loading
+    emit(state.copyWith(status: () => SettingStatus.loading));
+
+    try {
+      final count = await _settingApis.getChartDetailCount();
       
-  //     if (state is SettingLoaded) {
-  //       emit((state as SettingLoaded).copyWith(chartDetailCount: count));
-  //     } else {
-  //       emit(SettingLoaded(chartDetailCount: count));
-  //     }
-  //   } catch (e) {
-  //     emit(SettingError(e.toString()));
-  //   }
-  // }
+      emit(state.copyWith(
+        status: () => SettingStatus.loaded,
+        chartDetailCount: () => count,
+        errorMessage: () => null,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        status: () => SettingStatus.error,
+        errorMessage: () => e.toString(),
+      ));
+    }
+  }
 
   Future<void> _onLoadAllFurnaces(
     LoadAllFurnaces event,
     Emitter<SettingState> emit,
   ) async {
+    emit(state.copyWith(status: () => SettingStatus.loading));
+
     try {
-      emit(SettingLoading());
       final furnaces = await _settingApis.getAllFurnaces();
       
-      if (state is SettingLoaded) {
-        emit((state as SettingLoaded).copyWith(furnaces: furnaces));
-      } else {
-        emit(SettingLoaded(furnaces: furnaces));
-      }
+      emit(state.copyWith(
+        status: () => SettingStatus.loaded,
+        furnaces: () => furnaces,
+        errorMessage: () => null,
+      ));
     } catch (e) {
-      emit(SettingError(e.toString()));
+      emit(state.copyWith(
+        status: () => SettingStatus.error,
+        errorMessage: () => e.toString(),
+      ));
     }
   }
 
@@ -127,17 +158,21 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
     LoadAllMatNo event,
     Emitter<SettingState> emit,
   ) async {
+    emit(state.copyWith(status: () => SettingStatus.loading));
+
     try {
-      emit(SettingLoading());
       final matNumbers = await _settingApis.getAllMatNo();
       
-      if (state is SettingLoaded) {
-        emit((state as SettingLoaded).copyWith(matNumbers: matNumbers));
-      } else {
-        emit(SettingLoaded(matNumbers: matNumbers));
-      }
+      emit(state.copyWith(
+        status: () => SettingStatus.loaded,
+        matNumbers: () => matNumbers,
+        errorMessage: () => null,
+      ));
     } catch (e) {
-      emit(SettingError(e.toString()));
+      emit(state.copyWith(
+        status: () => SettingStatus.error,
+        errorMessage: () => e.toString(),
+      ));
     }
   }
 
@@ -145,9 +180,9 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
     LoadAllData event,
     Emitter<SettingState> emit,
   ) async {
+    emit(state.copyWith(status: () => SettingStatus.loading));
+
     try {
-      emit(SettingLoading());
-      
       // Load all data concurrently
       final results = await Future.wait([
         _settingApis.getChartDetailCount(),
@@ -155,72 +190,95 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
         _settingApis.getAllMatNo(),
       ]);
 
-      emit(SettingLoaded(
-        chartDetailCount: results[0] as int,
-        furnaces: results[1] as List<Furnace>,
-        matNumbers: results[2] as List<CustomerProduct>,
+      emit(state.copyWith(
+        status: () => SettingStatus.loaded,
+        chartDetailCount: () => results[0] as int,
+        furnaces: () => results[1] as List<Furnace>,
+        matNumbers: () => results[2] as List<CustomerProduct>,
+        errorMessage: () => null,
       ));
     } catch (e) {
-      emit(SettingError(e.toString()));
+      emit(state.copyWith(
+        status: () => SettingStatus.error,
+        errorMessage: () => e.toString(),
+      ));
     }
   }
 
-Future<void> _onUpdatePeriodS(
+  // Form update event handlers
+  Future<void> _onUpdatePeriodS(
     UpdatePeriodS event,
     Emitter<SettingState> emit,
   ) async {
-    if (state is FormDataState) {
-      final currentState = state as FormDataState;
+    // Update UI state immediately
+    final updatedFormState = state.formState.copyWith(
+      periodValue: event.period,
+    );
+    
+    emit(state.copyWith(formState: () => updatedFormState));
+
+    // Calculate date range and update dates + labels
+    final dateRange = DateAutoComplete.calculateDateRange(event.period);
+    if (dateRange.isNotEmpty) {
+      // Update start and end dates with calculated values
+      final startDate = dateRange['startDate']!.date;
+      final endDate = dateRange['endDate']!.date;
       
-      // อัพเดท UI state
-      final updatedFormState = currentState.formState.copyWith(
-        periodValue: event.period,
+      final finalFormState = updatedFormState.copyWith(
+        startDate: startDate,
+        endDate: endDate,
+        startDateLabel: DateAutoComplete.formatDateLabel(startDate, true),
+        endDateLabel: DateAutoComplete.formatDateLabel(endDate, false),
       );
-      
-      emit(currentState.copyWith(formState: updatedFormState));
 
-      // Calculate date range and update dates + labels
-      final dateRange = DateAutoComplete.calculateDateRange(event.period);
-      if (dateRange.isNotEmpty) {
-        // Call the existing methods to update start and end dates with labels
-        _onUpdateStartDate(
-          UpdateStartDate(startDate: dateRange['startDate']!.date), 
-          emit
-        );
-        _onUpdateEndDate(
-          UpdateEndDate(endDate: dateRange['endDate']!.date), 
-          emit
-        );
-      }
+      emit(state.copyWith(formState: () => finalFormState));
     }
   }
 
-  void _onUpdateStartDate(UpdateStartDate event, Emitter<SettingState> emit) {
-    if (state is FormDataState) {
-      final currentState = state as FormDataState;
-      final newLabel = DateAutoComplete.formatDateLabel(event.startDate, true);
-      
-      emit(currentState.copyWith(
-        formState: currentState.formState.copyWith(
-          startDate: event.startDate,
-          startDateLabel: newLabel,
-        ),
-      ));
-    }
+  void _onUpdateStartDate(
+    UpdateStartDate event,
+    Emitter<SettingState> emit,
+  ) {
+    final newLabel = DateAutoComplete.formatDateLabel(event.startDate, true);
+    
+    final updatedFormState = state.formState.copyWith(
+      startDate: event.startDate,
+      startDateLabel: newLabel,
+    );
+
+    emit(state.copyWith(formState: () => updatedFormState));
   }
 
-  void _onUpdateEndDate(UpdateEndDate event, Emitter<SettingState> emit) {
-    if (state is FormDataState) {
-      final currentState = state as FormDataState;
-      final newLabel = DateAutoComplete.formatDateLabel(event.endDate, false);
-      
-      emit(currentState.copyWith(
-        formState: currentState.formState.copyWith(
-          endDate: event.endDate,
-          endDateLabel: newLabel,
-        ),
-      ));
-    }
+  void _onUpdateEndDate(
+    UpdateEndDate event,
+    Emitter<SettingState> emit,
+  ) {
+    final newLabel = DateAutoComplete.formatDateLabel(event.endDate, false);
+    
+    final updatedFormState = state.formState.copyWith(
+      endDate: event.endDate,
+      endDateLabel: newLabel,
+    );
+
+    emit(state.copyWith(formState: () => updatedFormState));
   }
 
+  // Search event handler
+  void _onFilterChartDetailLoading(
+    FilterChartDetailLoading event,
+    Emitter<SettingState> emit,
+  ) {
+    emit(state.copyWith(status: () => SettingStatus.loading));
+    
+    // This can trigger search in SearchBloc if needed
+    // searchBloc?.add(SomeSearchEvent());
+  }
+
+  // Helper method for common error handling
+  void _handleError(Emitter<SettingState> emit, String error) {
+    emit(state.copyWith(
+      status: () => SettingStatus.error,
+      errorMessage: () => error,
+    ));
+  }
 }

@@ -1,12 +1,13 @@
 
 
 import 'package:control_chart/apis/settings/setting_apis.dart';
+import 'package:control_chart/data/bloc/chart_details/chart_details_bloc.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
-import 'package:control_chart/data/bloc/search_chart_details/search_event.dart';
-import 'package:control_chart/data/bloc/search_chart_details/search_state.dart';
+// import 'package:control_chart/data/bloc/search_chart_details/search_event.dart';
+// import 'package:control_chart/data/bloc/search_chart_details/search_state.dart';
 import 'package:control_chart/data/bloc/setting/setting_bloc.dart';
-import 'package:control_chart/data/bloc/setting/setting_event.dart';
-import 'package:control_chart/data/bloc/setting/setting_state.dart';
+// import 'package:control_chart/data/bloc/setting/setting_event.dart';
+// import 'package:control_chart/data/bloc/setting/setting_state.dart';
 import 'package:control_chart/domain/models/customer_product.dart';
 import 'package:control_chart/domain/models/furnace.dart';
 import 'package:control_chart/domain/types/chart_filter_query.dart';
@@ -60,70 +61,40 @@ class _SettingFormState extends State<SettingForm> {
           // Listener สำหรับ SettingBloc notifications
           BlocListener<SettingBloc, SettingState>(
             listener: (context, state) {
-              if (state is FormDataState) {
-                if (state.isSaved) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('บันทึกข้อมูลเรียบร้อยแล้ว'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-                if (state.errorMessage != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(state.errorMessage!),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
+              if (state.isSaved) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('บันทึกข้อมูลเรียบร้อยแล้ว'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+              if (state.errorMessage != null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.errorMessage!),
+                    backgroundColor: Colors.red,
+                  ),
+                );
               }
             },
           ),
-          
-          // Listener สำหรับ sync วันที่ไปยัง SearchBloc
-          // BlocListener<SettingBloc, SettingState>(
-          //   listenWhen: (previous, current) {
-          //     if (previous is FormDataState && current is FormDataState) {
-          //       return previous.formState.startDate != current.formState.startDate ||
-          //              previous.formState.endDate != current.formState.endDate;
-          //     }
-          //     return false;
-          //   },
-          //   listener: (context, state) {
-          //     if (state is FormDataState) {
-          //       print('🗓️ Date changed - Start: ${state.formState.startDate}, End: ${state.formState.endDate}');
-                
-          //       if (state.formState.startDate != null && state.formState.endDate != null) {
-          //         final searchBloc = context.read<SearchBloc>();
-          //         searchBloc.add(UpdatePeriodStartDate(startDate: state.formState.startDate));
-          //         searchBloc.add(UpdatePeriodEndDate(endDate: state.formState.endDate));
-          //       }
-          //     }
-          //   }
-          // ),
 
           BlocListener<SettingBloc, SettingState>(
           listenWhen: (previous, current) {
             // Only listen when dates actually change
-            if (previous is FormDataState && current is FormDataState) {
-              return previous.formState.startDate != current.formState.startDate ||
-                     previous.formState.endDate != current.formState.endDate;
-            }
+          if (previous.formState.startDate != current.formState.startDate ||
+            previous.formState.endDate != current.formState.endDate) {
+          return true;
+          }
             return false;
           },
           listener: (context, state) {
-            if (state is FormDataState) {
-              final startDate = state.formState.startDate;
-              final endDate = state.formState.endDate;
-              
-              if (startDate != null && endDate != null) {
-                // print('🔄 Updating SearchBloc with dates: $startDate to $endDate');
-                context.read<SearchBloc>().add(UpdateDateRange(
-                  startDate: startDate,
-                  endDate: endDate,
-                ));
-              }
+            if (state.formState.startDate != null && state.formState.endDate != null) {
+            context.read<SearchBloc>().add(UpdateDateRange(
+              startDate: state.formState.startDate!,
+              endDate: state.formState.endDate!,
+            ));
             }
           },
         ),
@@ -131,16 +102,16 @@ class _SettingFormState extends State<SettingForm> {
         child: BlocBuilder<SettingBloc, SettingState>(
           builder: (context, state) {
             // Handle loading states
-            if (state is SettingLoading) {
-              return const Center(child: CircularProgressIndicator());
+            if (state.status == SettingStatus.loading) {
+            return const Center(child: CircularProgressIndicator());
             }
 
-            if (state is SettingError) {
-              return Center(child: Text('Error: ${state.message}'));
+            if (state.status == SettingStatus.error) {
+            return Center(child: Text('Error: ${state.errorMessage ?? 'Unknown error'}'));
             }
 
-            if (state is! FormDataState) {
-              return const Center(child: Text('กำลังโหลด...'));
+            if (state.formState == null) {
+            return const Center(child: Text('กำลังโหลด...'));
             }
 
             final formState = state.formState;
@@ -203,7 +174,7 @@ class _SettingFormState extends State<SettingForm> {
                                         context: context,
                                         value: formState.startDate, // ใช้ formState เหมือน dropdown
                                         label: formState.startDateLabel,
-                                        date: formState.startDate,
+                                        date: formState.startDate!,
                                         onTap: () => _selectDate(context, true),
                                         onChanged: (date) {
                                           // print('📅 Start Date selected: $date');
@@ -236,7 +207,7 @@ class _SettingFormState extends State<SettingForm> {
                                         context: context,
                                         value: formState.endDate, // ใช้ formState เหมือน dropdown
                                         label: formState.endDateLabel,
-                                        date: formState.endDate,
+                                        date: formState.endDate!,
                                         onTap: () => _selectDate(context, false),
                                         onChanged: (date) {
                                           // print('📅 End Date selected: $date');
@@ -376,7 +347,7 @@ class _SettingFormState extends State<SettingForm> {
 
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
     final state = _settingBloc.state;
-    if (state is! FormDataState) return;
+    if (state.formState == null) return;
 
     final initialDate = isStartDate 
       ? (state.formState.startDate)

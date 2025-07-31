@@ -1,6 +1,6 @@
 import 'package:control_chart/config/api_config.dart';
 import 'package:control_chart/domain/models/chart_detail.dart';
-import 'package:control_chart/domain/models/control_chart_stat.dart';
+import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_filter_query.dart';
 
 class SearchChartDetailsApis {
@@ -22,11 +22,11 @@ class SearchChartDetailsApis {
       
       
     } catch (e) {
-      throw Exception('Failed to get filtering chart details: $e');
+      throw Exception('Failed to get filtering chart details spots: $e');
     }
   }
 
-  Future<List<ControlChartStat>> getControlChartStat(ChartFilterQuery query) async {
+  Future<ControlChartStats> getControlChartStat(ChartFilterQuery query) async {
     try {
       final response = await ApiConfig().getQueryParam<Map<String, dynamic>>(
         '/chart-details/calculate',
@@ -40,12 +40,17 @@ class SearchChartDetailsApis {
       //   print('✅ Found ${data.length} items');
       //   return data.map((json) => ChartDetail.fromJson(json)).toList();
       // }
-      
-      return [];
-      
+          // Check specific fields
+    print('📋 Attempting to parse response...');
+    final stats = ControlChartStats.fromJson(response);
+    print('✅ Parsing successful!');
+    print('📋 UCL: ${stats.controlLimitIChart?.ucl}');
+    print('📋 Average: ${stats.average}');
+    
+    return stats;
       
     } catch (e) {
-      throw Exception('Failed to get filtering chart details: $e');
+      throw Exception('Failed to get filtering chart detailsssssssssssss: $e');
     }
   }
 }
