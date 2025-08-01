@@ -44,10 +44,12 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
           create: (context) {
             final bloc = SearchBloc();
             // ✅ Initial load
-            bloc.add(UpdateDateRange(
+            bloc.add(LoadFilteredChartData(
               startDate: DateTime.now().subtract(Duration(days: 30)),
               endDate: DateTime.now(),
+
             ));
+
             return bloc;
           },
         ),

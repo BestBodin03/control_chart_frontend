@@ -49,17 +49,19 @@ class HomeContentState extends State<HomeContent> {
                     return const Text('No control chart data');
                   }
                   
-                  return 
-                    BlocBuilder<SearchBloc, SearchState>(
-                      builder: (context, searchState) {
-                        return ControlChartTemplate(
-                          key: ValueKey('${searchState.currentQuery.startDate}-${searchState.currentQuery.endDate}-${searchState.currentQuery.furnaceNo}'),
-                          dataPoints: sampleData,
-                          controlChartStats: searchState.controlChartStats!,
-                          dataLineColor: AppColors.colorBrand,
-                          width: 300 * 21 / 9,
-                        );
-                      },
+                    // ✅ ใช้ currentQuery ทั้งหมดเป็น key เพื่อให้ chart rebuild เมื่อ query เปลี่ยน
+                    final query = searchState.currentQuery;
+                    final uniqueKey = '${query?.startDate?.millisecondsSinceEpoch ?? 0}-'
+                        '${query?.endDate?.millisecondsSinceEpoch ?? 0}-'
+                        '${query?.furnaceNo ?? 'none'}-'
+                        '${query?.materialNo ?? 'none'}';
+                    
+                    return ControlChartTemplate(
+                      key: ValueKey(uniqueKey),
+                      dataPoints: sampleData, // ⚠️ ควรใช้ searchState.chartDetails แทน sampleData
+                      controlChartStats: searchState.controlChartStats!,
+                      dataLineColor: AppColors.colorBrand,
+                      width: 300 * 21 / 9,
                     );
                 },
               ),

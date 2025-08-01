@@ -18,10 +18,10 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
        super(const SearchState()) {
     
     on<LoadFilteredChartData>(_onLoadFilteredChartData);
-    on<UpdateFurnaceNo>(_onUpdateFurnaceNo);
-    on<UpdatePeriodStartDate>(_onUpdatePeriodStartDate);
-    on<UpdatePeriodEndDate>(_onUpdatePeriodEndDate);
-    on<UpdateMaterialNo>(_onUpdateMaterialNo);
+    // on<UpdateFurnaceNo>(_onUpdateFurnaceNo);
+    // on<UpdatePeriodStartDate>(_onUpdatePeriodStartDate);
+    // on<UpdatePeriodEndDate>(_onUpdatePeriodEndDate);
+    // on<UpdateMaterialNo>(_onUpdateMaterialNo);
     on<ClearFilters>(_onClearFilters);
     on<UpdateDateRange>(_onUpdateDateRange);
   }
@@ -33,13 +33,15 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     emit(state.copyWith(status: () => SearchStatus.loading));
 
     try {
+      // รวมค่าเดิมกับค่าใหม่
+      final currentQuery = state.currentQuery;
       final newQuery = ChartFilterQuery(
-        startDate: event.startDate,
-        endDate: event.endDate,
-        furnaceNo: event.furnaceNo,
-        materialNo: event.materialNo,
-        page: event.page ?? 1,
-        limit: event.limit ?? 50,
+        startDate: event.startDate ?? currentQuery.startDate,
+        endDate: event.endDate ?? currentQuery.endDate,
+        furnaceNo: event.furnaceNo ?? currentQuery.furnaceNo,
+        materialNo: event.materialNo ?? currentQuery.materialNo,
+        page: event.page ?? currentQuery.page ?? 1,
+        limit: event.limit ?? currentQuery.limit ?? 50,
       );
 
       final results = await Future.wait([
@@ -55,7 +57,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         chartDetails: () => chartDetails,
         controlChartStats: () => chartStatistics,
         currentQuery: () => newQuery,
-        errorMessage: () => null, // Clear any previous errors
+        errorMessage: () => null,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -65,65 +67,65 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     }
   }
 
-  Future<void> _onUpdateFurnaceNo(
-    UpdateFurnaceNo event,
-    Emitter<SearchState> emit,
-  ) async {
-    print('🔄 Updating furnace no: ${event.furnaceNo}');
+  // Future<void> _onUpdateFurnaceNo(
+  //   UpdateFurnaceNo event,
+  //   Emitter<SearchState> emit,
+  // ) async {
+  //   print('🔄 Updating furnace no: ${event.furnaceNo}');
     
-    await _updateQueryAndFetch(
-      emit,
-      state.currentQuery.copyWith(
-        furnaceNo: event.furnaceNo,
-        page: 1, // Reset to first page
-      ),
-    );
-  }
+  //   await _updateQueryAndFetch(
+  //     emit,
+  //     state.currentQuery.copyWith(
+  //       furnaceNo: event.furnaceNo,
+  //       page: 1, // Reset to first page
+  //     ),
+  //   );
+  // }
 
-  Future<void> _onUpdatePeriodStartDate(
-    UpdatePeriodStartDate event,
-    Emitter<SearchState> emit,
-  ) async {
-    print('🔄 Updating start date: ${event.startDate}');
+  // Future<void> _onUpdatePeriodStartDate(
+  //   UpdatePeriodStartDate event,
+  //   Emitter<SearchState> emit,
+  // ) async {
+  //   print('🔄 Updating start date: ${event.startDate}');
     
-    await _updateQueryAndFetch(
-      emit,
-      state.currentQuery.copyWith(
-        startDate: event.startDate,
-        page: 1,
-      ),
-    );
-  }
+  //   await _updateQueryAndFetch(
+  //     emit,
+  //     state.currentQuery.copyWith(
+  //       startDate: event.startDate,
+  //       page: 1,
+  //     ),
+  //   );
+  // }
 
-  Future<void> _onUpdatePeriodEndDate(
-    UpdatePeriodEndDate event,
-    Emitter<SearchState> emit,
-  ) async {
-    print('🔄 Updating end date: ${event.endDate}');
+  // Future<void> _onUpdatePeriodEndDate(
+  //   UpdatePeriodEndDate event,
+  //   Emitter<SearchState> emit,
+  // ) async {
+  //   print('🔄 Updating end date: ${event.endDate}');
     
-    await _updateQueryAndFetch(
-      emit,
-      state.currentQuery.copyWith(
-        endDate: event.endDate,
-        page: 1,
-      ),
-    );
-  }
+  //   await _updateQueryAndFetch(
+  //     emit,
+  //     state.currentQuery.copyWith(
+  //       endDate: event.endDate,
+  //       page: 1,
+  //     ),
+  //   );
+  // }
 
-  Future<void> _onUpdateMaterialNo(
-    UpdateMaterialNo event,
-    Emitter<SearchState> emit,
-  ) async {
-    print('🔄 Updating material no: ${event.materialNo}');
+  // Future<void> _onUpdateMaterialNo(
+  //   UpdateMaterialNo event,
+  //   Emitter<SearchState> emit,
+  // ) async {
+  //   print('🔄 Updating material no: ${event.materialNo}');
     
-    await _updateQueryAndFetch(
-      emit,
-      state.currentQuery.copyWith(
-        materialNo: event.materialNo,
-        page: 1,
-      ),
-    );
-  }
+  //   await _updateQueryAndFetch(
+  //     emit,
+  //     state.currentQuery.copyWith(
+  //       materialNo: event.materialNo,
+  //       page: 1,
+  //     ),
+  //   );
+  // }
 
   Future<void> _onClearFilters(
     ClearFilters event,

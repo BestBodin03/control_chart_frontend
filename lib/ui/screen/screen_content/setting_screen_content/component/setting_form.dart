@@ -51,12 +51,9 @@ class _SettingFormState extends State<SettingForm> {
       providers: [
         BlocProvider.value(
           value: _settingBloc,
-        ),
-        BlocProvider<SearchBloc>(
-          create: (context) => SearchBloc(),
-        ),
+        )
       ],
-      child: MultiBlocListener(
+child: MultiBlocListener(
         listeners: [
           // Listener สำหรับ SettingBloc notifications
           BlocListener<SettingBloc, SettingState>(
@@ -115,8 +112,8 @@ class _SettingFormState extends State<SettingForm> {
             }
 
             final formState = state.formState;
-            final furnaces = state.furnaces ?? <Furnace>[];
-            final matNumbers = state.matNumbers ?? <CustomerProduct>[];
+            final furnaces = state.furnaces;
+            final matNumbers = state.matNumbers;
 
             return GradientBackground(
               opacity: backgroundOpacity,
@@ -179,7 +176,7 @@ class _SettingFormState extends State<SettingForm> {
                                         onChanged: (date) {
                                           // print('📅 Start Date selected: $date');
                                           context.read<SearchBloc>().add(
-                                            UpdatePeriodStartDate(startDate: date!)
+                                            LoadFilteredChartData(startDate: date!)
                                           );
                                         },
                                       ),
@@ -212,7 +209,7 @@ class _SettingFormState extends State<SettingForm> {
                                         onChanged: (date) {
                                           // print('📅 End Date selected: $date');
                                           context.read<SearchBloc>().add(
-                                            UpdatePeriodEndDate(endDate: date!)
+                                            LoadFilteredChartData(endDate: date!)
                                           );
                                         },
                                       ),
@@ -235,7 +232,7 @@ class _SettingFormState extends State<SettingForm> {
                                   items: _getFurnaceNumbers(furnaces),
                                   onChanged: (value) {
                                     // print('🔥 Furnace selected: $value');
-                                    context.read<SearchBloc>().add(UpdateFurnaceNo(value));
+                                    context.read<SearchBloc>().add(LoadFilteredChartData(furnaceNo: value));
                                   },
                                 );
                               },
@@ -254,7 +251,7 @@ class _SettingFormState extends State<SettingForm> {
                                   items: _getMatNumbers(matNumbers),
                                   onChanged: (value) {
                                     // print('🧪 Material selected: $value');
-                                    context.read<SearchBloc>().add(UpdateMaterialNo(value));
+                                    context.read<SearchBloc>().add(LoadFilteredChartData(materialNo: value));
                                   },
                                 );
                               },

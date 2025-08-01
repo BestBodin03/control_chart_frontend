@@ -275,10 +275,10 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
   }
 
   // Helper method for common error handling
-  void _handleError(Emitter<SettingState> emit, String error) {
-    emit(state.copyWith(
-      status: () => SettingStatus.error,
-      errorMessage: () => error,
-    ));
-  }
+  // void _handleError(Emitter<SettingState> emit, String error) {
+  //   emit(state.copyWith(
+  //     status: () => SettingStatus.error,
+  //     errorMessage: () => error,
+  //   ));
+  // }
 }

@@ -33,49 +33,49 @@ final class LoadFilteredChartData extends SearchEvent {
   ];
 }
 
-final class UpdateFurnaceNo extends SearchEvent {
-  const UpdateFurnaceNo(this.furnaceNo);
+// final class UpdateFurnaceNo extends SearchEvent {
+//   const UpdateFurnaceNo(this.furnaceNo);
 
-  final String? furnaceNo;
+//   final String? furnaceNo;
 
-  @override
-  List<Object?> get props => [furnaceNo];
-}
+//   @override
+//   List<Object?> get props => [furnaceNo];
+// }
 
-final class UpdatePeriodStartDate extends SearchEvent {
-  const UpdatePeriodStartDate({
-    this.startDate,
-    this.startDateLabel,
-  });
+// final class UpdatePeriodStartDate extends SearchEvent {
+//   const UpdatePeriodStartDate({
+//     this.startDate,
+//     this.startDateLabel,
+//   });
 
-  final DateTime? startDate;
-  final String? startDateLabel;
+//   final DateTime? startDate;
+//   final String? startDateLabel;
 
-  @override
-  List<Object?> get props => [startDate, startDateLabel];
-}
+//   @override
+//   List<Object?> get props => [startDate, startDateLabel];
+// }
 
-final class UpdatePeriodEndDate extends SearchEvent {
-  const UpdatePeriodEndDate({
-    this.endDate,
-    this.endDateLabel,
-  });
+// final class UpdatePeriodEndDate extends SearchEvent {
+//   const UpdatePeriodEndDate({
+//     this.endDate,
+//     this.endDateLabel,
+//   });
 
-  final DateTime? endDate;
-  final String? endDateLabel;
+//   final DateTime? endDate;
+//   final String? endDateLabel;
 
-  @override
-  List<Object?> get props => [endDate, endDateLabel];
-}
+//   @override
+//   List<Object?> get props => [endDate, endDateLabel];
+// }
 
-final class UpdateMaterialNo extends SearchEvent {
-  const UpdateMaterialNo(this.materialNo);
+// final class UpdateMaterialNo extends SearchEvent {
+//   const UpdateMaterialNo(this.materialNo);
 
-  final String? materialNo;
+//   final String? materialNo;
 
-  @override
-  List<Object?> get props => [materialNo];
-}
+//   @override
+//   List<Object?> get props => [materialNo];
+// }
 
 final class ClearFilters extends SearchEvent {
   const ClearFilters();
