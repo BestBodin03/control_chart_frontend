@@ -19,11 +19,11 @@ Future<int> getChartDetailCount() async {
   Future<List<Furnace>> getAllFurnaces() async {
     try {
       final response = await ApiConfig().get<Response<dynamic>>('/all-furnaces');
+      final Map<String, dynamic> responseData = response.data;
+      final List<dynamic> data = responseData['data']; // Access the 'data' key
+      final result = data.map((item) => Furnace.fromJson(item)).toList();
       
-      // Extract the actual data from the Response object
-      final List<dynamic> data = response.data; // or whatever property contains the list
-      
-      return data.map((json) => Furnace.fromJson(json)).toList();
+      return result;
     } catch (e) {
       throw Exception('Failed to get all furnaces: $e');
     }
@@ -32,10 +32,13 @@ Future<int> getChartDetailCount() async {
   Future<List<CustomerProduct>> getAllMatNo() async {
     try {
       final response = await ApiConfig().get<Response<dynamic>>('/all-material-no');
-      final List<dynamic> data = response.data;
-      return data.map((json) => CustomerProduct.fromJson(json)).toList();
+      final Map<String, dynamic> responseData = response.data;
+      final List<dynamic> data = responseData['data'];
+      final result = data.map((item) => CustomerProduct.fromJson(item)).toList();
+      
+      return result;
     } catch (e) {
-      throw Exception('Failed to get all material no: $e');
+      throw Exception('Failed to get material number: $e');
     }
   }
 
@@ -56,12 +59,22 @@ Future<int> getChartDetailCount() async {
     );
   }
 
-  Future<List<ChartDetail>> getChartDetails() async {
+  Future<Map<String, dynamic>> getChartDetails() async {
     try {
       final response = await ApiConfig().get<List<dynamic>>('/test/chart-details');
-      return response.map((json) => ChartDetail.fromJson(json)).toList();
+      final List<ChartDetail> chartDetails = response.map((json) => ChartDetail.fromJson(json)).toList();
+      
+      return {
+        'success': true,
+        'data': chartDetails.map((chart) => chart.toJson()).toList(),
+        'count': chartDetails.length,
+      };
     } catch (e) {
-      throw Exception('Failed to get chart status: $e');
+      return {
+        'success': false,
+        'error': 'Failed to get chart status: $e',
+        'data': null,
+      };
     }
   }
 

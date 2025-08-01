@@ -19,13 +19,6 @@ class HomeContent extends StatefulWidget {
 class HomeContentState extends State<HomeContent> {
   @override
   Widget build(BuildContext context) {
-    final sampleData = [
-      ChartDataPoint(label: '330', value: 300),
-      ChartDataPoint(label: '430', value: 500),
-      ChartDataPoint(label: '530', value: 600),
-      ChartDataPoint(label: '630', value: 700),
-    ];
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(8.0),
       child: Row(
@@ -34,7 +27,6 @@ class HomeContentState extends State<HomeContent> {
           const SizedBox(width: 16.0),
           Column(
             children: [
-              // ✅ ใช้ SearchBloc ตรงๆ แทน ChartDetailsBloc
               BlocBuilder<SearchBloc, SearchState>(
                 builder: (context, searchState) {
                   if (searchState.status == SearchStatus.loading) {
@@ -48,19 +40,19 @@ class HomeContentState extends State<HomeContent> {
                   if (searchState.controlChartStats == null) {
                     return const Text('No control chart data');
                   }
-                  
-                    // ✅ ใช้ currentQuery ทั้งหมดเป็น key เพื่อให้ chart rebuild เมื่อ query เปลี่ยน
                     final query = searchState.currentQuery;
-                    final uniqueKey = '${query?.startDate?.millisecondsSinceEpoch ?? 0}-'
-                        '${query?.endDate?.millisecondsSinceEpoch ?? 0}-'
-                        '${query?.furnaceNo ?? 'none'}-'
-                        '${query?.materialNo ?? 'none'}';
-                    
+                    final uniqueKey = '${query.startDate?.day}-'
+                        '${query.endDate?.millisecondsSinceEpoch}-'
+                        '${query.furnaceNo}-'
+                        '${query.materialNo}-';
                     return ControlChartTemplate(
-                      key: ValueKey(uniqueKey),
-                      dataPoints: sampleData, // ⚠️ ควรใช้ searchState.chartDetails แทน sampleData
+                      key: ValueKey(uniqueKey.hashCode.toString()),
+                      dataPoints: searchState.chartDetails.map((chartDetail) => ChartDataPoint(
+                        label: "${chartDetail.chartGeneralDetail.collectedDate.month.toString().padLeft(2, '0')}/${chartDetail.chartGeneralDetail.collectedDate.day.toString().padLeft(2, '0')}",
+                        value: chartDetail.machanicDetail.surfaceHardnessMean,
+                      )).toList(),
                       controlChartStats: searchState.controlChartStats!,
-                      dataLineColor: AppColors.colorBrand,
+                      dataLineColor: const Color.fromARGB(255, 167, 163, 228),
                       width: 300 * 21 / 9,
                     );
                 },

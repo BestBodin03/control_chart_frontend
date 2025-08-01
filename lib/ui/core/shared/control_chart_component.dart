@@ -62,8 +62,8 @@ class ControlChartComponent extends StatelessWidget {
       show: true,
       drawHorizontalLine: true,
       drawVerticalLine: true,
-      // horizontalInterval: ((controlLimits?.controlLimitIChart?.ucl ?? 0.0) * 1.2 - (controlLimits?.controlLimitIChart?.lcl ?? 0.0) * 0.8) / 12,
-      horizontalInterval: 50.0,
+      horizontalInterval: ((controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2 
+                          - (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.8) / 12,
       verticalInterval: dataPoints!.length / 12,
       getDrawingHorizontalLine: (value) {
         return FlLine(
@@ -86,8 +86,8 @@ class ControlChartComponent extends StatelessWidget {
         sideTitles: SideTitles(
           showTitles: true,
           reservedSize:32,
-          // interval: ((controlLimits?.controlLimitIChart?.ucl ?? 0.0) * 1.2 - (controlLimits?.controlLimitIChart?.lcl ?? 0.0) * 0.8) / 4,
-          interval: 30.4,
+          interval: ((controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2 
+                    - (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.8) / 4,
           getTitlesWidget: (value, meta) {
             return Text(
               value.toStringAsFixed(1),
@@ -326,41 +326,58 @@ class ControlChartComponent extends StatelessWidget {
     return Wrap(
       spacing: 16,
       runSpacing: 8,
+      direction: Axis.vertical,
       children: [
-        buildLegendItem('USL = ${((controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2).toStringAsFixed(3)}', Colors.red, true),
-buildLegendItem('UCL = ${controlChartStats?.controlLimitIChart?.ucl?.toStringAsFixed(3)}', Colors.orange, false),
-buildLegendItem('AVG = ${controlChartStats?.average?.toStringAsFixed(3)}', Colors.green, false),
-buildLegendItem('LCL = ${controlChartStats?.controlLimitIChart?.lcl?.toStringAsFixed(3)}', Colors.orange, false),
-        buildLegendItem('LSL = ${(controlChartStats?.controlLimitIChart?.lcl ?? 0.0 * 0.8).toStringAsFixed(3)}', Colors.red, true),
+        buildLegendItem('USL', Colors.red, true, (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2),
+        buildLegendItem('UCL', Colors.orange, false, controlChartStats?.controlLimitIChart?.ucl ?? 0.0),
+        buildLegendItem('AVG', Colors.green, false, controlChartStats?.average ?? 0.0),
+        buildLegendItem('LCL', Colors.orange, false, controlChartStats?.controlLimitIChart?.lcl ?? 0.0),
+        buildLegendItem('LSL', Colors.red, true, (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.8),
         // buildLegendItem('Data', dataLineColor!, false),
       ],
     );
   }
 
-  Widget buildLegendItem(String label, Color color, bool isDashed) {
+  Widget buildLegendItem(String label, Color color, bool isDashed, double? value) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
+        SizedBox(
           width: 20,
           height: 2,
-          decoration: BoxDecoration(
-            color: color,
-            border: isDashed ? Border.all(color: color, width: 1) : null,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: color,
+              border: isDashed ? Border.all(color: color, width: 1) : null,
+            ),
+            child: isDashed
+                ? CustomPaint(
+                    painter: DashedLinePainter(color: color),
+                  )
+                : null,
           ),
-          child: isDashed
-              ? CustomPaint(
-                  painter: DashedLinePainter(color: color),
-                )
-              : null,
         ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.colorBlack,
-          ),
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '$label',
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.colorBlack,
+              ),
+            ),
+            Text(
+              '${value?.toStringAsFixed(2) ?? '0.000'}',
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.colorBlack,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ],
     );

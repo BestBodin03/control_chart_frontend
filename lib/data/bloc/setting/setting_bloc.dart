@@ -1,4 +1,6 @@
 // setting_bloc.dart
+import 'dart:convert';
+
 import 'package:bloc/bloc.dart';
 import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
@@ -155,8 +157,8 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
   }
 
   Future<void> _onLoadAllMatNo(
-    LoadAllMatNo event,
-    Emitter<SettingState> emit,
+  LoadAllMatNo event,
+  Emitter<SettingState> emit,
   ) async {
     emit(state.copyWith(status: () => SettingStatus.loading));
 

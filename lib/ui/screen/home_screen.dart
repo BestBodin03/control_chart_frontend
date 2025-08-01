@@ -43,7 +43,6 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
         BlocProvider<SearchBloc>(
           create: (context) {
             final bloc = SearchBloc();
-            // ✅ Initial load
             bloc.add(LoadFilteredChartData(
               startDate: DateTime.now().subtract(Duration(days: 30)),
               endDate: DateTime.now(),

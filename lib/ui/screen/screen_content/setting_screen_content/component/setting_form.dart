@@ -197,17 +197,17 @@ child: MultiBlocListener(
                                 const SizedBox(width: 16),
                                 
                                 // End Date
+                                // End Date
                                 BlocBuilder<SearchBloc, SearchState>(
                                   builder: (context, searchState) {
                                     return Expanded(
                                       child: buildDateField(
                                         context: context,
-                                        value: formState.endDate, // ใช้ formState เหมือน dropdown
-                                        label: formState.endDateLabel,
-                                        date: formState.endDate!,
+                                        value: searchState.currentQuery.endDate, // ใช้ searchState แทน formState
+                                        label: searchState.currentQuery.endDate.toString(), // แก้ไขจาก USEEEEEEEEEEEEEEE
+                                        date: searchState.currentQuery.endDate!,
                                         onTap: () => _selectDate(context, false),
                                         onChanged: (date) {
-                                          // print('📅 End Date selected: $date');
                                           context.read<SearchBloc>().add(
                                             LoadFilteredChartData(endDate: date!)
                                           );
@@ -228,7 +228,7 @@ child: MultiBlocListener(
                               builder: (context, searchState) {
                                 return buildDropdownField(
                                   context: context,
-                                  value: formState.selectedItem.isEmpty ? null : formState.selectedItem,
+                                  value: searchState.currentQuery.furnaceNo != null ? null : formState.selectedItem,
                                   items: _getFurnaceNumbers(furnaces),
                                   onChanged: (value) {
                                     // print('🔥 Furnace selected: $value');
@@ -247,7 +247,7 @@ child: MultiBlocListener(
                               builder: (context, searchState) {
                                 return buildDropdownField(
                                   context: context,
-                                  value: formState.selectedMatNo.isEmpty ? null : formState.selectedMatNo,
+                                  value: searchState.currentQuery.materialNo != null ? null : formState.selectedMatNo,
                                   items: _getMatNumbers(matNumbers),
                                   onChanged: (value) {
                                     // print('🧪 Material selected: $value');
