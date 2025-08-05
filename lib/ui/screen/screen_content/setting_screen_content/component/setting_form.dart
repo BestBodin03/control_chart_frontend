@@ -20,6 +20,7 @@ import 'package:control_chart/utils/date_autocomplete.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 
 class SettingForm extends StatefulWidget {
   const SettingForm({super.key});
@@ -47,15 +48,11 @@ class _SettingFormState extends State<SettingForm> {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider.value(
-          value: _settingBloc,
-        )
-      ],
-child: MultiBlocListener(
+    return BlocProvider.value(
+      value: _settingBloc,
+      child: MultiBlocListener(
         listeners: [
-          // Listener สำหรับ SettingBloc notifications
+          // SettingBloc notifications
           BlocListener<SettingBloc, SettingState>(
             listener: (context, state) {
               if (state.isSaved) {
@@ -77,38 +74,55 @@ child: MultiBlocListener(
             },
           ),
 
+          // Bridge SettingBloc dates to SearchBloc
           BlocListener<SettingBloc, SettingState>(
-          listenWhen: (previous, current) {
-            // Only listen when dates actually change
-          if (previous.formState.startDate != current.formState.startDate ||
-            previous.formState.endDate != current.formState.endDate) {
-          return true;
-          }
-            return false;
-          },
-          listener: (context, state) {
-            if (state.formState.startDate != null && state.formState.endDate != null) {
-            context.read<SearchBloc>().add(UpdateDateRange(
-              startDate: state.formState.startDate!,
-              endDate: state.formState.endDate!,
-            ));
-            }
-          },
-        ),
+            listenWhen: (previous, current) {
+              return previous.formState.startDate != current.formState.startDate ||
+                     previous.formState.endDate != current.formState.endDate;
+            },
+            listener: (context, state) {
+              if (state.formState.startDate != null && state.formState.endDate != null) {
+                try {
+                  // Parse dates properly
+                  DateTime startDateTime;
+                  DateTime endDateTime;
+                  
+                  if (state.formState.startDate is DateTime) {
+                    startDateTime = state.formState.startDate!;
+                  } else {
+                    startDateTime = state.formState.startDate as DateTime;
+                  }
+                  
+                  if (state.formState.endDate is DateTime) {
+                    endDateTime = state.formState.endDate!;
+                  } else {
+                    endDateTime = state.formState.endDate as DateTime;
+                  }
+                  
+                  // Get current SearchBloc state to preserve other filters
+                  final searchState = context.read<SearchBloc>().state;
+                  
+                  context.read<SearchBloc>().add(LoadFilteredChartData(
+                    startDate: startDateTime,
+                    endDate: endDateTime,
+                    furnaceNo: searchState.currentQuery.furnaceNo,
+                    materialNo: searchState.currentQuery.materialNo,
+                  ));
+                } catch (e) {
+                  print('Error syncing dates to SearchBloc: $e');
+                }
+              }
+            },
+          ),
         ],
         child: BlocBuilder<SettingBloc, SettingState>(
           builder: (context, state) {
-            // Handle loading states
             if (state.status == SettingStatus.loading) {
-            return const Center(child: CircularProgressIndicator());
+              return const Center(child: CircularProgressIndicator());
             }
 
             if (state.status == SettingStatus.error) {
-            return Center(child: Text('Error: ${state.errorMessage ?? 'Unknown error'}'));
-            }
-
-            if (state.formState == null) {
-            return const Center(child: Text('กำลังโหลด...'));
+              return Center(child: Text('Error: ${state.errorMessage ?? 'Unknown error'}'));
             }
 
             final formState = state.formState;
@@ -148,36 +162,54 @@ child: MultiBlocListener(
                             buildSectionTitle('ระยะเวลา'),
                             const SizedBox(height: 8.0),
                           
-                            // Period Dropdown
-                              buildDropdownField(
-                                  context: context,
-                                  value: formState.periodValue,
-                                  items: ['1 เดือน', '3 เดือน', '6 เดือน', '1 ปี', 'ตลอดเวลา', 'กำหนดเอง'],
-                                  onChanged: (value) {
-                                    // print('📅 Period selected: $value');
-                                    context.read<SettingBloc>().add(UpdatePeriodS(value!));
-                                  },
-                              ),
+                            // Period Dropdown - Use SettingBloc
+                            buildDropdownField(
+                              context: context,
+                              value: formState.periodValue,
+                              items: ['1 เดือน', '3 เดือน', '6 เดือน', '1 ปี', 'ตลอดเวลา', 'กำหนดเอง'],
+                              onChanged: (value) {
+                                context.read<SettingBloc>().add(UpdatePeriodS(value!));
+                                // Also update date range based on period
+                                _updateDateRangeByPeriod(context, value);
+                              },
+                            ),
 
                             const SizedBox(height: 16.0),
 
                             Row(
                               children: [
-                                // Start Date
+                                // Start Date - Show SearchBloc state but sync with SettingBloc
                                 BlocBuilder<SearchBloc, SearchState>(
                                   builder: (context, searchState) {
                                     return Expanded(
                                       child: buildDateField(
                                         context: context,
-                                        value: formState.startDate, // ใช้ formState เหมือน dropdown
-                                        label: formState.startDateLabel,
-                                        date: formState.startDate!,
+                                        value: searchState.currentQuery.startDate,
+                                        label: searchState.currentQuery.startDate != null 
+                                              ? DateFormat('MM/dd/yy').format(searchState.currentQuery.startDate!)
+                                              : (formState.startDate != null 
+                                                  ? DateFormat('MM/dd/yy').format(formState.startDate is String 
+                                                      ? formState.startDate!
+                                                      : formState.startDate as DateTime)
+                                                  : 'Select Date'),
+                                        date: searchState.currentQuery.startDate ?? 
+                                              (formState.startDate is String 
+                                                  ? formState.startDate! 
+                                                  : formState.startDate ?? DateTime.now()),
                                         onTap: () => _selectDate(context, true),
                                         onChanged: (date) {
-                                          // print('📅 Start Date selected: $date');
-                                          context.read<SearchBloc>().add(
-                                            LoadFilteredChartData(startDate: date!)
-                                          );
+                                          if (date != null) {
+                                            // Update both SettingBloc and SearchBloc
+                                            context.read<SettingBloc>().add(UpdateStartDate(startDate: date));
+                                            context.read<SearchBloc>().add(
+                                              LoadFilteredChartData(
+                                                startDate: date,
+                                                endDate: formState.endDate ?? searchState.currentQuery.endDate,
+                                                furnaceNo: searchState.currentQuery.furnaceNo,
+                                                materialNo: searchState.currentQuery.materialNo
+                                              )
+                                            );
+                                          }
                                         },
                                       ),
                                     );
@@ -185,32 +217,41 @@ child: MultiBlocListener(
                                 ),
 
                                 const SizedBox(width: 16),
-
-                                const Text(
-                                  'ถึง',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.black87,
-                                  ),
-                                ),
+                                const Text('ถึง', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87)),
                                 const SizedBox(width: 16),
                                 
-                                // End Date
-                                // End Date
+                                // End Date - Show SearchBloc state but sync with SettingBloc
                                 BlocBuilder<SearchBloc, SearchState>(
                                   builder: (context, searchState) {
                                     return Expanded(
                                       child: buildDateField(
                                         context: context,
-                                        value: searchState.currentQuery.endDate, // ใช้ searchState แทน formState
-                                        label: searchState.currentQuery.endDate.toString(), // แก้ไขจาก USEEEEEEEEEEEEEEE
-                                        date: searchState.currentQuery.endDate!,
+                                        value: searchState.currentQuery.endDate,
+                                        label: searchState.currentQuery.endDate != null 
+                                              ? DateFormat('MM/dd/yy').format(searchState.currentQuery.endDate!)
+                                              : (formState.endDate != null 
+                                                  ? DateFormat('MM/dd/yy').format(formState.endDate is String 
+                                                      ? formState.endDate! 
+                                                      : formState.endDate as DateTime)
+                                                  : 'Select Date'),
+                                        date: searchState.currentQuery.endDate ?? 
+                                              (formState.endDate is String 
+                                                  ? formState.endDate!
+                                                  : formState.endDate ?? DateTime.now()),
                                         onTap: () => _selectDate(context, false),
                                         onChanged: (date) {
-                                          context.read<SearchBloc>().add(
-                                            LoadFilteredChartData(endDate: date!)
-                                          );
+                                          if (date != null) {
+                                            // Update both SettingBloc and SearchBloc
+                                            context.read<SettingBloc>().add(UpdateEndDate(endDate: date));
+                                            context.read<SearchBloc>().add(
+                                              LoadFilteredChartData(
+                                                startDate: formState.startDate ?? searchState.currentQuery.startDate,
+                                                endDate: date,
+                                                furnaceNo: searchState.currentQuery.furnaceNo,
+                                                materialNo: searchState.currentQuery.materialNo
+                                              )
+                                            );
+                                          }
                                         },
                                       ),
                                     );
@@ -221,18 +262,23 @@ child: MultiBlocListener(
                             
                             const SizedBox(height: 16),
                             
-                            // Furnace Selection
+                            // Furnace Selection - Fixed dropdown value logic
                             buildSectionTitle('หมายเลขเตา'),
                             const SizedBox(height: 8),
                             BlocBuilder<SearchBloc, SearchState>(
                               builder: (context, searchState) {
                                 return buildDropdownField(
                                   context: context,
-                                  value: searchState.currentQuery.furnaceNo != null ? null : formState.selectedItem,
+                                  // Use SearchBloc value if available, otherwise use SettingBloc fallback
+                                  value: searchState.currentQuery.furnaceNo ?? formState.selectedItem,
                                   items: _getFurnaceNumbers(furnaces),
                                   onChanged: (value) {
-                                    // print('🔥 Furnace selected: $value');
-                                    context.read<SearchBloc>().add(LoadFilteredChartData(furnaceNo: value));
+                                    context.read<SearchBloc>().add(LoadFilteredChartData(
+                                      startDate: formState.startDate ?? searchState.currentQuery.startDate,
+                                      endDate: formState.endDate ?? searchState.currentQuery.endDate,
+                                      furnaceNo: value,
+                                      materialNo: searchState.currentQuery.materialNo
+                                    ));
                                   },
                                 );
                               },
@@ -240,18 +286,23 @@ child: MultiBlocListener(
                             
                             const SizedBox(height: 16),
 
-                            // Material No. Selection 
+                            // Material No. Selection - Fixed dropdown value logic
                             buildSectionTitle('Material No.'),
                             const SizedBox(height: 8),
                             BlocBuilder<SearchBloc, SearchState>(
                               builder: (context, searchState) {
                                 return buildDropdownField(
                                   context: context,
-                                  value: searchState.currentQuery.materialNo != null ? null : formState.selectedMatNo,
+                                  // Use SearchBloc value if available, otherwise use SettingBloc fallback
+                                  value: searchState.currentQuery.materialNo ?? formState.selectedMatNo,
                                   items: _getMatNumbers(matNumbers),
                                   onChanged: (value) {
-                                    // print('🧪 Material selected: $value');
-                                    context.read<SearchBloc>().add(LoadFilteredChartData(materialNo: value));
+                                    context.read<SearchBloc>().add(LoadFilteredChartData(
+                                      startDate: formState.startDate ?? searchState.currentQuery.startDate,
+                                      endDate: formState.endDate ?? searchState.currentQuery.endDate,
+                                      furnaceNo: searchState.currentQuery.furnaceNo,
+                                      materialNo: value
+                                    ));
                                   },
                                 );
                               },
@@ -259,7 +310,7 @@ child: MultiBlocListener(
       
                             const SizedBox(height: 16),
 
-                            // Conditions Selection
+                            // Conditions Selection - Use SettingBloc
                             buildSectionTitle('การแจ้งเตือน'),
                             const SizedBox(height: 8),
                             buildMultiSelectField(
@@ -273,7 +324,7 @@ child: MultiBlocListener(
                             
                             const SizedBox(height: 16),
                             
-                            // Limit Value
+                            // Limit Value - Use SettingBloc
                             buildSectionTitle('ระยะเวลาการเปลี่ยนหน้าจอ (วินาที)'),
                             const SizedBox(height: 8),
                             buildTextField(
@@ -296,24 +347,15 @@ child: MultiBlocListener(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.colorBrand,
                                   foregroundColor: AppColors.colorBg,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   elevation: 0,
                                 ),
                                 child: state.isLoading
                                     ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                        ),
+                                        width: 20, height: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
                                       )
-                                    : const Text(
-                                        'บันทึก',
-                                        style: AppTypography.textBody1WBold,
-                                      ),
+                                    : const Text('บันทึก', style: AppTypography.textBody1WBold),
                               ),
                             ),
                           ],
@@ -330,6 +372,38 @@ child: MultiBlocListener(
     );
   }
 
+  // Helper method to update date range based on period selection
+  void _updateDateRangeByPeriod(BuildContext context, String period) {
+    final now = DateTime.now();
+    DateTime startDate;
+    
+    switch (period) {
+      case '1 เดือน':
+        startDate = DateTime(now.year, now.month - 1, now.day);
+        break;
+      case '3 เดือน':
+        startDate = DateTime(now.year, now.month - 3, now.day);
+        break;
+      case '6 เดือน':
+        startDate = DateTime(now.year, now.month - 6, now.day);
+        break;
+      case '1 ปี':
+        startDate = DateTime(now.year - 1, now.month, now.day);
+        break;
+      case 'ตลอดเวลา':
+        startDate = DateTime(2020, 1, 1);
+        break;
+      default: // 'กำหนดเอง'
+        return; // Don't auto-update for custom
+    }
+    
+    // Update both SettingBloc and SearchBloc
+    context.read<SettingBloc>().add(UpdateStartDate(startDate: startDate));
+    context.read<SettingBloc>().add(UpdateEndDate(endDate: now));
+    
+    // SearchBloc will be updated via the BlocListener above
+  }
+
   List<String> _getFurnaceNumbers(List<Furnace> furnaces) {
     final furnaceNumbers = furnaces.map((furnace) => furnace.furnaceNo).toList();
     furnaceNumbers.sort();
@@ -343,12 +417,22 @@ child: MultiBlocListener(
   }
 
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
-    final state = _settingBloc.state;
-    if (state.formState == null) return;
-
-    final initialDate = isStartDate 
-      ? (state.formState.startDate)
-      : (state.formState.endDate);
+    final settingState = _settingBloc.state;
+    final searchState = context.read<SearchBloc>().state;
+    
+    // Use SearchBloc date if available, otherwise use SettingBloc date
+    DateTime initialDate;
+    if (isStartDate) {
+      initialDate = searchState.currentQuery.startDate ?? 
+                   (settingState.formState.startDate is String 
+                       ? settingState.formState.startDate! 
+                       : settingState.formState.startDate ?? DateTime.now());
+    } else {
+      initialDate = searchState.currentQuery.endDate ?? 
+                   (settingState.formState.endDate is String 
+                       ? settingState.formState.endDate! 
+                       : settingState.formState.endDate ?? DateTime.now());
+    }
 
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -358,18 +442,23 @@ child: MultiBlocListener(
     );
     
     if (picked != null) {
-      print(picked);
-    try {
-      if (isStartDate) {
-        context.read<SettingBloc>().add(UpdateStartDate(
-          // startDateLabel: DateAutoComplete.formatDateLabel(picked, isStartDate),
-          startDate: picked));
-      } else {
-        context.read<SettingBloc>().add(UpdateEndDate(
-          // endDateLabel: DateAutoComplete.formatDateLabel(picked, true),
-          endDate: picked));
-      }
-    } catch (e) {
+      try {
+        // Update SettingBloc
+        if (isStartDate) {
+          context.read<SettingBloc>().add(UpdateStartDate(startDate: picked));
+        } else {
+          context.read<SettingBloc>().add(UpdateEndDate(endDate: picked));
+        }
+        
+        // Update SearchBloc immediately
+        context.read<SearchBloc>().add(LoadFilteredChartData(
+          startDate: isStartDate ? picked : searchState.currentQuery.startDate,
+          endDate: isStartDate ? searchState.currentQuery.endDate : picked,
+          furnaceNo: searchState.currentQuery.furnaceNo,
+          materialNo: searchState.currentQuery.materialNo,
+        ));
+      } catch (e) {
+        print('Error updating date: $e');
       }
     }
   }

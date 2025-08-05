@@ -42,7 +42,7 @@ class SearchChartDetailsApis {
       return stats;
     } catch (e) {
       print('Unexpected error: $e');
-      throw Exception('UNKNOWN_ERROR: ต้องการข้อมูลอย่างน้อย 2 รายการเพื่อคำนวณแสดงแผนภูมิควบคุม');
+      throw Exception('ต้องการข้อมูลอย่างน้อย 2 รายการเพื่อคำนวณแสดงแผนภูมิควบคุม');
     }
   }
 }

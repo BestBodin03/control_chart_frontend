@@ -11,16 +11,16 @@ final class LoadFilteredChartData extends SearchEvent {
     this.endDate,
     this.furnaceNo,
     this.materialNo,
-    this.page,
-    this.limit,
+    // this.page,
+    // this.limit,
   });
 
   final DateTime? startDate;
   final DateTime? endDate;
   final String? furnaceNo;
   final String? materialNo;
-  final int? page;
-  final int? limit;
+  // final int? page;
+  // final int? limit;
 
   @override
   List<Object?> get props => [
@@ -28,8 +28,8 @@ final class LoadFilteredChartData extends SearchEvent {
     endDate,
     furnaceNo,
     materialNo,
-    page,
-    limit,
+    // page,
+    // limit,
   ];
 }
 

@@ -37,45 +37,29 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider<SearchBloc>(
-          create: (context) {
-            final bloc = SearchBloc();
-            bloc.add(LoadFilteredChartData(
-              startDate: DateTime.now().subtract(Duration(days: 30)),
-              endDate: DateTime.now(),
-
-            ));
-
-            return bloc;
+    // Remove MultiBlocProvider - SearchBloc is already provided at App level
+    return Scaffold(
+      appBar: AppBar(
+        leading: Builder(
+          builder: (context) {
+            return CollapsedAppDrawer();
           },
         ),
-      ],
-      child: Scaffold(
-        appBar: AppBar(
-          leading: Builder(
-            builder: (context) {
-              return CollapsedAppDrawer();
-            },
+        actions: [
+          Padding(
+            padding: EdgeInsets.only(right: 32.0),
+            child: DateTimeComponent(),
           ),
-          actions: [
-            Padding(
-              padding: EdgeInsets.only(right: 32.0),
-              child: DateTimeComponent(),
-            ),
-          ],
-        ),
-        body: Center(
-          child: _widgetOptions[_selectedIndex],
-        ),
-        drawer: SizedBox(
-          width: 240.0,
-          child: AppDrawer(
-            selectedIndex: _selectedIndex,
-            onItemTapped: _onItemTapped,
-          ),
+        ],
+      ),
+      body: Center(
+        child: _widgetOptions[_selectedIndex],
+      ),
+      drawer: SizedBox(
+        width: 240.0,
+        child: AppDrawer(
+          selectedIndex: _selectedIndex,
+          onItemTapped: _onItemTapped,
         ),
       ),
     );

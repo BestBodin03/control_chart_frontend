@@ -1,8 +1,10 @@
+import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/gradient_background.dart';
 import 'package:control_chart/ui/screen/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 void main() => runApp(const MyApp());
 
@@ -11,7 +13,16 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MultiBlocProvider(
+      providers: [
+        // Provide SearchBloc at app level so it persists across navigation
+        BlocProvider<SearchBloc>(
+          create: (context) => SearchBloc(),
+        ),
+        // Add other global blocs here
+      ],
+
+    child: MaterialApp(
       theme: ThemeData(
         scaffoldBackgroundColor: AppColors.colorBg,
         appBarTheme: const AppBarTheme(
@@ -22,6 +33,7 @@ class MyApp extends StatelessWidget {
       ),
       debugShowCheckedModeBanner: false,
       home: MyHomeScreen(),
+    ),
     );
   }
 }

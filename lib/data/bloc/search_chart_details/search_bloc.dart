@@ -40,8 +40,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         endDate: event.endDate ?? currentQuery.endDate,
         furnaceNo: event.furnaceNo ?? currentQuery.furnaceNo,
         materialNo: event.materialNo ?? currentQuery.materialNo,
-        page: event.page ?? currentQuery.page ?? 1,
-        limit: event.limit ?? currentQuery.limit ?? 50,
+        // page: event.page ?? currentQuery.page ?? 1,
+        // limit: event.limit ?? currentQuery.limit ?? 50,
       );
 
       final results = await Future.wait([
@@ -152,7 +152,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       state.currentQuery.copyWith(
         startDate: event.startDate,
         endDate: event.endDate,
-        page: 1,
+        // page: 1,
       ),
     );
   }
