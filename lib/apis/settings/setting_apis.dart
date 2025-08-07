@@ -79,4 +79,3 @@ Future<int> getChartDetailCount() async {
   }
 
 }
-  

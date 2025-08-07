@@ -8,7 +8,6 @@ class CustomerProduct {
   const CustomerProduct({
     required this.cpNo,
     required this.furnaceId,
-    required this.specifications,
     required this.isDisplay,
   });
 
@@ -20,15 +19,13 @@ class CustomerProduct {
 
   final List<String> furnaceId;
 
-  final Specifications specifications;
-
   final bool isDisplay;
 
   Map<String, dynamic> toJson() => _$CustomerProductToJson(this);
 
   @override
   String toString() {
-    return 'CustomerProduct{cpNo: $cpNo, furnaceId: $furnaceId, specifications: $specifications, isDisplay: $isDisplay}';
+    return 'CustomerProduct{cpNo: $cpNo, furnaceId: $furnaceId, isDisplay: $isDisplay}';
   }
 
   @override
@@ -38,14 +35,12 @@ class CustomerProduct {
           runtimeType == other.runtimeType &&
           cpNo == other.cpNo &&
           _listEquals(furnaceId, other.furnaceId) &&
-          specifications == other.specifications &&
           isDisplay == other.isDisplay;
 
   @override
   int get hashCode =>
       cpNo.hashCode ^
       furnaceId.hashCode ^
-      specifications.hashCode ^
       isDisplay.hashCode;
 
   // Helper method for list comparison
@@ -62,65 +57,12 @@ class CustomerProduct {
   CustomerProduct copyWith({
     String? cpNo,
     List<String>? furnaceId,
-    Specifications? specifications,
     bool? isDisplay,
   }) {
     return CustomerProduct(
       cpNo: cpNo ?? this.cpNo,
       furnaceId: furnaceId ?? this.furnaceId,
-      specifications: specifications ?? this.specifications,
       isDisplay: isDisplay ?? this.isDisplay,
-    );
-  }
-}
-
-@JsonSerializable()
-class Specifications {
-  const Specifications({
-    required this.upperSpecLimit,
-    required this.lowerSpecLimit,
-    required this.target,
-  });
-
-  factory Specifications.fromJson(Map<String, dynamic> json) =>
-      _$SpecificationsFromJson(json);
-
-  final double upperSpecLimit;
-  final double lowerSpecLimit;
-  final double target;
-
-  Map<String, dynamic> toJson() => _$SpecificationsToJson(this);
-
-  @override
-  String toString() {
-    return 'Specifications{upperSpecLimit: $upperSpecLimit, lowerSpecLimit: $lowerSpecLimit, target: $target}';
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Specifications &&
-          runtimeType == other.runtimeType &&
-          upperSpecLimit == other.upperSpecLimit &&
-          lowerSpecLimit == other.lowerSpecLimit &&
-          target == other.target;
-
-  @override
-  int get hashCode =>
-      upperSpecLimit.hashCode ^
-      lowerSpecLimit.hashCode ^
-      target.hashCode;
-
-  // Utility method สำหรับ copy with changes
-  Specifications copyWith({
-    double? upperSpecLimit,
-    double? lowerSpecLimit,
-    double? target,
-  }) {
-    return Specifications(
-      upperSpecLimit: upperSpecLimit ?? this.upperSpecLimit,
-      lowerSpecLimit: lowerSpecLimit ?? this.lowerSpecLimit,
-      target: target ?? this.target,
     );
   }
 }

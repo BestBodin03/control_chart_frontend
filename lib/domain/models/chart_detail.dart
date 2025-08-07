@@ -51,23 +51,16 @@ class ChartGeneralDetail {
 class MachanicDetail {
   const MachanicDetail({
     required this.surfaceHardnessMean,
-    required this.hardnessAt01mmMean,
     required this.cde,
-    required this.coreHardnessMean,
-    required this.compoundLayer,
   });
 
   factory MachanicDetail.fromJson(Map<String, dynamic> json) =>
       _$MachanicDetailFromJson(json);
 
   final double surfaceHardnessMean;
-  final double hardnessAt01mmMean;
 
   @JsonKey(name: 'CDE')
   final CDE cde;
-
-  final double coreHardnessMean;
-  final double compoundLayer;
 
   Map<String, dynamic> toJson() => _$MachanicDetailToJson(this);
 }
@@ -84,7 +77,7 @@ class CDE {
   @JsonKey(name: 'CDEX')
   final double cdex;
 
-  @JsonKey(name: 'CDEY')
+  @JsonKey(name: 'CDTX')
   final double cdey;
 
   Map<String, dynamic> toJson() => _$CDEToJson(this);

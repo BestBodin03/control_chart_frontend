@@ -44,29 +44,23 @@ Map<String, dynamic> _$ChartGeneralDetailToJson(ChartGeneralDetail instance) =>
 MachanicDetail _$MachanicDetailFromJson(Map<String, dynamic> json) =>
     MachanicDetail(
       surfaceHardnessMean: (json['surfaceHardnessMean'] as num).toDouble(),
-      hardnessAt01mmMean: (json['hardnessAt01mmMean'] as num).toDouble(),
       cde: CDE.fromJson(json['CDE'] as Map<String, dynamic>),
-      coreHardnessMean: (json['coreHardnessMean'] as num).toDouble(),
-      compoundLayer: (json['compoundLayer'] as num).toDouble(),
     );
 
 Map<String, dynamic> _$MachanicDetailToJson(MachanicDetail instance) =>
     <String, dynamic>{
       'surfaceHardnessMean': instance.surfaceHardnessMean,
-      'hardnessAt01mmMean': instance.hardnessAt01mmMean,
       'CDE': instance.cde,
-      'coreHardnessMean': instance.coreHardnessMean,
-      'compoundLayer': instance.compoundLayer,
     };
 
 CDE _$CDEFromJson(Map<String, dynamic> json) => CDE(
   cdex: (json['CDEX'] as num).toDouble(),
-  cdey: (json['CDEY'] as num).toDouble(),
+  cdey: (json['CDTX'] as num).toDouble(),
 );
 
 Map<String, dynamic> _$CDEToJson(CDE instance) => <String, dynamic>{
   'CDEX': instance.cdex,
-  'CDEY': instance.cdey,
+  'CDTX': instance.cdey,
 };
 
 Filters _$FiltersFromJson(Map<String, dynamic> json) => Filters(

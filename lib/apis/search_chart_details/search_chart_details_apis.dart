@@ -16,6 +16,7 @@ class SearchChartDetailsApis {
       // Get the array of chart details
       final List<dynamic> data = response['data'] ?? [];
       print('✅ Found ${data.length} items');
+      print(data);
       
       // Access the separate summary data (not part of the array)
       if (response['machanicDetail'] != null && response['chartGeneralDetail'] != null) {
