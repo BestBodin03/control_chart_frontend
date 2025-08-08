@@ -6,29 +6,7 @@ import 'package:control_chart/ui/core/shared/dashed_line_painter.dart' show Dash
 import 'package:control_chart/ui/core/shared/table_component.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-  
-// final sampleData = [
-//   ChartDataPoint(label: 'B06', value: 12),
-//   ChartDataPoint(label: 'C17', value: 28),
-//   ChartDataPoint(label: 'C24', value: 12),
-//   ChartDataPoint(label: '630', value: 16),
-//   ChartDataPoint(label: '901', value: 30),
-//   ChartDataPoint(label: 'A30', value: 33),
-//   ChartDataPoint(label: 'A05', value: 26),
-//   ChartDataPoint(label: 'A11', value: 10),
-//   ChartDataPoint(label: 'B30', value: 21),
-//   ChartDataPoint(label: 'B06', value: 12),
-//   ChartDataPoint(label: 'C17', value: 28),
-//   ChartDataPoint(label: 'C24', value: 32),
-// ];
 
-// final controlLimits = ControlLimits(
-//   usl: 32,  // Upper Specification Limit
-//   ucl: 30,  // Upper Control Limit  
-//   average: 19, // Average
-//   lcl: 8,   // Lower Control Limit
-//   lsl: 2,   // Lower Specification Limit
-// );
   
 class ControlChartComponent extends StatelessWidget {
   final List<ChartDataPoint>? dataPoints;
@@ -44,17 +22,92 @@ class ControlChartComponent extends StatelessWidget {
     super.key,
     this.dataPoints,
     this.controlChartStats,
-    this.xAxisLabel = 'Date',
-    this.yAxisLabel = 'Attr.',
+    this.xAxisLabel = 'Date (mm/dd)',
+    this.yAxisLabel = 'Surface Hardness',
     this.dataLineColor = AppColors.colorBrand,
-    this.backgroundColor = Colors.white,
-    this.height = 300,
-    this.width,
+    this.backgroundColor,
+    this.height = 240,
+    this.width = 560,
   });
   
   @override
   Widget build(BuildContext context) {
-    throw UnimplementedError();
+    if (dataPoints == null || dataPoints!.isEmpty) {
+      return const Center(child: Text('No data available'));
+    }
+
+    return Container(
+      height: height,
+      width: width,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: backgroundColor ?? Colors.white,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          // Chart Title
+          // Text(
+          //   'Control Chart',
+          //   style: AppTypography.textBody3B,
+          // ),
+          const SizedBox(height: 16),
+          
+          // The LineChart
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                gridData: buildGridData(),
+                titlesData: buildTitlesData(),
+                borderData: buildBorderData(),
+                lineBarsData: buildLineBarsData(),
+                extraLinesData: buildControlLines(),
+                lineTouchData: buildTouchData(),
+                minX: 0,
+                maxX: (dataPoints!.length - 1).toDouble(),
+                minY: getMinY(),
+                maxY: getMaxY(),
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Axis Labels
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Y-axis label (rotated)
+              RotatedBox(
+                quarterTurns: 3,
+                child: Text(
+                  yAxisLabel, // Surface Hardness
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              // X-axis label
+              Text(
+                xAxisLabel, // Date (mm/dd)
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Legend
+          buildLegend(),
+        ],
+      ),
+    );
   }
   
   FlGridData buildGridData() {
@@ -62,9 +115,9 @@ class ControlChartComponent extends StatelessWidget {
       show: true,
       drawHorizontalLine: true,
       drawVerticalLine: true,
-      horizontalInterval: ((controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2 
-                          - (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.8) / 12,
-      verticalInterval: dataPoints!.length / 12,
+      horizontalInterval: _calculateYAxisInterval(),
+      // horizontalInterval: 24,
+      verticalInterval: 24,
       getDrawingHorizontalLine: (value) {
         return FlLine(
           color: Colors.grey.shade300,
@@ -82,12 +135,20 @@ class ControlChartComponent extends StatelessWidget {
 
   FlTitlesData buildTitlesData() {
     return FlTitlesData(
-      leftTitles: AxisTitles(
+        leftTitles: AxisTitles(
+        axisNameSize: 36, // กำหนดขนาด axis name
+        axisNameWidget: SizedBox(
+          width: height,
+          child: Text(
+            yAxisLabel,
+            style: AppTypography.textBody3BBold,
+            textAlign: TextAlign.center,
+          ),
+        ),
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize:32,
-          interval: ((controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2 
-                    - (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.8) / 4,
+          reservedSize: 40,
+          interval: _calculateYAxisInterval(),
           getTitlesWidget: (value, meta) {
             return Text(
               value.toStringAsFixed(1),
@@ -98,24 +159,21 @@ class ControlChartComponent extends StatelessWidget {
             );
           },
         ),
-        // axisNameWidget: RotatedBox(
-        //   quarterTurns: 3,
-        //   child: Text(
-        //     yAxisLabel,
-        //     style: const TextStyle(
-        //       color: Colors.black87,
-        //       fontSize: 12,
-        //       fontWeight: FontWeight.w500,
-        //     ),
-        //   ),
-        // ),
-      ),
+        ),
       bottomTitles: AxisTitles(
+        axisNameSize: 36, // กำหนดขนาด axis name
+        axisNameWidget: SizedBox(
+          width: width,
+          child: Text(
+            xAxisLabel,
+            style: AppTypography.textBody3BBold,
+            textAlign: TextAlign.center,
+          ),
+        ),
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 32,
-          // interval: dataPoints!.length > 10 ? dataPoints!.length / 12 : 1,
-          interval: 20,
+          reservedSize: 32, // เพิ่มขนาดสำหรับ X-axis labels
+          interval: _calculateXInterval(),
           getTitlesWidget: (value, meta) {
             final index = value.toInt();
             if (index >= 0 && index < dataPoints!.length) {
@@ -125,7 +183,7 @@ class ControlChartComponent extends StatelessWidget {
                   dataPoints![index].label,
                   style: const TextStyle(
                     color: Colors.black54,
-                    fontSize: 10,
+                    fontSize: 10, // เพิ่มขนาดฟอนต์
                   ),
                 ),
               );
@@ -133,17 +191,6 @@ class ControlChartComponent extends StatelessWidget {
             return const SizedBox.shrink();
           },
         ),
-        // axisNameWidget: Padding(
-        //   padding: const EdgeInsets.only(top: 8.0),
-        //   child: Text(
-        //     xAxisLabel,
-        //     style: const TextStyle(
-        //       color: Colors.black87,
-        //       fontSize: 14,
-        //       fontWeight: FontWeight.w500,
-        //     ),
-        //   ),
-        // ),
       ),
       topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -167,20 +214,8 @@ class ControlChartComponent extends StatelessWidget {
         // USL (Upper Specification Limit)
         HorizontalLine(
           y: (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2,
-          color: AppColors.colorAlert1,
+          color: Colors.red.shade400,
           strokeWidth: 2,
-          dashArray: [5,5],
-          // label: HorizontalLineLabel(
-          //   show: true,
-          //   alignment: Alignment.topRight,
-          //   padding: const EdgeInsets.only(right: 8, top: 4),
-          //   style: const TextStyle(
-          //     color: Colors.red,
-          //     fontWeight: FontWeight.bold,
-          //     fontSize: 12,
-          //   ),
-          //   // labelResolver: (line) => 'USL = ${controlLimits!.usl.toStringAsFixed(2)}',
-          // ),
         ),
         
         // UCL (Upper Control Limit)
@@ -188,18 +223,6 @@ class ControlChartComponent extends StatelessWidget {
           y: controlChartStats?.controlLimitIChart?.ucl ?? 0.0,
           color: Colors.amberAccent,
           strokeWidth: 1.5,
-          // dashArray: [3, 3],
-          // label: HorizontalLineLabel(
-          //   show: true,
-          //   alignment: Alignment.topRight,
-          //   padding: const EdgeInsets.only(right: 8, top: 4),
-          //   style: const TextStyle(
-          //     color: Colors.orange,
-          //     fontWeight: FontWeight.bold,
-          //     fontSize: 12,
-          //   ),
-          //   // labelResolver: (line) => 'ULC = ${controlLimits!.ucl.toStringAsFixed(2)}',
-          // ),
         ),
         
         // Average Line
@@ -207,66 +230,33 @@ class ControlChartComponent extends StatelessWidget {
           y: controlChartStats?.average ?? 0.0,
           color: AppColors.colorSuccess1,
           strokeWidth: 2,
-          // label: HorizontalLineLabel(
-          //   show: true,
-          //   alignment: Alignment.centerRight,
-          //   padding: const EdgeInsets.only(right: 8),
-            // style: const TextStyle(
-            //   color: Colors.green,
-            //   fontWeight: FontWeight.bold,
-            //   fontSize: 12,
-            // ),
-            // labelResolver: (line) => 'AVG = ${controlLimits!.average.toStringAsFixed(2)}',
-          ),
-        
-        // LCL (Lower Control Limit)
+        ),
+
         HorizontalLine(
           y: controlChartStats?.controlLimitIChart?.lcl ?? 0.0,
           color: Colors.amberAccent,
           strokeWidth: 1.5,
-          // dashArray: [3, 3],
-          // label: HorizontalLineLabel(
-          //   show: true,
-          //   alignment: Alignment.bottomRight,
-          //   padding: const EdgeInsets.only(right: 8, bottom: 4),
-          //   style: const TextStyle(
-          //     color: Colors.orange,
-          //     fontWeight: FontWeight.bold,
-          //     fontSize: 12,
-          //   ),
-          //   // labelResolver: (line) => 'LC = ${controlLimits!.lcl.toStringAsFixed(2)}',
-          // ),
-        // ),
         ),
         
         // LSL (Lower Specification Limit)
         HorizontalLine(
           y: (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.8,
-          color: AppColors.colorAlert1,
+          color: Colors.red.shade400,
           strokeWidth: 2,
-          dashArray: [5, 5],
-          // label: HorizontalLineLabel(
-          //   show: true,
-          //   alignment: Alignment.bottomRight,
-          //   padding: const EdgeInsets.only(right: 8, bottom: 4),
-          //   style: const TextStyle(
-          //     color: Colors.red,
-          //     fontWeight: FontWeight.bold,
-          //     fontSize: 12,
-          //   ),
-            // labelResolver: (line) => 'LSL = ${controlLimits!.lsl.toStringAsFixed(2)}',
-          ),
-        // ),
+        ),
       ],
     );
   }
 
-    List<LineChartBarData> buildLineBarsData() {
+  List<LineChartBarData> buildLineBarsData() {
+    final interval = _calculateXInterval().toInt();
+    
     return [
       LineChartBarData(
         spots: dataPoints!
             .asMap()
             .entries
+            .where((entry) => entry.key % interval == 0)
             .map((entry) => FlSpot(entry.key.toDouble(), entry.value.value))
             .toList(),
         
@@ -277,13 +267,16 @@ class ControlChartComponent extends StatelessWidget {
         dotData: FlDotData(
           show: true,
           getDotPainter: (spot, percent, barData, index) {
-            final value = dataPoints![index].value;
+            final realIndex = spot.x.toInt();
+            final value = dataPoints![realIndex].value;
             Color dotColor = dataLineColor!;
             
             // Color dots based on control limits
-            if (value > (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2 || value < (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.8) {
+            if (value > (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2 || 
+                value < (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.8) {
               dotColor = Colors.red; // Out of control
-            } else if (value > (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) || value < (controlChartStats?.controlLimitIChart?.lcl ?? 0.0)) {
+            } else if (value > (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) || 
+                      value < (controlChartStats?.controlLimitIChart?.lcl ?? 0.0)) {
               dotColor = Colors.orange; // Warning zone
             }
             
@@ -303,15 +296,17 @@ class ControlChartComponent extends StatelessWidget {
   LineTouchData buildTouchData() {
     return LineTouchData(
       touchTooltipData: LineTouchTooltipData(
-        getTooltipColor: (touchedSpot) => Colors.black87,
+        maxContentWidth: 150,
+        getTooltipColor: (touchedSpot) => Color.fromARGB(220, 26, 23, 74),
         tooltipBorderRadius: BorderRadius.circular(8.0),
         getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
           return touchedBarSpots.map((barSpot) {
             final index = barSpot.x.toInt();
             if (index >= 0 && index < dataPoints!.length) {
               return LineTooltipItem(
-                '${dataPoints![index].label}\n${dataPoints![index].value.toStringAsFixed(3)}',
-                AppTypography.textBody3WBold
+                "วันที่: ${dataPoints![index].fullLabel}\n ค่า: ${dataPoints![index].value.toStringAsFixed(3)}\n เตา: ${dataPoints![index].furnaceNo}\n เลขแมต: ${dataPoints![index].matNo} ",
+                AppTypography.textBody3W,
+                textAlign: TextAlign.left
               );
             }
             return null;
@@ -328,12 +323,11 @@ class ControlChartComponent extends StatelessWidget {
       runSpacing: 8,
       direction: Axis.vertical,
       children: [
-        buildLegendItem('USL', Colors.red, true, (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2),
+        buildLegendItem('USL', Colors.red, false, (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2),
         buildLegendItem('UCL', Colors.orange, false, controlChartStats?.controlLimitIChart?.ucl ?? 0.0),
         buildLegendItem('AVG', Colors.green, false, controlChartStats?.average ?? 0.0),
         buildLegendItem('LCL', Colors.orange, false, controlChartStats?.controlLimitIChart?.lcl ?? 0.0),
-        buildLegendItem('LSL', Colors.red, true, (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.8),
-        // buildLegendItem('Data', dataLineColor!, false),
+        buildLegendItem('LSL', Colors.red, false, (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.8),
       ],
     );
   }
@@ -343,7 +337,7 @@ class ControlChartComponent extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          width: 20,
+          width: 8,
           height: 2,
           child: DecoratedBox(
             decoration: BoxDecoration(
@@ -363,16 +357,16 @@ class ControlChartComponent extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '$label',
+              label,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 10,
                 color: AppColors.colorBlack,
               ),
             ),
             Text(
-              '${value?.toStringAsFixed(2) ?? '0.000'}',
+              value?.toStringAsFixed(3) ?? 'N/A',
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 10,
                 color: AppColors.colorBlack,
                 fontWeight: FontWeight.w500,
               ),
@@ -384,12 +378,34 @@ class ControlChartComponent extends StatelessWidget {
   }
 
   double getMinY() {
-    final dataMin = dataPoints!.map((e) => e.value).reduce((a, b) => a < b ? a : b);
-    return [dataMin, controlChartStats?.controlLimitIChart?.lcl ?? 0.0 * 0.8].reduce((a, b) => a < b ? a : b) - 2;
-  }
-  double getMaxY() {
-    final dataMax = dataPoints!.map((e) => e.value).reduce((a, b) => a > b ? a : b);
-    return [dataMax, controlChartStats?.controlLimitIChart?.ucl ?? 0.0 * 0.8].reduce((a, b) => a > b ? a : b) + 2;
+    // final dataMin = dataPoints!.map((e) => e.value).reduce((a, b) => a < b ? a : b);
+    // final lclLimit = (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.9;
+    
+    return (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.95;
   }
 
+  double getMaxY() {
+  // minY: (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.75,
+  // maxY: (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.1;
+    
+    return (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.05;
+  }
+  
+  double _calculateXInterval() {
+    int pointCount = dataPoints!.length;
+    
+    if (pointCount <= 15) return 1.0;
+    return (pointCount / 15).ceilToDouble();
+  }
+
+  double _calculateYAxisInterval() {
+    final ucl = controlChartStats?.controlLimitIChart?.ucl ?? 0.0;
+    final lcl = controlChartStats?.controlLimitIChart?.lcl ?? 0.0;
+    
+    final maxValue = ucl * 1.1;
+    final minValue = lcl * 0.9;
+    final totalRange = maxValue - minValue;
+    
+    return totalRange; // แบ่งเป็น 8 ช่วง
+  }
 }

@@ -16,10 +16,11 @@ class SettingScreen extends StatefulWidget {
 class _SettingScreenState extends State<SettingScreen> {
   @override
   Widget build(BuildContext context) {
-    return RepositoryProvider<SettingApis>(
-      create: (context) => SettingApis(),
-      child: SettingScreenBody(),
-    );
+    // return RepositoryProvider<SettingApis>(
+    //   create: (context) => SettingApis(),
+    //   child: SettingScreenBody(),
+    // );
+    return SettingScreenBody();
   }
 }
 

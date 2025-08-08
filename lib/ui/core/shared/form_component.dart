@@ -60,7 +60,7 @@ Widget buildSectionTitle(String title) {
         items: items.map((String item) {
           return DropdownMenuItem<String>(
             value: item,
-            child: Text(item),
+            child: Text(item == "0" ? "เลือกเตา" : item),
           );
         }).toList(),
         onChanged: onChanged,

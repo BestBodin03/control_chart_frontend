@@ -7,6 +7,7 @@ final class SearchState extends Equatable {
   const SearchState({
     this.status = SearchStatus.initial,
     this.chartDetails = const [],
+    this.searchTable = const [],
     this.controlChartStats,
     this.currentQuery = const ChartFilterQuery(),
     this.errorMessage,
@@ -14,6 +15,7 @@ final class SearchState extends Equatable {
 
   final SearchStatus status;
   final List<ChartDetail> chartDetails;
+  final List<SearchTable>? searchTable;
   final ControlChartStats? controlChartStats;
   final ChartFilterQuery currentQuery;
   final String? errorMessage;
@@ -28,6 +30,7 @@ final class SearchState extends Equatable {
   SearchState copyWith({
     SearchStatus Function()? status,
     List<ChartDetail> Function()? chartDetails,
+    List<SearchTable> Function()? searchTable,
     ControlChartStats Function()? controlChartStats,
     ChartFilterQuery Function()? currentQuery,
     String? Function()? errorMessage,
@@ -35,6 +38,7 @@ final class SearchState extends Equatable {
     return SearchState(
       status: status != null ? status() : this.status,
       chartDetails: chartDetails != null ? chartDetails() : this.chartDetails,
+      searchTable: searchTable != null ? searchTable() : this.searchTable,
       controlChartStats: controlChartStats != null ? controlChartStats() : this.controlChartStats,
       currentQuery: currentQuery != null ? currentQuery() : this.currentQuery,
       errorMessage: errorMessage != null ? errorMessage() : this.errorMessage,
@@ -45,6 +49,7 @@ final class SearchState extends Equatable {
   List<Object?> get props => [
     status,
     chartDetails,
+    searchTable,
     controlChartStats,
     currentQuery,
     errorMessage,

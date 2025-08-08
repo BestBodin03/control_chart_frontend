@@ -3,6 +3,7 @@ import 'package:control_chart/apis/search_chart_details/search_chart_details_api
 import 'package:control_chart/domain/models/chart_detail.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_filter_query.dart';
+import 'package:control_chart/domain/types/search_table.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
@@ -40,21 +41,20 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         endDate: event.endDate ?? currentQuery.endDate,
         furnaceNo: event.furnaceNo ?? currentQuery.furnaceNo,
         materialNo: event.materialNo ?? currentQuery.materialNo,
-        // page: event.page ?? currentQuery.page ?? 1,
-        // limit: event.limit ?? currentQuery.limit ?? 50,
       );
 
       final results = await Future.wait([
-        _searchApiService.getFilteringChartDetails(newQuery),
+        _searchApiService.getFilteringChartDetails(newQuery), // ใช้ method ที่ return tuple
         _searchApiService.getControlChartStat(newQuery),
       ]);
 
-      final chartDetails = results[0] as List<ChartDetail>;
+      final (chartDetails, searchTables) = results[0] as (List<ChartDetail>, List<SearchTable>); // แก้การ cast
       final chartStatistics = results[1] as ControlChartStats;
 
       emit(state.copyWith(
         status: () => SearchStatus.success,
         chartDetails: () => chartDetails,
+        searchTable: () => searchTables, // ใช้ searchTables
         controlChartStats: () => chartStatistics,
         currentQuery: () => newQuery,
         errorMessage: () => null,

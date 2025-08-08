@@ -67,6 +67,9 @@ class HomeContentState extends State<HomeContent> {
                     key: ValueKey(uniqueKey.hashCode.toString()),
                     dataPoints: searchState.chartDetails.map((chartDetail) => ChartDataPoint(
                       label: "${chartDetail.chartGeneralDetail.collectedDate.month.toString().padLeft(2, '0')}/${chartDetail.chartGeneralDetail.collectedDate.day.toString().padLeft(2, '0')}",
+                      fullLabel: "${chartDetail.chartGeneralDetail.collectedDate.month.toString().padLeft(2, '0')}/${chartDetail.chartGeneralDetail.collectedDate.day.toString().padLeft(2, '0')}/${chartDetail.chartGeneralDetail.collectedDate.year.toString().padLeft(4)}",
+                      furnaceNo: chartDetail.chartGeneralDetail.furnaceNo.toString(),
+                      matNo: chartDetail.cpNo,
                       value: chartDetail.machanicDetail.surfaceHardnessMean,
                     )).toList(),
                     controlChartStats: searchState.controlChartStats!,

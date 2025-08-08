@@ -1,4 +1,6 @@
 import 'package:control_chart/ui/core/design_system/app_color.dart';
+import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/setting_form.dart';
+import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/setting_show_chart.dart';
 import 'package:flutter/material.dart';
 
 class SearchingContent extends StatefulWidget {
@@ -9,17 +11,17 @@ class SearchingContent extends StatefulWidget {
 }
 
 class SearchingContentState extends State<SearchingContent> {
-  @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        height: 100,
-        width: 100,
-        color: AppColors.colorBrandTp,
-        child: const Center(
-          child: Text("Searching Screen",
-          style: TextStyle(color: AppColors.colorBg),),
-
+    return const SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.only(left: 32.0, right: 32.0, bottom: 32.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SettingForm(),
+            SizedBox(width: 32.0),
+            SettingShowChart(),
+          ],
         ),
       ),
     );

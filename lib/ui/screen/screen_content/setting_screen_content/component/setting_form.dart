@@ -1,24 +1,13 @@
-
-
 import 'package:control_chart/apis/settings/setting_apis.dart';
-import 'package:control_chart/data/bloc/chart_details/chart_details_bloc.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
-// import 'package:control_chart/data/bloc/search_chart_details/search_event.dart';
-// import 'package:control_chart/data/bloc/search_chart_details/search_state.dart';
 import 'package:control_chart/data/bloc/setting/setting_bloc.dart';
-// import 'package:control_chart/data/bloc/setting/setting_event.dart';
-// import 'package:control_chart/data/bloc/setting/setting_state.dart';
 import 'package:control_chart/domain/models/customer_product.dart';
 import 'package:control_chart/domain/models/furnace.dart';
-import 'package:control_chart/domain/types/chart_filter_query.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/form_component.dart';
 import 'package:control_chart/ui/core/shared/gradient_background.dart';
-import 'package:control_chart/ui/core/shared/table_component.dart';
-import 'package:control_chart/utils/date_autocomplete.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
@@ -405,15 +394,28 @@ class _SettingFormState extends State<SettingForm> {
   }
 
   List<String> _getFurnaceNumbers(List<Furnace> furnaces) {
-    final furnaceNumbers = furnaces.map((furnace) => furnace.furnaceNo).toList();
-    furnaceNumbers.sort();
-    return furnaceNumbers.map((num) => num.toString()).toList();
+    final sortedNumbers = furnaces
+        .map((furnace) => furnace.furnaceNo)
+        .toList()
+      ..sort(); // sort ตัวเลขก่อน
+    
+    return [
+      "0",
+      ...sortedNumbers.map((num) => num.toString())
+    ];
   }
 
   List<String> _getMatNumbers(List<CustomerProduct> matNumbers) {
-    final matNoNumbers = matNumbers.map((mat) => mat.cpNo).toList();
-    matNoNumbers.sort();
-    return matNoNumbers;
+    // Sort ตัวเลขก่อน แล้วค่อยแปลง String
+    final sortedNumbers = matNumbers
+        .map((mat) => mat.cpNo)
+        .toList()
+      ..sort();
+    
+    return [
+      "เลือกเลขแมต",
+      ...sortedNumbers.map((num) => num.toString())
+    ];
   }
 
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {

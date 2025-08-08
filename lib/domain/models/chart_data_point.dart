@@ -1,9 +1,15 @@
 class ChartDataPoint {
   final String label;
+  final String fullLabel;
+  final String? furnaceNo;
+  final String? matNo;
   final double value;
 
   ChartDataPoint({
     required this.label,
+    required this.fullLabel,
+    this.furnaceNo,
+    this.matNo,
     required this.value,
   });
 }

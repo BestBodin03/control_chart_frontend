@@ -1,3 +1,4 @@
+import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
@@ -19,35 +20,62 @@ import 'package:flutter/material.dart';
         ),
         child: _buildTableRow([
           'Furnace No.',
-          'CP No.',
-          'Part Name',
           'Material No.',
+          'Part Name',
           'จำนวนครั้ง',
         ], isHeader: true),
       ),
     );
   }
 
-  Widget buildDataTable(int dataLength) {
-    // Limit to maximum 8 rows
-    final int displayLength = dataLength > 8 ? 8 : dataLength;
+  Widget buildDataTable(SearchState searchState) {
+    final chartDetails = searchState.searchTable ?? [];
     
-    return Column(
-      children: List.generate(displayLength, (index) {
-        return Container(
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: index < displayLength - 1 
-                ? BorderSide(color: Colors.black26, width: 0.5)
-                : BorderSide.none,
+    if (chartDetails.isEmpty) {
+      return SizedBox(
+        height: 200,
+        child: Center(child: Text('ไม่มีข้อมูล')),
+      );
+    }
+    
+    final rowHeight = 32.0;
+    final maxRowsForFitContent = 6;
+    final isScrollable = chartDetails.length > maxRowsForFitContent;
+    
+    return SizedBox(
+      height: isScrollable ? 200 : null, // null = fit content
+      child: ListView.builder(
+        shrinkWrap: !isScrollable, // shrinkWrap เมื่อไม่ scrollable
+        physics: isScrollable 
+          ? ClampingScrollPhysics() 
+          : NeverScrollableScrollPhysics(),
+        itemCount: chartDetails.length,
+        itemBuilder: (context, index) {
+          final chartDetail = chartDetails[index];
+          
+          return SizedBox(
+            height: rowHeight,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: index < chartDetails.length - 1 
+                    ? BorderSide(color: Colors.black26, width: 0.5)
+                    : BorderSide.none,
+                ),
+                borderRadius: index == chartDetails.length - 1
+                  ? BorderRadius.vertical(bottom: Radius.circular(10.0))
+                  : null,
+              ),
+              child: _buildTableRow([
+                chartDetail.furnaceNo?.toString() ?? '-',
+                chartDetail.matNo ?? '-',
+                chartDetail.partName ?? '-',
+                chartDetail.count?.toString() ?? '0'
+              ], isHeader: false),
             ),
-            borderRadius: index == displayLength - 1
-              ? BorderRadius.vertical(bottom: Radius.circular(10.0))
-              : null,
-          ),
-          child: _buildTableRow(['5', '2400ui9987', 'SPRING', 'U*0wwk872548', dataLength.toString()], isHeader: false),
-        );
-      }),
+          );
+        },
+      ),
     );
   }
 
@@ -63,12 +91,12 @@ import 'package:flutter/material.dart';
             child: DecoratedBox(
               decoration: BoxDecoration(
                 border: Border(
-                  right: index < cells.length - 1 // ✅ Only right border
+                  right: index < cells.length - 1
                     ? BorderSide(color: Colors.black26, width: 0.5)
                     : BorderSide.none,
                 ),
               ),
-              child: Center( // Add Center for better alignment in 36px height
+              child: Center(
                 child: Text(
                   text,
                   style: isHeader ? _headerTextStyle : _bodyTextStyle,

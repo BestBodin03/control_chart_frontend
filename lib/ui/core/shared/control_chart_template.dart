@@ -78,7 +78,7 @@ class ControlChartTemplate extends StatelessWidget {
             Icon(
               Icons.data_usage_outlined,
               size: 64,
-              color: Colors.grey[400],
+              // color: Colors.grey[400],
             ),
             SizedBox(height: 16),
             Text(
@@ -106,7 +106,7 @@ class ControlChartTemplate extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: EdgeInsets.fromLTRB(4.0, 24.0, 16.0, 4.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -124,6 +124,7 @@ class ControlChartTemplate extends StatelessWidget {
                   minY: useWidget.getMinY(),
                   maxY: useWidget.getMaxY(),
                   lineTouchData: useWidget.buildTouchData(),
+                  clipData: FlClipData.none(),
                 ),
               ),
             ),

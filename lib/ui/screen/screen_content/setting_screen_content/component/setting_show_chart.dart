@@ -30,8 +30,7 @@ class SettingShowChart extends StatelessWidget {
                 ),
               ],
             ),
-            
-            // child: FurnaceReportLayout(),
+            child: FurnaceReportLayout(),
             
           ),
         ),
