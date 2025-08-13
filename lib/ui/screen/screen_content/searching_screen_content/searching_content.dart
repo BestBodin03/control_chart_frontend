@@ -11,6 +11,7 @@ class SearchingContent extends StatefulWidget {
 }
 
 class SearchingContentState extends State<SearchingContent> {
+  @override
   Widget build(BuildContext context) {
     return const SingleChildScrollView(
       child: Padding(

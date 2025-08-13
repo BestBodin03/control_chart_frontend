@@ -283,7 +283,7 @@ class _SettingFormState extends State<SettingForm> {
                                 return buildDropdownField(
                                   context: context,
                                   // Use SearchBloc value if available, otherwise use SettingBloc fallback
-                                  value: searchState.currentQuery.materialNo ?? formState.selectedMatNo,
+                                  value: searchState.currentQuery.materialNo /*?? formState.selectedMatNo*/,
                                   items: _getMatNumbers(matNumbers),
                                   onChanged: (value) {
                                     context.read<SearchBloc>().add(LoadFilteredChartData(

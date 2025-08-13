@@ -31,7 +31,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     LoadFilteredChartData event,
     Emitter<SearchState> emit,
   ) async {
-    emit(state.copyWith(status: () => SearchStatus.loading));
+    // emit(state.copyWith(status: () => SearchStatus.loading));
 
     try {
       // รวมค่าเดิมกับค่าใหม่
@@ -42,6 +42,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         furnaceNo: event.furnaceNo ?? currentQuery.furnaceNo,
         materialNo: event.materialNo ?? currentQuery.materialNo,
       );
+      // print('NEW QUERY IS: $newQuery');
 
       final results = await Future.wait([
         _searchApiService.getFilteringChartDetails(newQuery), // ใช้ method ที่ return tuple
@@ -133,10 +134,10 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   ) async {
     print('🔄 Clearing all filters');
     
-    await _updateQueryAndFetch(
-      emit,
-      const ChartFilterQuery(page: 1, limit: 50),
-    );
+    // await _updateQueryAndFetch(
+    //   emit,
+    //   const ChartFilterQuery(page: 1, limit: 50),
+    // );
   }
 
   Future<void> _onUpdateDateRange(

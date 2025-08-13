@@ -41,7 +41,7 @@ class SearchChartDetailsApis {
         '/chart-details/filter',
         queryParameters: query.toQueryParams(),
       );
-      print(query.toQueryParams());
+      // print(query.toQueryParams());
       final List<dynamic> data = response['data'] ?? [];
       final List<dynamic> summary = response['summary'] ?? [];
       final lengOfSummary = summary.length;
@@ -66,7 +66,8 @@ class SearchChartDetailsApis {
         '/chart-details/calculate',
         queryParameters: query.toQueryParams(),
       );
-      final stats = ControlChartStats.fromJson(response);
+      final data = response['data'];
+      final stats = ControlChartStats.fromJson(data);
       
       return stats;
     } catch (e) {

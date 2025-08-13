@@ -4,13 +4,13 @@ import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
-import 'package:control_chart/ui/core/shared/control_chart_component.dart';
+import 'package:control_chart/ui/core/shared/control_chart_component_small.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ControlChartTemplate extends StatelessWidget {
+class ControlChartTemplateSmall extends StatelessWidget {
   final List<ChartDataPoint>? dataPoints;
   final ControlChartStats? controlChartStats;
   final String xAxisLabel;
@@ -20,7 +20,7 @@ class ControlChartTemplate extends StatelessWidget {
   final double? height;
   final double? width;
 
-  const ControlChartTemplate({
+  const ControlChartTemplateSmall({
     super.key,
     this.dataPoints,
     this.controlChartStats,
@@ -80,7 +80,7 @@ class ControlChartTemplate extends StatelessWidget {
               size: 64,
               // color: Colors.grey[400],
             ),
-            SizedBox(height: 16),
+            // SizedBox(height: 16),
             Text(
               'ไม่มีข้อมูลสำหรับแสดงผล',
               style: TextStyle(
@@ -94,7 +94,7 @@ class ControlChartTemplate extends StatelessWidget {
     }
 
     // สร้าง component เมื่อมีข้อมูล
-    final useWidget = ControlChartComponent(
+    final useWidget = ControlChartComponentSmall(
       dataPoints: dataPoints,
       controlChartStats: controlChartStats,
     );
@@ -130,8 +130,8 @@ class ControlChartTemplate extends StatelessWidget {
             ),
             
             // Legend at right
-            const SizedBox(width: 16),
-            useWidget.buildLegend(),
+            // const SizedBox(width: 16),
+            // useWidget.buildLegend(),
           ],
         ),
       ),

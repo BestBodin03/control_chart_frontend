@@ -9,7 +9,7 @@ import 'package:dio/dio.dart';
 class SettingApis {
 Future<int> getChartDetailCount() async {
     try {
-      final response = await ApiConfig().get<Response<dynamic>>('/test/chart-details');
+      final response = await ApiConfig().get<Response<dynamic>>('/all-chart-details');
       return CountExtractor.extractCountFromResponse(response);
     } catch (e) {
       throw Exception('Failed to get chart status: $e');
@@ -61,7 +61,7 @@ Future<int> getChartDetailCount() async {
 
   Future<Map<String, dynamic>> getChartDetails() async {
     try {
-      final response = await ApiConfig().get<List<dynamic>>('/test/chart-details');
+      final response = await ApiConfig().get<List<dynamic>>('/all-chart-details');
       final List<ChartDetail> chartDetails = response.map((json) => ChartDetail.fromJson(json)).toList();
       
       return {
