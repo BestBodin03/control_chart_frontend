@@ -107,13 +107,26 @@ class ControlChartTemplate extends StatelessWidget {
       ),
       child: Padding(
         padding: EdgeInsets.fromLTRB(4.0, 24.0, 16.0, 4.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            // Chart area
-            Expanded(
+            // Background layout (legend + chart space)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                
+                // Legend at right
+                const SizedBox(width: 8),
+                useWidget.buildLegend(),
+              ],
+            ),
+            
+            // Chart overlay (full width for touch events)
+            Positioned.fill(
+              right: 72, // เว้นพื้นที่ให้ legend (ปรับตามขนาดจริง)
               child: LineChart(
                 LineChartData(
+                  lineTouchData: useWidget.buildTouchData(),
                   gridData: useWidget.buildGridData(),
                   extraLinesData: useWidget.buildControlLines(),
                   titlesData: useWidget.buildTitlesData(),
@@ -123,15 +136,10 @@ class ControlChartTemplate extends StatelessWidget {
                   maxX: dataPoints!.length.toDouble() - 1,
                   minY: useWidget.getMinY(),
                   maxY: useWidget.getMaxY(),
-                  lineTouchData: useWidget.buildTouchData(),
                   clipData: FlClipData.none(),
                 ),
               ),
             ),
-            
-            // Legend at right
-            const SizedBox(width: 16),
-            useWidget.buildLegend(),
           ],
         ),
       ),

@@ -25,10 +25,10 @@ class ChartFilterQuery {
     if (endDate != null) {
       params['endDate'] = jsonEncode(endDate!.toIso8601String());
     }
-    if (furnaceNo != null && furnaceNo!.isNotEmpty) {
+    if (furnaceNo != null) {
       params['furnaceNo'] = furnaceNo;
     }
-    if (materialNo != null && materialNo!.isNotEmpty) {
+    if (materialNo != null) {
       params['matNo'] = materialNo;
     }
     return params;

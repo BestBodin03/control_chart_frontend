@@ -11,14 +11,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
-class SettingForm extends StatefulWidget {
-  const SettingForm({super.key});
+class SearchingForm extends StatefulWidget {
+  const SearchingForm({super.key});
 
   @override
-  State<SettingForm> createState() => _SettingFormState();
+  State<SearchingForm> createState() => _SearchingFormState();
 }
 
-class _SettingFormState extends State<SettingForm> {
+class _SearchingFormState extends State<SearchingForm> {
   late SettingBloc _settingBloc;
   double backgroundOpacity = 0.2;
 
@@ -261,13 +261,16 @@ class _SettingFormState extends State<SettingForm> {
                                   // Use SearchBloc value if available, otherwise use SettingBloc fallback
                                   value: searchState.currentQuery.furnaceNo ?? formState.selectedItem,
                                   items: _getFurnaceNumbers(furnaces),
-                                  onChanged: (value) {
-                                    context.read<SearchBloc>().add(LoadFilteredChartData(
-                                      startDate: formState.startDate ?? searchState.currentQuery.startDate,
-                                      endDate: formState.endDate ?? searchState.currentQuery.endDate,
-                                      furnaceNo: value,
-                                      materialNo: searchState.currentQuery.materialNo
-                                    ));
+                                  hint: "เลือกเตา",
+                                  onChanged: (selected) {
+                                    context.read<SearchBloc>().add(
+                                      LoadFilteredChartData(
+                                        startDate: formState.startDate ?? searchState.currentQuery.startDate,
+                                        endDate: formState.endDate ?? searchState.currentQuery.endDate,
+                                        furnaceNo: selected == "0" ? "" : selected, // Send "" if "เลือกเตา" is chosen
+                                        materialNo: searchState.currentQuery.materialNo,
+                                      ),
+                                    );
                                   },
                                 );
                               },
@@ -285,12 +288,13 @@ class _SettingFormState extends State<SettingForm> {
                                   // Use SearchBloc value if available, otherwise use SettingBloc fallback
                                   value: searchState.currentQuery.materialNo /*?? formState.selectedMatNo*/,
                                   items: _getMatNumbers(matNumbers),
-                                  onChanged: (value) {
+                                  hint: "เลือกเลขแมต",
+                                  onChanged: (selected) {
                                     context.read<SearchBloc>().add(LoadFilteredChartData(
                                       startDate: formState.startDate ?? searchState.currentQuery.startDate,
                                       endDate: formState.endDate ?? searchState.currentQuery.endDate,
                                       furnaceNo: searchState.currentQuery.furnaceNo,
-                                      materialNo: value
+                                      materialNo: selected ==  "เลือกเลขแมต" ? "" : selected
                                     ));
                                   },
                                 );

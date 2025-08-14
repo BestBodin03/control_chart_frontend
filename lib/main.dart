@@ -19,7 +19,6 @@ class MyApp extends StatelessWidget {
         BlocProvider<SearchBloc>(
           create: (context) => SearchBloc(),
         ),
-        // Add other global blocs here
       ],
 
     child: MaterialApp(

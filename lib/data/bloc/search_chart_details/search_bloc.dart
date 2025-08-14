@@ -31,21 +31,16 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     LoadFilteredChartData event,
     Emitter<SearchState> emit,
   ) async {
-    // emit(state.copyWith(status: () => SearchStatus.loading));
-
     try {
-      // รวมค่าเดิมกับค่าใหม่
-      final currentQuery = state.currentQuery;
       final newQuery = ChartFilterQuery(
-        startDate: event.startDate ?? currentQuery.startDate,
-        endDate: event.endDate ?? currentQuery.endDate,
-        furnaceNo: event.furnaceNo ?? currentQuery.furnaceNo,
-        materialNo: event.materialNo ?? currentQuery.materialNo,
+        startDate: event.startDate,
+        endDate: event.endDate,
+        furnaceNo: event.furnaceNo,
+        materialNo: event.materialNo,
       );
-      // print('NEW QUERY IS: $newQuery');
 
       final results = await Future.wait([
-        _searchApiService.getFilteringChartDetails(newQuery), // ใช้ method ที่ return tuple
+        _searchApiService.getFilteringChartDetails(newQuery),
         _searchApiService.getControlChartStat(newQuery),
       ]);
 
@@ -55,14 +50,21 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       emit(state.copyWith(
         status: () => SearchStatus.success,
         chartDetails: () => chartDetails,
-        searchTable: () => searchTables, // ใช้ searchTables
+        searchTable: () => searchTables,
         controlChartStats: () => chartStatistics,
         currentQuery: () => newQuery,
         errorMessage: () => null,
       ));
     } catch (e) {
+      final newQuery = ChartFilterQuery(
+        startDate: event.startDate,
+        endDate: event.endDate,
+        furnaceNo: event.furnaceNo,
+        materialNo: event.materialNo,
+      );
       emit(state.copyWith(
         status: () => SearchStatus.failure,
+        currentQuery: () => newQuery,
         errorMessage: () => e.toString(),
       ));
     }

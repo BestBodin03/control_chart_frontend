@@ -45,7 +45,8 @@ class FurnaceReportLayout extends StatelessWidget {
                   
                   // Use shared searchState
                   Text(
-                    'Furnace No. ${searchState.currentQuery.furnaceNo ?? 'N/A'}/ ${searchState.currentQuery.materialNo ?? 'N/A'} | QUERY PARAMS: ${searchState.currentQuery.toQueryParams().values}',
+                    'Furnace No. ${searchState.currentQuery.furnaceNo?.isNotEmpty == true ? searchState.currentQuery.furnaceNo : 'N/A'}, '
+                    'Material No. ${searchState.currentQuery.materialNo?.isNotEmpty == true ? searchState.currentQuery.materialNo : 'N/A'}',
                     style: AppTypography.textBody1BBold
                   ),
                   

@@ -1,3 +1,6 @@
+import 'dart:math';
+
+import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
@@ -212,13 +215,13 @@ class ControlChartComponent extends StatelessWidget {
       extraLinesOnTop: false,
       horizontalLines: [
         // USL (Upper Specification Limit)
-        HorizontalLine(
-          y: (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2,
-          color: Colors.red.shade400,
-          strokeWidth: 2,
-        ),
+        if ((controlChartStats?.specAttribute?.surfaceHardnessUpperSpec ?? 0.0) > 0.0)
+          HorizontalLine(
+            y: controlChartStats!.specAttribute!.surfaceHardnessUpperSpec!,
+            color: Colors.red.shade400,
+            strokeWidth: 2,
+          ),
         
-        // UCL (Upper Control Limit)
         HorizontalLine(
           y: controlChartStats?.controlLimitIChart?.ucl ?? 0.0,
           color: Colors.amberAccent,
@@ -239,8 +242,9 @@ class ControlChartComponent extends StatelessWidget {
         ),
         
         // LSL (Lower Specification Limit)
+      if ((controlChartStats?.specAttribute?.surfaceHardnessLowerSpec ?? 0.0) > 0.0)
         HorizontalLine(
-          y: (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.8,
+          y: controlChartStats!.specAttribute!.surfaceHardnessLowerSpec!,
           color: Colors.red.shade400,
           strokeWidth: 2,
         ),
@@ -271,13 +275,14 @@ class ControlChartComponent extends StatelessWidget {
             final value = dataPoints![realIndex].value;
             Color dotColor = dataLineColor!;
             
-            // Color dots based on control limits
-            if (value > (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2 || 
-                value < (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.8) {
-              dotColor = Colors.red; // Out of control
+            // OVER LIMIT #RULE 1
+            if ((controlChartStats?.specAttribute?.surfaceHardnessUpperSpec ?? 0.0) > 0.0 &&
+              (value > (controlChartStats?.specAttribute?.surfaceHardnessUpperSpec ?? 0.0) || 
+                value < (controlChartStats?.specAttribute?.surfaceHardnessLowerSpec ?? 0.0))) {
+            dotColor = Colors.red; // Out of spec
             } else if (value > (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) || 
                       value < (controlChartStats?.controlLimitIChart?.lcl ?? 0.0)) {
-              dotColor = Colors.orange; // Warning zone
+            dotColor = Colors.orange; // Warning zone
             }
             
             return FlDotCirclePainter(
@@ -323,16 +328,16 @@ class ControlChartComponent extends StatelessWidget {
       runSpacing: 8,
       direction: Axis.vertical,
       children: [
-        buildLegendItem('USL', Colors.red, false, (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.2),
-        buildLegendItem('UCL', Colors.orange, false, controlChartStats?.controlLimitIChart?.ucl ?? 0.0),
-        buildLegendItem('AVG', Colors.green, false, controlChartStats?.average ?? 0.0),
-        buildLegendItem('LCL', Colors.orange, false, controlChartStats?.controlLimitIChart?.lcl ?? 0.0),
-        buildLegendItem('LSL', Colors.red, false, (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.8),
+        buildLegendItem('USL', Colors.red, false, formatValue(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec)),
+        buildLegendItem('UCL', Colors.orange, false, formatValue(controlChartStats?.controlLimitIChart?.ucl)),
+        buildLegendItem('AVG', Colors.green, false, formatValue(controlChartStats?.average)),
+        buildLegendItem('LCL', Colors.orange, false, formatValue(controlChartStats?.controlLimitIChart?.lcl)),
+        buildLegendItem('LSL', Colors.red, false, formatValue(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec)),
       ],
     );
   }
 
-  Widget buildLegendItem(String label, Color color, bool isDashed, double? value) {
+  Widget buildLegendItem(String label, Color color, bool isDashed, String? value) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -364,7 +369,7 @@ class ControlChartComponent extends StatelessWidget {
               ),
             ),
             Text(
-              value?.toStringAsFixed(3) ?? 'N/A',
+              value ?? 'N/A',
               style: const TextStyle(
                 fontSize: 10,
                 color: AppColors.colorBlack,
@@ -377,35 +382,103 @@ class ControlChartComponent extends StatelessWidget {
     );
   }
 
-  double getMinY() {
-    // final dataMin = dataPoints!.map((e) => e.value).reduce((a, b) => a < b ? a : b);
-    // final lclLimit = (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.9;
+  double _getInterval() {
+    final spotMin = getMinSpot();
+    final spotMax = getMaxSpot();
+    final range = (spotMax - spotMin).abs();
     
-    return (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.95;
+    if (range < 10) {
+      return 2.5; // hardcode สำหรับ range เล็ก
+    }
+
+    if (range < 5) {
+      return 1.25; // hardcode สำหรับ range เล็ก
+    }
+    
+    final targetIntervals = 2;
+    final tempInterval = range / targetIntervals;
+    
+    // Conditional interval selection
+    if (tempInterval < 25) return 25.0;
+    else if (tempInterval < 50) return 50.0;
+    else if (tempInterval < 75) return 75.0;
+    else if (tempInterval < 100) return 100.0;
+    else return (tempInterval / 100).ceil() * 100.0; // สำหรับค่าใหญ่กว่า
+  }
+
+  double getMinY() {
+    final controlLCL = controlChartStats?.controlLimitIChart?.lcl;
+    final specLower = controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;
+    final spotMin = getMinSpot();
+    final spotMax = getMaxSpot();
+    final range = (spotMax - spotMin).abs();
+    
+    // คำนวณ base min
+    double baseMin = spotMin;
+    if (specLower != null && specLower > 0) {
+      baseMin = min(baseMin, specLower * 0.95);
+    } else if (controlLCL != null && controlLCL > 0) {
+      baseMin = min(baseMin, controlLCL * 0.95);
+    }
+    
+    final interval = _getInterval();
+    final calculatedMin = (baseMin / interval).floor() * interval;
+    return max(0.0, calculatedMin);
   }
 
   double getMaxY() {
-  // minY: (controlChartStats?.controlLimitIChart?.lcl ?? 0.0) * 0.75,
-  // maxY: (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.1;
+    final controlUCL = controlChartStats?.controlLimitIChart?.ucl;
+    final specUpper = controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
+    final spotMin = getMinSpot();
+    final spotMax = getMaxSpot();
+    (spotMax - spotMin).abs();
     
-    return (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) * 1.05;
-  }
-  
-  double _calculateXInterval() {
-    int pointCount = dataPoints!.length;
+    // คำนวณ base max
+    double baseMax = spotMax;
+    if (specUpper != null && specUpper > 0) {
+      baseMax = max(baseMax, specUpper * 1.05);
+    } else if (controlUCL != null && controlUCL > 0) {
+      baseMax = max(baseMax, controlUCL * 1.05);
+    }
     
-    if (pointCount <= 15) return 1.0;
-    return (pointCount / 15).ceilToDouble();
+    final interval = _getInterval();
+    return (baseMax / interval).ceil() * interval;
   }
 
   double _calculateYAxisInterval() {
-    final ucl = controlChartStats?.controlLimitIChart?.ucl ?? 0.0;
-    final lcl = controlChartStats?.controlLimitIChart?.lcl ?? 0.0;
+    return _getInterval(); // ใช้ interval ที่คำนวณแล้ว
+  }
     
-    final maxValue = ucl * 1.1;
-    final minValue = lcl * 0.9;
-    final totalRange = maxValue - minValue;
-    
-    return totalRange; // แบ่งเป็น 8 ช่วง
+    double _calculateXInterval() {
+      int pointCount = dataPoints!.length;
+      
+      if (pointCount <= 10) return 1.0;
+      return (pointCount / 10).ceilToDouble();
+    }
+
+  double getMaxSpot() {  
+  final maxSpot = dataPoints!
+      .map((point) => point.value)
+      .where((value) => value > 0)
+      .fold<double>(double.negativeInfinity, max);
+
+  return maxSpot;
+  }
+
+  double getMinSpot() {
+  // if (dataPoints == null || dataPoints!.isEmpty || controlChartStats!.specAttribute!.surfaceHardnessLowerSpec == 0 || controlChartStats!.specAttribute!.surfaceHardnessLowerSpec == null) {
+  //   return 0.0;
+  // }
+  
+  final minSpot = dataPoints!
+      .map((point) => point.value)
+      .where((value) => value > 0)
+      .fold<double>(double.infinity, min);
+  
+  return minSpot;
+  }
+  String formatValue(double? value) {
+    if (value == null) return 'N/A';
+    return value.toStringAsFixed(3);
   }
 }

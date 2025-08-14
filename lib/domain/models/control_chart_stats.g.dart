@@ -29,6 +29,16 @@ ControlChartStats _$ControlChartStatsFromJson(Map<String, dynamic> json) =>
               : ControlLimitMRChart.fromJson(
                 json['controlLimitMRChart'] as Map<String, dynamic>,
               ),
+      mrChartSpots:
+          (json['mrChartSpots'] as List<dynamic>?)
+              ?.map((e) => (e as num).toDouble())
+              .toList(),
+      specAttribute:
+          json['specAttribute'] == null
+              ? null
+              : SpecAttribute.fromJson(
+                json['specAttribute'] as Map<String, dynamic>,
+              ),
     );
 
 Map<String, dynamic> _$ControlChartStatsToJson(ControlChartStats instance) =>
@@ -39,6 +49,8 @@ Map<String, dynamic> _$ControlChartStatsToJson(ControlChartStats instance) =>
       'controlLimitIChart': instance.controlLimitIChart,
       'sigmaIChart': instance.sigmaIChart,
       'controlLimitMRChart': instance.controlLimitMRChart,
+      'mrChartSpots': instance.mrChartSpots,
+      'specAttribute': instance.specAttribute,
     };
 
 ControlLimitIChart _$ControlLimitIChartFromJson(Map<String, dynamic> json) =>
@@ -46,8 +58,6 @@ ControlLimitIChart _$ControlLimitIChartFromJson(Map<String, dynamic> json) =>
       cl: (json['CL'] as num?)?.toDouble(),
       ucl: (json['UCL'] as num?)?.toDouble(),
       lcl: (json['LCL'] as num?)?.toDouble(),
-      usl: (json['USL'] as num?)?.toDouble(),
-      lsl: (json['LSL'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> _$ControlLimitIChartToJson(ControlLimitIChart instance) =>
@@ -55,8 +65,6 @@ Map<String, dynamic> _$ControlLimitIChartToJson(ControlLimitIChart instance) =>
       'CL': instance.cl,
       'UCL': instance.ucl,
       'LCL': instance.lcl,
-      'USL': instance.usl,
-      'LSL': instance.lsl,
     };
 
 SigmaIChart _$SigmaIChartFromJson(Map<String, dynamic> json) => SigmaIChart(
@@ -92,3 +100,34 @@ Map<String, dynamic> _$ControlLimitMRChartToJson(
   'UCL': instance.ucl,
   'LCL': instance.lcl,
 };
+
+SpecAttribute _$SpecAttributeFromJson(Map<String, dynamic> json) =>
+    SpecAttribute(
+      materialNo: json['materialNo'] as String?,
+      surfaceHardnessUpperSpec:
+          (json['surfaceHardnessUpperSpec'] as num?)?.toDouble(),
+      surfaceHardnessLowerSpec:
+          (json['surfaceHardnessLowerSpec'] as num?)?.toDouble(),
+      surfaceHardnessTarget:
+          (json['surfaceHardnessTarget'] as num?)?.toDouble(),
+      cdeUpperSpec: (json['cdeUpperSpec'] as num?)?.toDouble(),
+      cdeLowerSpec: (json['cdeLowerSpec'] as num?)?.toDouble(),
+      cdeTarget: (json['cdeTarget'] as num?)?.toDouble(),
+      cdtUpperSpec: (json['cdtUpperSpec'] as num?)?.toDouble(),
+      cdtLowerSpec: (json['cdtLowerSpec'] as num?)?.toDouble(),
+      cdtTarget: (json['cdtTarget'] as num?)?.toDouble(),
+    );
+
+Map<String, dynamic> _$SpecAttributeToJson(SpecAttribute instance) =>
+    <String, dynamic>{
+      'materialNo': instance.materialNo,
+      'surfaceHardnessUpperSpec': instance.surfaceHardnessUpperSpec,
+      'surfaceHardnessLowerSpec': instance.surfaceHardnessLowerSpec,
+      'surfaceHardnessTarget': instance.surfaceHardnessTarget,
+      'cdeUpperSpec': instance.cdeUpperSpec,
+      'cdeLowerSpec': instance.cdeLowerSpec,
+      'cdeTarget': instance.cdeTarget,
+      'cdtUpperSpec': instance.cdtUpperSpec,
+      'cdtLowerSpec': instance.cdtLowerSpec,
+      'cdtTarget': instance.cdtTarget,
+    };

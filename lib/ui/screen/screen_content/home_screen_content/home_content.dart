@@ -5,7 +5,7 @@ import 'package:control_chart/domain/models/chart_data_point.dart';
 // import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/control_chart_template.dart';
 // import 'package:control_chart/ui/core/shared/table_component.dart';
-import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/setting_form.dart';
+import 'package:control_chart/ui/core/shared/searching_form.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -23,7 +23,7 @@ class HomeContentState extends State<HomeContent> {
       padding: const EdgeInsets.all(8.0),
       child: Row(
         children: [
-          const SettingForm(),
+          const SearchingForm(),
           const SizedBox(width: 16.0),
           Column(
             children: [

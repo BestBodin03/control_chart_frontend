@@ -14,9 +14,6 @@ class SettingShowChart extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.colorBg,
               borderRadius: BorderRadius.circular(16.0),
-              border:Border.all(
-                color: Colors.black12
-              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.white.withValues(alpha: 0.6),

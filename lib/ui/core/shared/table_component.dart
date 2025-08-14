@@ -214,7 +214,7 @@ Widget _buildChartContainer({
                 ),
 
                 // Moving Range Chart container
-                _buildSingleChart(
+                _buildMrChart(
                   searchState: searchState,
                   chartType: chartType,
                   isMovingRange: true,
@@ -229,6 +229,28 @@ Widget _buildChartContainer({
 }
 
 Widget _buildSingleChart({
+  required SearchState searchState,
+  required ChartType chartType,
+  required bool isMovingRange,
+}) {
+  return SizedBox(
+    width: double.infinity,
+    height: 144.0,
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50, // Changed from black26 to light background
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: _buildChartContent(
+        searchState: searchState,
+        chartType: chartType,
+        isMovingRange: isMovingRange,
+      ),
+    ),
+  );
+}
+
+Widget _buildMrChart({
   required SearchState searchState,
   required ChartType chartType,
   required bool isMovingRange,
@@ -275,7 +297,7 @@ Widget _buildChartContent({
           Icon(Icons.error_outline, size: 16, color: Colors.red),
           SizedBox(height: 4),
           Text(
-            'Error',
+            'จำนวนข้อมูลไม่เพียงพอ',
             style: TextStyle(fontSize: 10, color: Colors.red),
           ),
         ],
