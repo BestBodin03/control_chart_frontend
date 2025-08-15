@@ -4,6 +4,8 @@ import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 // import 'package:control_chart/data/bloc/setting/setting_bloc.dart';
 // import 'package:control_chart/data/cubit/setting_cubit.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
+import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/help.dart';
+import 'package:control_chart/ui/core/shared/small_control_chart/surface_hardness/help.dart';
 import 'package:control_chart/ui/core/shared/table_component.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -51,9 +53,20 @@ class FurnaceReportLayout extends StatelessWidget {
                   ),
                   
                   const SizedBox(height: 16),
-                  
-                  // Pass searchState to charts section - THIS IS THE KEY CHANGE
-                  buildChartsSection(searchState), // Now passing searchState!
+
+                  Flex(
+                    direction: Axis.vertical,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: buildChartsSectionSurfaceHardness(searchState)),
+                          SizedBox(width: 16),
+                          Expanded(child: buildChartsSectionCdeCdt(searchState)),
+                        ],
+                      ),
+                    ],
+                  ),
+
                 ],
               ),
             ),

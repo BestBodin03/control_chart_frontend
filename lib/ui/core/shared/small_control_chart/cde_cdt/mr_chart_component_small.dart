@@ -1,14 +1,15 @@
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
+import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-  
-class ControlChartComponentSmall extends StatelessWidget {
+class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
   final List<ChartDataPoint>? dataPoints;
   final ControlChartStats? controlChartStats;
   // final String xAxisLabel;
@@ -17,17 +18,19 @@ class ControlChartComponentSmall extends StatelessWidget {
   final Color? backgroundColor;
   final double? height;
   final double? width;
+  final bool isMovingRange;
 
-  const ControlChartComponentSmall({
-    super.key,
+  const MrChartComponentSmall({
+    super.key, 
     this.dataPoints,
     this.controlChartStats,
     // this.xAxisLabel = 'Date (mm/dd)',
     // this.yAxisLabel = 'Surface Hardness',
-    this.dataLineColor = AppColors.colorBrand,
+    this.dataLineColor = const Color.fromARGB(255, 244, 171, 94),
     this.backgroundColor,
     this.height = 240,
     this.width = 560,
+    this.isMovingRange = true
   });
   
   @override
@@ -76,6 +79,7 @@ class ControlChartComponentSmall extends StatelessWidget {
     );
   }
   
+  @override
   FlGridData buildGridData() {
     return FlGridData(
       show: true,
@@ -99,6 +103,7 @@ class ControlChartComponentSmall extends StatelessWidget {
     );
   }
 
+  @override
   FlTitlesData buildTitlesData() {
     return FlTitlesData(
         leftTitles: AxisTitles(
@@ -151,6 +156,7 @@ class ControlChartComponentSmall extends StatelessWidget {
     );
   }
 
+  @override
   FlBorderData buildBorderData() {
     return FlBorderData(
       show: true,
@@ -161,59 +167,52 @@ class ControlChartComponentSmall extends StatelessWidget {
     );
   }
 
+  @override
   ExtraLinesData buildControlLines() {
     return ExtraLinesData(
       extraLinesOnTop: false,
       horizontalLines: [
-        // USL (Upper Specification Limit)
-        if ((controlChartStats?.specAttribute?.surfaceHardnessUpperSpec ?? 0.0) > 0.0)
-          HorizontalLine(
-            y: controlChartStats!.specAttribute!.surfaceHardnessUpperSpec!,
-            color: Colors.red.shade400,
-            strokeWidth: 2,
-          ),
         
         HorizontalLine(
-          y: controlChartStats?.controlLimitIChart?.ucl ?? 0.0,
+          y: controlChartStats?.controlLimitMRChart?.ucl ?? 0.0,
           color: Colors.amberAccent,
           strokeWidth: 1.5,
         ),
         
         // Average Line
         HorizontalLine(
-          y: controlChartStats?.average ?? 0.0,
+          y: controlChartStats?.mrAverage ?? 0.0,
           color: AppColors.colorSuccess1,
           strokeWidth: 2,
         ),
 
         HorizontalLine(
-          y: controlChartStats?.controlLimitIChart?.lcl ?? 0.0,
+          y: controlChartStats?.controlLimitMRChart?.lcl ?? 0.0,
           color: Colors.amberAccent,
           strokeWidth: 1.5,
         ),
-        
-        // LSL (Lower Specification Limit)
-      if ((controlChartStats?.specAttribute?.surfaceHardnessLowerSpec ?? 0.0) > 0.0)
-        HorizontalLine(
-          y: controlChartStats!.specAttribute!.surfaceHardnessLowerSpec!,
-          color: Colors.red.shade400,
-          strokeWidth: 2,
-        ),
+
       ],
     );
   }
 
+  @override
   List<LineChartBarData> buildLineBarsData() {
     final interval = _calculateXInterval().toInt();
+    final int nullMrValue = dataPoints!.length - 1;
     
     return [
       LineChartBarData(
-        spots: dataPoints!
-            .asMap()
-            .entries
-            .where((entry) => entry.key % interval == 0)
-            .map((entry) => FlSpot(entry.key.toDouble(), entry.value.value))
-            .toList(),
+      spots: dataPoints!
+        .asMap()
+        .entries
+        .take(nullMrValue)
+        .where((entry) => (entry.key - 1) % interval == 0)
+        .map((entry) => FlSpot(
+          entry.key.toDouble() + 1.0,
+          entry.value.mrValue
+        ))
+        .toList(),
         
         isCurved: false,
         color: dataLineColor,
@@ -223,16 +222,11 @@ class ControlChartComponentSmall extends StatelessWidget {
           show: true,
           getDotPainter: (spot, percent, barData, index) {
             final realIndex = spot.x.toInt();
-            final value = dataPoints![realIndex].value;
+            final value = dataPoints![realIndex].mrValue;
             Color dotColor = dataLineColor!;
             
-            // OVER LIMIT #RULE 1
-            if ((controlChartStats?.specAttribute?.surfaceHardnessUpperSpec ?? 0.0) > 0.0 &&
-              (value > (controlChartStats?.specAttribute?.surfaceHardnessUpperSpec ?? 0.0) || 
-                value < (controlChartStats?.specAttribute?.surfaceHardnessLowerSpec ?? 0.0))) {
-            dotColor = Colors.red; // Out of spec
-            } else if (value > (controlChartStats?.controlLimitIChart?.ucl ?? 0.0) || 
-                      value < (controlChartStats?.controlLimitIChart?.lcl ?? 0.0)) {
+            if (value > (controlChartStats?.controlLimitMRChart?.ucl ?? 0.0) || 
+                      value < (controlChartStats?.controlLimitMRChart?.lcl ?? 0.0)) {
             dotColor = Colors.orange; // Warning zone
             }
             
@@ -249,6 +243,7 @@ class ControlChartComponentSmall extends StatelessWidget {
     ];
   }
 
+  @override
   LineTouchData buildTouchData() {
     return LineTouchData(
       handleBuiltInTouches: true,
@@ -256,24 +251,22 @@ class ControlChartComponentSmall extends StatelessWidget {
         maxContentWidth: 150,
         getTooltipColor: (_) => AppColors.colorBrand.withValues(alpha: 0.9),
         tooltipBorderRadius: BorderRadius.circular(8),
-        // กัน tooltip หลุดกรอบ/ถูกตัด
         fitInsideHorizontally: true,
         fitInsideVertically: true,
         tooltipMargin: 8,
         getTooltipItems: (spots) {
           return spots.map((barSpot) {
-            final index = barSpot.x.toInt();
-            if (index >= 0 && index < dataPoints!.length) {
+            final index = barSpot.x.toInt() - 1; // map กลับจาก x -> index เดิม
+            if (index >= 0 && index < (dataPoints!.length - 1)) { // ให้สอดคล้องกับ .take(nullMrValue)
+              final mr = dataPoints![index].mrValue;
               return LineTooltipItem(
-                "วันที่: ${dataPoints![index].fullLabel}\n"
-                "ค่า: ${dataPoints![index].value.toStringAsFixed(3)}\n"
-                "เตา: ${dataPoints![index].furnaceNo}\n"
-                "เลขแมต: ${dataPoints![index].matNo}",
+                "ค่า: ${mr.isNaN ? '-' : mr.toStringAsFixed(3)}\n",
                 AppTypography.textBody3W,
                 textAlign: TextAlign.left,
               );
             }
-            return null;
+            return const LineTooltipItem('', TextStyle());
+
           }).whereType<LineTooltipItem>().toList();
         },
       ),
@@ -284,6 +277,8 @@ class ControlChartComponentSmall extends StatelessWidget {
     final spotMin = getMinSpot();
     final spotMax = getMaxSpot();
     final range = (spotMax - spotMin).abs();
+
+    print('$spotMin, $spotMax, $range');
     
     if (range < 10) {
       return 2.5; // hardcode สำหรับ range เล็ก
@@ -292,30 +287,43 @@ class ControlChartComponentSmall extends StatelessWidget {
     if (range < 5) {
       return 1.25; // hardcode สำหรับ range เล็ก
     }
+
+    if (range < 1) {
+      return 0.25; // hardcode สำหรับ range เล็ก
+    }
     
     final targetIntervals = 2;
     final tempInterval = range / targetIntervals;
     
-    // Conditional interval selection
-    if (tempInterval < 25) return 25.0;
-    else if (tempInterval < 50) return 50.0;
-    else if (tempInterval < 75) return 75.0;
-    else if (tempInterval < 100) return 100.0;
-    else return (tempInterval / 100).ceil() * 100.0; // สำหรับค่าใหญ่กว่า
+    if (tempInterval < 25) {
+      return 25.0;
+    }
+    else if (tempInterval < 50) {
+      return 50.0;
+    }
+    else if (tempInterval < 75) {
+      return 75.0;
+    }
+    else if (tempInterval < 100) {
+      return 100.0;
+    } 
+    else {
+      return (tempInterval / 100).ceil() * 50.0; // สำหรับค่าใหญ่กว่า
+    }
   }
 
+
+  @override
   double getMinY() {
-    final controlLCL = controlChartStats?.controlLimitIChart?.lcl;
-    final specLower = controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;
+    final controlLCL = controlChartStats?.controlLimitMRChart?.lcl;
+    // final specLower = controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;
     final spotMin = getMinSpot();
     final spotMax = getMaxSpot();
-    final range = (spotMax - spotMin).abs();
+    (spotMax - spotMin).abs();
     
     // คำนวณ base min
     double baseMin = spotMin;
-    if (specLower != null && specLower > 0) {
-      baseMin = min(baseMin, specLower * 0.95);
-    } else if (controlLCL != null && controlLCL > 0) {
+    if (controlLCL != null && controlLCL > 0) {
       baseMin = min(baseMin, controlLCL * 0.95);
     }
     
@@ -324,18 +332,17 @@ class ControlChartComponentSmall extends StatelessWidget {
     return max(0.0, calculatedMin);
   }
 
+  @override
   double getMaxY() {
-    final controlUCL = controlChartStats?.controlLimitIChart?.ucl;
-    final specUpper = controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
+    final controlUCL = controlChartStats?.controlLimitMRChart?.ucl;
+    // final specUpper = controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
     final spotMin = getMinSpot();
     final spotMax = getMaxSpot();
     (spotMax - spotMin).abs();
     
     // คำนวณ base max
     double baseMax = spotMax;
-    if (specUpper != null && specUpper > 0) {
-      baseMax = max(baseMax, specUpper * 1.05);
-    } else if (controlUCL != null && controlUCL > 0) {
+    if (controlUCL != null && controlUCL > 0) {
       baseMax = max(baseMax, controlUCL * 1.05);
     }
     
@@ -360,7 +367,7 @@ class ControlChartComponentSmall extends StatelessWidget {
   }
   
   final maxSpot = dataPoints!
-      .map((point) => point.value)
+      .map((point) => point.mrValue)
       .where((value) => value > 0)
       .fold<double>(double.negativeInfinity, max);
 
@@ -373,11 +380,10 @@ class ControlChartComponentSmall extends StatelessWidget {
   }
   
   final minSpot = dataPoints!
-      .map((point) => point.value)
+      .map((point) => point.mrValue)
       .where((value) => value > 0)
       .fold<double>(double.infinity, min);
   
   return minSpot;
   }
-
 }

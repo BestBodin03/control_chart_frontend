@@ -10,12 +10,28 @@ ControlChartStats _$ControlChartStatsFromJson(Map<String, dynamic> json) =>
     ControlChartStats(
       numberOfSpots: (json['numberOfSpots'] as num?)?.toInt(),
       average: (json['average'] as num?)?.toDouble(),
+      cdeAverage: (json['cdeAverage'] as num?)?.toDouble(),
+      cdtAverage: (json['cdtAverage'] as num?)?.toDouble(),
       mrAverage: (json['MRAverage'] as num?)?.toDouble(),
+      cdeMrAverage: (json['cdeMrAverage'] as num?)?.toDouble(),
+      cdtMrAverage: (json['cdtMrAverage'] as num?)?.toDouble(),
       controlLimitIChart:
           json['controlLimitIChart'] == null
               ? null
               : ControlLimitIChart.fromJson(
                 json['controlLimitIChart'] as Map<String, dynamic>,
+              ),
+      cdeControlLimitIChart:
+          json['cdeControlLimitIChart'] == null
+              ? null
+              : ControlLimitIChart.fromJson(
+                json['cdeControlLimitIChart'] as Map<String, dynamic>,
+              ),
+      cdtControlLimitIChart:
+          json['cdtControlLimitIChart'] == null
+              ? null
+              : ControlLimitIChart.fromJson(
+                json['cdtControlLimitIChart'] as Map<String, dynamic>,
               ),
       sigmaIChart:
           json['sigmaIChart'] == null
@@ -23,14 +39,46 @@ ControlChartStats _$ControlChartStatsFromJson(Map<String, dynamic> json) =>
               : SigmaIChart.fromJson(
                 json['sigmaIChart'] as Map<String, dynamic>,
               ),
+      cdeSigmaIChart:
+          json['cdeSigmaIChart'] == null
+              ? null
+              : SigmaIChart.fromJson(
+                json['cdeSigmaIChart'] as Map<String, dynamic>,
+              ),
+      cdtSigmaIChart:
+          json['cdtSigmaIChart'] == null
+              ? null
+              : SigmaIChart.fromJson(
+                json['cdtSigmaIChart'] as Map<String, dynamic>,
+              ),
       controlLimitMRChart:
           json['controlLimitMRChart'] == null
               ? null
               : ControlLimitMRChart.fromJson(
                 json['controlLimitMRChart'] as Map<String, dynamic>,
               ),
+      cdeControlLimitMRChart:
+          json['cdeControlLimitMRChart'] == null
+              ? null
+              : ControlLimitMRChart.fromJson(
+                json['cdeControlLimitMRChart'] as Map<String, dynamic>,
+              ),
+      cdtControlLimitMRChart:
+          json['cdtControlLimitMRChart'] == null
+              ? null
+              : ControlLimitMRChart.fromJson(
+                json['cdtControlLimitMRChart'] as Map<String, dynamic>,
+              ),
       mrChartSpots:
           (json['mrChartSpots'] as List<dynamic>?)
+              ?.map((e) => (e as num).toDouble())
+              .toList(),
+      cdeMrChartSpots:
+          (json['cdeMrChartSpots'] as List<dynamic>?)
+              ?.map((e) => (e as num).toDouble())
+              .toList(),
+      cdtMrChartSpots:
+          (json['cdtMrChartSpots'] as List<dynamic>?)
               ?.map((e) => (e as num).toDouble())
               .toList(),
       specAttribute:
@@ -45,11 +93,23 @@ Map<String, dynamic> _$ControlChartStatsToJson(ControlChartStats instance) =>
     <String, dynamic>{
       'numberOfSpots': instance.numberOfSpots,
       'average': instance.average,
+      'cdeAverage': instance.cdeAverage,
+      'cdtAverage': instance.cdtAverage,
       'MRAverage': instance.mrAverage,
+      'cdeMrAverage': instance.cdeMrAverage,
+      'cdtMrAverage': instance.cdtMrAverage,
       'controlLimitIChart': instance.controlLimitIChart,
+      'cdeControlLimitIChart': instance.cdeControlLimitIChart,
+      'cdtControlLimitIChart': instance.cdtControlLimitIChart,
       'sigmaIChart': instance.sigmaIChart,
+      'cdeSigmaIChart': instance.cdeSigmaIChart,
+      'cdtSigmaIChart': instance.cdtSigmaIChart,
       'controlLimitMRChart': instance.controlLimitMRChart,
+      'cdeControlLimitMRChart': instance.cdeControlLimitMRChart,
+      'cdtControlLimitMRChart': instance.cdtControlLimitMRChart,
       'mrChartSpots': instance.mrChartSpots,
+      'cdeMrChartSpots': instance.cdeMrChartSpots,
+      'cdtMrChartSpots': instance.cdtMrChartSpots,
       'specAttribute': instance.specAttribute,
     };
 

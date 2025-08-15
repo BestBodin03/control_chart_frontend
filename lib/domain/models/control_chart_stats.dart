@@ -6,34 +6,70 @@ part 'control_chart_stats.g.dart';
 class ControlChartStats {
   final int? numberOfSpots;
   final double? average;
+  final double? cdeAverage;
+  final double? cdtAverage;
   @JsonKey(name: 'MRAverage')
   final double? mrAverage;
+  final double? cdeMrAverage;
+  final double? cdtMrAverage;
   final ControlLimitIChart? controlLimitIChart;
+  final ControlLimitIChart? cdeControlLimitIChart;
+  final ControlLimitIChart? cdtControlLimitIChart;
   final SigmaIChart? sigmaIChart;
+  final SigmaIChart? cdeSigmaIChart;
+  final SigmaIChart? cdtSigmaIChart;
   final ControlLimitMRChart? controlLimitMRChart;
-  final List<double>? mrChartSpots;  // Added this field
+  final ControlLimitMRChart? cdeControlLimitMRChart;
+  final ControlLimitMRChart? cdtControlLimitMRChart;
+  final List<double>? mrChartSpots;
+  final List<double>? cdeMrChartSpots;
+  final List<double>? cdtMrChartSpots;
   final SpecAttribute? specAttribute;  // Added this field
 
   const ControlChartStats({
     this.numberOfSpots,
     this.average,
+    this.cdeAverage,
+    this.cdtAverage,
     this.mrAverage,
+    this.cdeMrAverage,
+    this.cdtMrAverage,
     this.controlLimitIChart,
+    this.cdeControlLimitIChart,
+    this.cdtControlLimitIChart,
     this.sigmaIChart,
+    this.cdeSigmaIChart,
+    this.cdtSigmaIChart,
     this.controlLimitMRChart,
-    this.mrChartSpots,      // Added
-    this.specAttribute,     // Added
+    this.cdeControlLimitMRChart,
+    this.cdtControlLimitMRChart,
+    this.mrChartSpots,      
+    this.cdeMrChartSpots,
+    this.cdtMrChartSpots,
+    this.specAttribute,     
   });
 
   // Add empty constructor for error handling
   const ControlChartStats.empty()
       : numberOfSpots = 0,
         average = 0.0,
+        cdeAverage = 0.0,
+        cdtAverage = 0.0,
         mrAverage = 0.0,
+        cdeMrAverage = 0.0,
+        cdtMrAverage = 0.0,
         controlLimitIChart = null,
+        cdeControlLimitIChart = null,
+        cdtControlLimitIChart = null,
         sigmaIChart = null,
+        cdeSigmaIChart = null,
+        cdtSigmaIChart = null,
         controlLimitMRChart = null,
+        cdeControlLimitMRChart = null,
+        cdtControlLimitMRChart = null,
         mrChartSpots = const [],
+        cdeMrChartSpots = const [],
+        cdtMrChartSpots = const [],
         specAttribute = null;
 
   factory ControlChartStats.fromJson(Map<String, dynamic> json) =>

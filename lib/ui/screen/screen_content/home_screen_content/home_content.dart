@@ -3,7 +3,7 @@ import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart';
 // import 'package:control_chart/domain/models/control_chart_stats.dart';
 // import 'package:control_chart/ui/core/design_system/app_color.dart';
-import 'package:control_chart/ui/core/shared/control_chart_template.dart';
+import 'package:control_chart/ui/core/shared/medium_control_chart/control_chart_template.dart';
 // import 'package:control_chart/ui/core/shared/table_component.dart';
 import 'package:control_chart/ui/core/shared/searching_form.dart';
 import 'package:flutter/material.dart';
@@ -71,6 +71,7 @@ class HomeContentState extends State<HomeContent> {
                       furnaceNo: chartDetail.chartGeneralDetail.furnaceNo.toString(),
                       matNo: chartDetail.cpNo,
                       value: chartDetail.machanicDetail.surfaceHardnessMean,
+                      mrValue: 0.0
                     )).toList(),
                     controlChartStats: searchState.controlChartStats!,
                     dataLineColor: const Color.fromARGB(255, 167, 163, 228),

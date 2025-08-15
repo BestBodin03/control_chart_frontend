@@ -4,6 +4,7 @@ class ChartDataPoint {
   final String? furnaceNo;
   final String? matNo;
   final double value;
+  final double mrValue;
 
   ChartDataPoint({
     required this.label,
@@ -11,21 +12,24 @@ class ChartDataPoint {
     this.furnaceNo,
     this.matNo,
     required this.value,
+    required this.mrValue
   });
 }
 
-// class ControlLimits {
-//   final double usl; // Upper Specification Limit
-//   final double ucl; // Upper Control Limit
-//   final double average; // Average/Center Line
-//   final double lcl; // Lower Control Limit
-//   final double lsl; // Lower Specification Limit
+class ChartDataPointCdeCdt {
+  final String label;
+  final String fullLabel;
+  final String? furnaceNo;
+  final String? matNo;
+  final double value;
+  final double mrValue;
 
-//   ControlLimits({
-//     required this.usl,
-//     required this.ucl,
-//     required this.average,
-//     required this.lcl,
-//     required this.lsl,
-//   });
-// }
+  ChartDataPointCdeCdt({
+    required this.label,
+    required this.fullLabel,
+    this.furnaceNo,
+    this.matNo,
+    required this.value,
+    required this.mrValue
+  });
+}

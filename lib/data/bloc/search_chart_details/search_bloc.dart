@@ -1,5 +1,6 @@
 // search_bloc.dart
 import 'package:control_chart/apis/search_chart_details/search_chart_details_apis.dart';
+import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/chart_detail.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_filter_query.dart';
