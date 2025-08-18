@@ -10,7 +10,9 @@ class ControlChartStats {
   final double? cdtAverage;
   @JsonKey(name: 'MRAverage')
   final double? mrAverage;
+  @JsonKey(name: 'cdeMRAverage')
   final double? cdeMrAverage;
+  @JsonKey(name: 'cdtMRAverage')
   final double? cdtMrAverage;
   final ControlLimitIChart? controlLimitIChart;
   final ControlLimitIChart? cdeControlLimitIChart;
@@ -21,6 +23,9 @@ class ControlChartStats {
   final ControlLimitMRChart? controlLimitMRChart;
   final ControlLimitMRChart? cdeControlLimitMRChart;
   final ControlLimitMRChart? cdtControlLimitMRChart;
+  final List<double>? surfaceHardnessChartSpots;
+  final List<double>? cdeChartSpots;
+  final List<double>? cdtChartSpots;
   final List<double>? mrChartSpots;
   final List<double>? cdeMrChartSpots;
   final List<double>? cdtMrChartSpots;
@@ -43,6 +48,9 @@ class ControlChartStats {
     this.controlLimitMRChart,
     this.cdeControlLimitMRChart,
     this.cdtControlLimitMRChart,
+    this.surfaceHardnessChartSpots,      
+    this.cdeChartSpots,
+    this.cdtChartSpots,
     this.mrChartSpots,      
     this.cdeMrChartSpots,
     this.cdtMrChartSpots,
@@ -67,6 +75,9 @@ class ControlChartStats {
         controlLimitMRChart = null,
         cdeControlLimitMRChart = null,
         cdtControlLimitMRChart = null,
+        surfaceHardnessChartSpots = const [],
+        cdeChartSpots = const [],
+        cdtChartSpots = const [],
         mrChartSpots = const [],
         cdeMrChartSpots = const [],
         cdtMrChartSpots = const [],

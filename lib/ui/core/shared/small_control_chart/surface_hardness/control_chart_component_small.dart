@@ -368,12 +368,12 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
     return _getInterval(); // ใช้ interval ที่คำนวณแล้ว
   }
     
-    double _calculateXInterval() {
-      int pointCount = dataPoints!.length;
-      
-      if (pointCount <= 10) return 1.0;
-      return (pointCount / 10).ceilToDouble();
-    }
+  double _calculateXInterval() {
+    int pointCount = dataPoints!.length;
+    
+    if (pointCount <= 10) return 1.0;
+    return (pointCount / 10).ceilToDouble();
+  }
 
   double getMaxSpot() {
   if (dataPoints == null || dataPoints!.isEmpty) {

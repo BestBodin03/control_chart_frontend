@@ -1,8 +1,4 @@
 
-
-import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
-import 'package:control_chart/ui/core/design_system/app_typography.dart';
-import 'package:control_chart/ui/core/shared/small_control_chart/surface_hardness/control_chart_template_small.dart';
 import 'package:flutter/material.dart';
 
 import '../../../data/bloc/search_chart_details/search_bloc.dart';

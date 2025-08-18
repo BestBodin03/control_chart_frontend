@@ -13,8 +13,8 @@ ControlChartStats _$ControlChartStatsFromJson(Map<String, dynamic> json) =>
       cdeAverage: (json['cdeAverage'] as num?)?.toDouble(),
       cdtAverage: (json['cdtAverage'] as num?)?.toDouble(),
       mrAverage: (json['MRAverage'] as num?)?.toDouble(),
-      cdeMrAverage: (json['cdeMrAverage'] as num?)?.toDouble(),
-      cdtMrAverage: (json['cdtMrAverage'] as num?)?.toDouble(),
+      cdeMrAverage: (json['cdeMRAverage'] as num?)?.toDouble(),
+      cdtMrAverage: (json['cdtMRAverage'] as num?)?.toDouble(),
       controlLimitIChart:
           json['controlLimitIChart'] == null
               ? null
@@ -69,6 +69,18 @@ ControlChartStats _$ControlChartStatsFromJson(Map<String, dynamic> json) =>
               : ControlLimitMRChart.fromJson(
                 json['cdtControlLimitMRChart'] as Map<String, dynamic>,
               ),
+      surfaceHardnessChartSpots:
+          (json['surfaceHardnessChartSpots'] as List<dynamic>?)
+              ?.map((e) => (e as num).toDouble())
+              .toList(),
+      cdeChartSpots:
+          (json['cdeChartSpots'] as List<dynamic>?)
+              ?.map((e) => (e as num).toDouble())
+              .toList(),
+      cdtChartSpots:
+          (json['cdtChartSpots'] as List<dynamic>?)
+              ?.map((e) => (e as num).toDouble())
+              .toList(),
       mrChartSpots:
           (json['mrChartSpots'] as List<dynamic>?)
               ?.map((e) => (e as num).toDouble())
@@ -96,8 +108,8 @@ Map<String, dynamic> _$ControlChartStatsToJson(ControlChartStats instance) =>
       'cdeAverage': instance.cdeAverage,
       'cdtAverage': instance.cdtAverage,
       'MRAverage': instance.mrAverage,
-      'cdeMrAverage': instance.cdeMrAverage,
-      'cdtMrAverage': instance.cdtMrAverage,
+      'cdeMRAverage': instance.cdeMrAverage,
+      'cdtMRAverage': instance.cdtMrAverage,
       'controlLimitIChart': instance.controlLimitIChart,
       'cdeControlLimitIChart': instance.cdeControlLimitIChart,
       'cdtControlLimitIChart': instance.cdtControlLimitIChart,
@@ -107,6 +119,9 @@ Map<String, dynamic> _$ControlChartStatsToJson(ControlChartStats instance) =>
       'controlLimitMRChart': instance.controlLimitMRChart,
       'cdeControlLimitMRChart': instance.cdeControlLimitMRChart,
       'cdtControlLimitMRChart': instance.cdtControlLimitMRChart,
+      'surfaceHardnessChartSpots': instance.surfaceHardnessChartSpots,
+      'cdeChartSpots': instance.cdeChartSpots,
+      'cdtChartSpots': instance.cdtChartSpots,
       'mrChartSpots': instance.mrChartSpots,
       'cdeMrChartSpots': instance.cdeMrChartSpots,
       'cdtMrChartSpots': instance.cdtMrChartSpots,

@@ -24,8 +24,8 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
   }
 
   static const List<Widget> _widgetOptions = <Widget>[
-    SearchingScreen(),
     HomeContent(),
+    SearchingScreen(),
     SettingScreen(),
     ChartDetailScreen(),
   ];

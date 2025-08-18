@@ -11,7 +11,7 @@ Widget buildChartsSectionSurfaceHardness(SearchState searchState) {
     children: [
       Expanded(
         child: _buildChartContainer(
-          title: 'CDE, CDT',
+          title: 'Surface Hardness',
           searchState: searchState,
           // chartType: ChartType.cdeCdt,
         ),
@@ -31,6 +31,17 @@ Widget _buildChartContainer({
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(0,0,0,8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              title,
+              style: AppTypography.textBody2BBold),
+          ],
+        ),
+      ),
       // Outer bordered card
       SizedBox(
         child: DecoratedBox(

@@ -69,7 +69,7 @@ class MachanicDetail {
 class CDE {
   const CDE({
     required this.cdex,
-    required this.cdey,
+    required this.cdtx,
   });
 
   factory CDE.fromJson(Map<String, dynamic> json) => _$CDEFromJson(json);
@@ -78,7 +78,7 @@ class CDE {
   final double cdex;
 
   @JsonKey(name: 'CDTX')
-  final double cdey;
+  final double cdtx;
 
   Map<String, dynamic> toJson() => _$CDEToJson(this);
 }

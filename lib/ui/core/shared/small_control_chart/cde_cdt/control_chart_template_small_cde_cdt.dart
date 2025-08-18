@@ -1,17 +1,19 @@
 
+
+import 'package:control_chart/domain/models/control_chart_stats.dart';
+import 'package:control_chart/domain/types/chart_component.dart';
+import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/control_chart_component_small.dart';
 import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/mr_chart_component_small.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../../../../data/bloc/search_chart_details/search_bloc.dart';
 import '../../../../../domain/models/chart_data_point.dart';
-import '../../../../../domain/models/control_chart_stats.dart';
-import '../../../../../domain/types/chart_component.dart';
-import '../../../design_system/app_color.dart';
 
-class ControlChartTemplateSmall extends StatelessWidget {
-  final List<ChartDataPoint>? dataPoints;
+class ControlChartTemplateSmallCdeCdt extends StatelessWidget {
+  final List<ChartDataPointCdeCdt>? dataPoints;
   final ControlChartStats? controlChartStats;
   final String xAxisLabel;
   final String yAxisLabel;
@@ -21,7 +23,7 @@ class ControlChartTemplateSmall extends StatelessWidget {
   final double? width;
   final bool isMovingRange;
 
-  const ControlChartTemplateSmall({
+  const ControlChartTemplateSmallCdeCdt({
     super.key,
     this.dataPoints,
     this.controlChartStats,
@@ -89,6 +91,26 @@ class ControlChartTemplateSmall extends StatelessWidget {
 
   // เลือก widget ตาม isMovingRange
   final ChartComponent selectedWidget = isMovingRange ? useMrWidget : useWidget;
+
+  // // 1) Which widget?
+  // debugPrint('Selected chart widget: ${selectedWidget.runtimeType} '
+  //           '(isMovingRange=$isMovingRange)');
+
+  // // 2) What values will be plotted?
+  // final List<double> shownValues = isMovingRange
+  //   ? dataPoints!.map((p) => p.mrValue).toList()
+  //   : dataPoints!.map((p) => p.value).toList();
+
+  // debugPrint('Showing ${shownValues.length} points; first 10: '
+  //   '${shownValues.take(10).map((v) => v.toStringAsFixed(3)).toList()}');
+
+  // // 3) Index-by-index (best for tracing)
+  // for (var i = 0; i < dataPoints!.length; i++) {
+  //   final p = dataPoints![i];
+  //   final shown = isMovingRange ? p.mrValue : p.value;
+  //   debugPrint('[$i] ${p.fullLabel}  -> ${shown.toStringAsFixed(3)} '
+  //             '(furnace=${p.furnaceNo}, mat=${p.matNo})');
+  // }
 
   return DecoratedBox(
     decoration: BoxDecoration(

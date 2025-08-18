@@ -3,18 +3,24 @@ import 'package:control_chart/data/bloc/search_chart_details/extension/search_st
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
-import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/control_chart_template_small.dart';
+import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/control_chart_template_small_cde_cdt.dart';
 // import 'package:control_chart/ui/core/shared/small_control_chart/surface_hardness/control_chart_template_small.dart';
 
 import 'package:flutter/material.dart';
 
 Widget buildChartsSectionCdeCdt(SearchState searchState) {
+  String _cdeOrCdtLabel(num? cde, num? cdt) {
+    final a = (cde ?? 0).toDouble();
+    final b = (cdt ?? 0).toDouble();
+    return a > b ? 'CDE' : b > a ? 'CDT' : 'N/A';
+  }
+
   return Row(
     children: [
       // Hardness Chart
       Expanded(
         child: _buildChartContainerCdeCdt(
-          title: 'Surface Hardness',
+          title: _cdeOrCdtLabel(searchState.controlChartStats!.cdeAverage, searchState.controlChartStats!.cdtAverage),
           searchState: searchState,
           // chartType: ChartType.surfaceHardness,
         ),
@@ -31,6 +37,17 @@ Widget _buildChartContainerCdeCdt({
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
+            Padding(
+        padding: const EdgeInsets.fromLTRB(0,0,0,8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              title,
+              style: AppTypography.textBody2BBold),
+          ],
+        ),
+      ),
       // Outer bordered card
       SizedBox(
         child: DecoratedBox(
@@ -190,11 +207,11 @@ Widget _buildChartContentCdeCdt({
       '${query.endDate?.millisecondsSinceEpoch}-'
       '${query.furnaceNo}-'
       '${query.materialNo}-';
-  final dataPoints = searchState.chartDataPoints;
+  final dataPoints = searchState.chartDataPointsCdeCdt;
 
   return ClipRRect(
     borderRadius: BorderRadius.circular(4),
-    child: ControlChartTemplateSmall(
+    child: ControlChartTemplateSmallCdeCdt(
       key: ValueKey(uniqueKey.hashCode.toString()),
       dataPoints: dataPoints,
       controlChartStats: searchState.controlChartStats!,
@@ -256,11 +273,21 @@ Widget _buildMrChartContentCdeCdt({
       '${query.endDate?.millisecondsSinceEpoch}-'
       '${query.furnaceNo}-'
       '${query.materialNo}-';
-  final dataPoints = searchState.chartDataPoints;
+  final dataPoints = searchState.chartDataPointsCdeCdt;
+  
+  // for (var i = 0; i < dataPoints.length; i++) {
+  //   final p = dataPoints[i];
+  //   debugPrint('++++++++++++++++++ BEFORE GO TO TEMPLATE ++++++++++++++' '\n');
+  //   debugPrint(
+  //     '[$i] ${p.fullLabel}  value=${p.value.toStringAsFixed(3)}  '
+  //     'mr=${p.mrValue.toStringAsFixed(3)}  furnace=${p.furnaceNo}  mat=${p.matNo}'
+  //   );
+  // }
+
 
   return ClipRRect(
     borderRadius: BorderRadius.circular(4),
-    child: ControlChartTemplateSmall(
+    child: ControlChartTemplateSmallCdeCdt(
       key: ValueKey(uniqueKey.hashCode.toString()),
       dataPoints: dataPoints,
       controlChartStats: searchState.controlChartStats!,

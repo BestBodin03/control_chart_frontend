@@ -1,4 +1,4 @@
-  import 'package:control_chart/ui/core/design_system/app_color.dart';
+import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:flutter/material.dart';
 

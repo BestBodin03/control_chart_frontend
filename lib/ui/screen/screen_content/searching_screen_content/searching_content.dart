@@ -14,7 +14,7 @@ class SearchingContentState extends State<SearchingContent> {
   Widget build(BuildContext context) {
     return const SingleChildScrollView(
       child: Padding(
-        padding: EdgeInsets.only(left: 16.0, right: 32.0, bottom: 32.0),
+        padding: EdgeInsets.only(left: 16.0, right: 32.0, bottom: 32.0, top: 16.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

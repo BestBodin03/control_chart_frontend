@@ -1,6 +1,4 @@
 import 'dart:math';
-import 'dart:ui';
-
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
@@ -351,7 +349,7 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
   }
 
   double _calculateYAxisInterval() {
-    return _getInterval(); // ใช้ interval ที่คำนวณแล้ว
+    return _getInterval();
   }
     
     double _calculateXInterval() {

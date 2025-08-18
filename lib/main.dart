@@ -23,9 +23,9 @@ class MyApp extends StatelessWidget {
 
     child: MaterialApp(
       theme: ThemeData(
-        scaffoldBackgroundColor: AppColors.colorBg,
+        scaffoldBackgroundColor: AppColors.colorBgGrey,
         appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.colorBg,
+        backgroundColor:  AppColors.colorBgGrey,
         toolbarHeight: 64.0,
         systemOverlayStyle: SystemUiOverlayStyle.light,
         ),

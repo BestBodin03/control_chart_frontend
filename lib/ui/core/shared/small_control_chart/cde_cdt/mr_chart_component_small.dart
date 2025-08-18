@@ -1,6 +1,4 @@
 import 'dart:math';
-import 'dart:ui';
-
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
@@ -10,7 +8,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
-  final List<ChartDataPoint>? dataPoints;
+  final List<ChartDataPointCdeCdt>? dataPoints;
   final ControlChartStats? controlChartStats;
   // final String xAxisLabel;
   // final String yAxisLabel;
@@ -26,7 +24,7 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
     this.controlChartStats,
     // this.xAxisLabel = 'Date (mm/dd)',
     // this.yAxisLabel = 'Surface Hardness',
-    this.dataLineColor = const Color.fromARGB(255, 244, 171, 94),
+    this.dataLineColor = AppColors.colorBrand,
     this.backgroundColor,
     this.height = 240,
     this.width = 560,
@@ -60,7 +58,7 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
                 // lineTouchData: buildTouchData(),
                 minX: 0,
                 maxX: (dataPoints!.length - 1).toDouble(),
-                minY: getMinY(),
+                minY: 0,
                 maxY: getMaxY(),
               ),
             ),
@@ -117,7 +115,7 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
           interval: _calculateYAxisInterval(),
           getTitlesWidget: (value, meta) {
             return Text(
-              value.toStringAsFixed(0),
+              value.toStringAsFixed(2),
               style: const TextStyle(
                 color: Colors.black54,
                 fontSize: 8,
@@ -174,23 +172,27 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
       horizontalLines: [
         
         HorizontalLine(
-          y: controlChartStats?.controlLimitMRChart?.ucl ?? 0.0,
+          y: _chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.ucl ?? 0.0,
+          controlChartStats?.cdtControlLimitMRChart?.ucl ?? 0.0),
           color: Colors.amberAccent,
           strokeWidth: 1.5,
         ),
         
         // Average Line
         HorizontalLine(
-          y: controlChartStats?.mrAverage ?? 0.0,
+          y: _chooseCdeOrCdt(controlChartStats?.cdeMrAverage ?? 0.0, 
+          controlChartStats?.cdtMrAverage ?? 0.0),
+          // y: controlChartStats?.mrAverage ?? 0.0,
           color: AppColors.colorSuccess1,
           strokeWidth: 2,
         ),
 
-        HorizontalLine(
-          y: controlChartStats?.controlLimitMRChart?.lcl ?? 0.0,
-          color: Colors.amberAccent,
-          strokeWidth: 1.5,
-        ),
+        // HorizontalLine(
+        //   y: _chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.lcl ?? 0.0,
+        //   controlChartStats?.cdtControlLimitMRChart?.lcl ?? 0.0),
+        //   color: Colors.amberAccent,
+        //   strokeWidth: 1.5,
+        // ),
 
       ],
     );
@@ -225,10 +227,13 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
             final value = dataPoints![realIndex].mrValue;
             Color dotColor = dataLineColor!;
             
-            if (value > (controlChartStats?.controlLimitMRChart?.ucl ?? 0.0) || 
-                      value < (controlChartStats?.controlLimitMRChart?.lcl ?? 0.0)) {
-            dotColor = Colors.orange; // Warning zone
-            }
+            // RULE 1 # OVER CONTROL
+            dotColor = (value < _chooseCdeOrCdt(
+              controlChartStats?.cdeControlLimitMRChart?.lcl ?? 0.0,
+              controlChartStats?.cdtControlLimitMRChart?.lcl ?? 0.0,
+            )) ? Colors.orange : AppColors.colorBrand;
+
+
             
             return FlDotCirclePainter(
               radius: 4,
@@ -271,95 +276,48 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
         },
       ),
     );
-  }
+  } 
 
   double _getInterval() {
     final spotMin = getMinSpot();
     final spotMax = getMaxSpot();
-    final range = (spotMax - spotMin).abs();
+    // final range = (spotMax - spotMin).abs();
+    final range = getMaxY();
+    // final theMaxY = getMaxY();
 
-    print('$spotMin, $spotMax, $range');
-    
-    if (range < 10) {
-      return 2.5; // hardcode สำหรับ range เล็ก
-    }
+    debugPrint('The Range = $range, max - min: ($spotMax - $spotMin)');
 
-    if (range < 5) {
-      return 1.25; // hardcode สำหรับ range เล็ก
-    }
 
-    if (range < 1) {
-      return 0.25; // hardcode สำหรับ range เล็ก
-    }
-    
-    final targetIntervals = 2;
-    final tempInterval = range / targetIntervals;
-    
-    if (tempInterval < 25) {
-      return 25.0;
-    }
-    else if (tempInterval < 50) {
-      return 50.0;
-    }
-    else if (tempInterval < 75) {
-      return 75.0;
-    }
-    else if (tempInterval < 100) {
-      return 100.0;
-    } 
-    else {
-      return (tempInterval / 100).ceil() * 50.0; // สำหรับค่าใหญ่กว่า
-    }
+    return range <= 0.25 ? 0.05
+        : range <= 0.5  ? 0.10
+        : range <= 1.0  ? 0.20
+        : 0.20;
   }
-
 
   @override
   double getMinY() {
-    final controlLCL = controlChartStats?.controlLimitMRChart?.lcl;
-    // final specLower = controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;
-    final spotMin = getMinSpot();
-    final spotMax = getMaxSpot();
-    (spotMax - spotMin).abs();
-    
-    // คำนวณ base min
-    double baseMin = spotMin;
-    if (controlLCL != null && controlLCL > 0) {
-      baseMin = min(baseMin, controlLCL * 0.95);
-    }
-    
-    final interval = _getInterval();
-    final calculatedMin = (baseMin / interval).floor() * interval;
-    return max(0.0, calculatedMin);
+    return 0.0;
   }
 
   @override
   double getMaxY() {
-    final controlUCL = controlChartStats?.controlLimitMRChart?.ucl;
-    // final specUpper = controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
-    final spotMin = getMinSpot();
-    final spotMax = getMaxSpot();
-    (spotMax - spotMin).abs();
-    
-    // คำนวณ base max
-    double baseMax = spotMax;
-    if (controlUCL != null && controlUCL > 0) {
-      baseMax = max(baseMax, controlUCL * 1.05);
-    }
-    
-    final interval = _getInterval();
-    return (baseMax / interval).ceil() * interval;
+    final ucl = _chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.ucl ?? 0, 
+    controlChartStats?.cdtControlLimitMRChart?.ucl ?? 0);
+    final maxY = max(getMaxSpot(), ucl);
+    return maxY <= 0.25 ? 0.25 : maxY <= 0.5 ? 0.5 : 1.0;
   }
 
   double _calculateYAxisInterval() {
-    return _getInterval(); // ใช้ interval ที่คำนวณแล้ว
+    return _getInterval();
   }
     
-    double _calculateXInterval() {
-      int pointCount = dataPoints!.length;
-      
-      if (pointCount <= 10) return 1.0;
-      return (pointCount / 10).ceilToDouble();
-    }
+  double _calculateXInterval() {
+    int pointCount = dataPoints!.length;
+    
+    if (pointCount <= 10) return 1.0;
+    return (pointCount / 10).ceilToDouble();
+  }
+
 
   double getMaxSpot() {
   if (dataPoints == null || dataPoints!.isEmpty) {
@@ -375,15 +333,12 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
   }
 
   double getMinSpot() {
-  if (dataPoints == null || dataPoints!.isEmpty) {
     return 0.0;
   }
-  
-  final minSpot = dataPoints!
-      .map((point) => point.mrValue)
-      .where((value) => value > 0)
-      .fold<double>(double.infinity, min);
-  
-  return minSpot;
+
+  double _chooseCdeOrCdt(double? cde, double? cdt, {double fallback = 0}) {
+    if (cde == null) return cdt ?? fallback;
+    if (cdt == null) return cde;
+    return cde > cdt ? cde : cdt;
   }
 }

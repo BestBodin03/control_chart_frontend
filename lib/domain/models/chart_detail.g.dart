@@ -55,12 +55,12 @@ Map<String, dynamic> _$MachanicDetailToJson(MachanicDetail instance) =>
 
 CDE _$CDEFromJson(Map<String, dynamic> json) => CDE(
   cdex: (json['CDEX'] as num).toDouble(),
-  cdey: (json['CDTX'] as num).toDouble(),
+  cdtx: (json['CDTX'] as num).toDouble(),
 );
 
 Map<String, dynamic> _$CDEToJson(CDE instance) => <String, dynamic>{
   'CDEX': instance.cdex,
-  'CDTX': instance.cdey,
+  'CDTX': instance.cdtx,
 };
 
 Filters _$FiltersFromJson(Map<String, dynamic> json) => Filters(
