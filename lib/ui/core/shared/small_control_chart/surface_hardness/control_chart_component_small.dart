@@ -223,7 +223,7 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
         
         isCurved: false,
         color: dataLineColor,
-        barWidth: 3,
+        barWidth: 2,
         isStrokeCapRound: true,
         dotData: FlDotData(
           show: true,

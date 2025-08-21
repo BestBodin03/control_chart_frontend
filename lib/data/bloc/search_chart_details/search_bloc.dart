@@ -5,6 +5,7 @@ import 'package:control_chart/domain/models/chart_detail.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_filter_query.dart';
 import 'package:control_chart/domain/types/search_table.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
@@ -71,77 +72,25 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     }
   }
 
-  // Future<void> _onUpdateFurnaceNo(
-  //   UpdateFurnaceNo event,
-  //   Emitter<SearchState> emit,
-  // ) async {
-  //   print('🔄 Updating furnace no: ${event.furnaceNo}');
-    
-  //   await _updateQueryAndFetch(
-  //     emit,
-  //     state.currentQuery.copyWith(
-  //       furnaceNo: event.furnaceNo,
-  //       page: 1, // Reset to first page
-  //     ),
-  //   );
-  // }
-
-  // Future<void> _onUpdatePeriodStartDate(
-  //   UpdatePeriodStartDate event,
-  //   Emitter<SearchState> emit,
-  // ) async {
-  //   print('🔄 Updating start date: ${event.startDate}');
-    
-  //   await _updateQueryAndFetch(
-  //     emit,
-  //     state.currentQuery.copyWith(
-  //       startDate: event.startDate,
-  //       page: 1,
-  //     ),
-  //   );
-  // }
-
-  // Future<void> _onUpdatePeriodEndDate(
-  //   UpdatePeriodEndDate event,
-  //   Emitter<SearchState> emit,
-  // ) async {
-  //   print('🔄 Updating end date: ${event.endDate}');
-    
-  //   await _updateQueryAndFetch(
-  //     emit,
-  //     state.currentQuery.copyWith(
-  //       endDate: event.endDate,
-  //       page: 1,
-  //     ),
-  //   );
-  // }
-
-  // Future<void> _onUpdateMaterialNo(
-  //   UpdateMaterialNo event,
-  //   Emitter<SearchState> emit,
-  // ) async {
-  //   print('🔄 Updating material no: ${event.materialNo}');
-    
-  //   await _updateQueryAndFetch(
-  //     emit,
-  //     state.currentQuery.copyWith(
-  //       materialNo: event.materialNo,
-  //       page: 1,
-  //     ),
-  //   );
-  // }
-
   Future<void> _onClearFilters(
     ClearFilters event,
     Emitter<SearchState> emit,
   ) async {
-    print('🔄 Clearing all filters');
-    
-    // await _updateQueryAndFetch(
-    //   emit,
-    //   const ChartFilterQuery(page: 1, limit: 50),
-    // );
+    final now = DateTime.now();
+
+    final defaultQuery = ChartFilterQuery(
+      startDate: event.startDate,
+      endDate: now,
+      furnaceNo: event.furnaceNo,
+      materialNo: event.materialNo,
+    );
+    debugPrint('$defaultQuery');
+    emit(SearchState(
+      status: SearchStatus.initial,
+      currentQuery: defaultQuery,
+      errorMessage: ''));
   }
+
 
   Future<void> _onUpdateDateRange(
     UpdateDateRange event,
@@ -201,6 +150,66 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     }
   }
 }
+
+  // Future<void> _onUpdateFurnaceNo(
+  //   UpdateFurnaceNo event,
+  //   Emitter<SearchState> emit,
+  // ) async {
+  //   print('🔄 Updating furnace no: ${event.furnaceNo}');
+    
+  //   await _updateQueryAndFetch(
+  //     emit,
+  //     state.currentQuery.copyWith(
+  //       furnaceNo: event.furnaceNo,
+  //       page: 1, // Reset to first page
+  //     ),
+  //   );
+  // }
+
+  // Future<void> _onUpdatePeriodStartDate(
+  //   UpdatePeriodStartDate event,
+  //   Emitter<SearchState> emit,
+  // ) async {
+  //   print('🔄 Updating start date: ${event.startDate}');
+    
+  //   await _updateQueryAndFetch(
+  //     emit,
+  //     state.currentQuery.copyWith(
+  //       startDate: event.startDate,
+  //       page: 1,
+  //     ),
+  //   );
+  // }
+
+  // Future<void> _onUpdatePeriodEndDate(
+  //   UpdatePeriodEndDate event,
+  //   Emitter<SearchState> emit,
+  // ) async {
+  //   print('🔄 Updating end date: ${event.endDate}');
+    
+  //   await _updateQueryAndFetch(
+  //     emit,
+  //     state.currentQuery.copyWith(
+  //       endDate: event.endDate,
+  //       page: 1,
+  //     ),
+  //   );
+  // }
+
+  // Future<void> _onUpdateMaterialNo(
+  //   UpdateMaterialNo event,
+  //   Emitter<SearchState> emit,
+  // ) async {
+  //   print('🔄 Updating material no: ${event.materialNo}');
+    
+  //   await _updateQueryAndFetch(
+  //     emit,
+  //     state.currentQuery.copyWith(
+  //       materialNo: event.materialNo,
+  //       page: 1,
+  //     ),
+  //   );
+  // }
 
 
 // import 'package:control_chart/apis/search_chart_details/search_chart_details_apis.dart';

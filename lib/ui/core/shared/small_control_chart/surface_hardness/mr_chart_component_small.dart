@@ -214,7 +214,7 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
         
         isCurved: false,
         color: dataLineColor,
-        barWidth: 3,
+        barWidth: 2,
         isStrokeCapRound: true,
         dotData: FlDotData(
           show: true,
@@ -275,8 +275,6 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
     final spotMin = getMinSpot();
     final spotMax = getMaxSpot();
     final range = (spotMax - spotMin).abs();
-
-    print('$spotMin, $spotMax, $range');
     
     if (range < 10) {
       return 2.5; // hardcode สำหรับ range เล็ก

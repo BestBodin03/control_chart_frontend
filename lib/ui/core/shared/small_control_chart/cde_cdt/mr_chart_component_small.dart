@@ -218,7 +218,7 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
         
         isCurved: false,
         color: dataLineColor,
-        barWidth: 3,
+        barWidth: 2,
         isStrokeCapRound: true,
         dotData: FlDotData(
           show: true,

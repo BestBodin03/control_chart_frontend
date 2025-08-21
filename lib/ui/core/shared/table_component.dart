@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../data/bloc/search_chart_details/search_bloc.dart';
 import '../design_system/app_color.dart';
@@ -29,6 +30,9 @@ Widget buildHeaderTable() {
 
 Widget buildDataTable(SearchState searchState) {
   final chartDetails = searchState.searchTable ?? [];
+  int? _hoveredRowIndex;
+  int? _selectedRowIndex;
+
   
   if (chartDetails.isEmpty) {
     return SizedBox(
@@ -41,41 +45,71 @@ Widget buildDataTable(SearchState searchState) {
   final maxRowsForFitContent = 6;
   final isScrollable = chartDetails.length > maxRowsForFitContent;
   
-  return SizedBox(
-    height: isScrollable ? 200 : null, // null = fit content
-    child: ListView.builder(
-      shrinkWrap: !isScrollable, // shrinkWrap เมื่อไม่ scrollable
-      physics: isScrollable 
-        ? ClampingScrollPhysics() 
-        : NeverScrollableScrollPhysics(),
-      itemCount: chartDetails.length,
-      itemBuilder: (context, index) {
-        final chartDetail = chartDetails[index];
-        
-        return SizedBox(
-          height: rowHeight,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: index < chartDetails.length - 1 
-                  ? BorderSide(color: Colors.black26, width: 0.5)
+return SizedBox(
+  height: isScrollable ? 200 : null,
+  child: ListView.builder(
+    shrinkWrap: !isScrollable,
+    physics: isScrollable
+        ? const ClampingScrollPhysics()
+        : const NeverScrollableScrollPhysics(),
+    itemCount: chartDetails.length,
+    itemBuilder: (context, index) {
+      final chartDetail = chartDetails[index];
+
+      final isLast = index == chartDetails.length - 1;
+      final isHovered = _hoveredRowIndex == index;
+      final isSelected = _selectedRowIndex == index;
+
+      return SizedBox(
+        height: rowHeight,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: index < chartDetails.length - 1
+                  ? const BorderSide(color: Colors.black26, width: 0.5)
                   : BorderSide.none,
-              ),
-              borderRadius: index == chartDetails.length - 1
-                ? BorderRadius.vertical(bottom: Radius.circular(10.0))
-                : null,
             ),
-            child: _buildTableRow([
-              chartDetail.furnaceNo?.toString() ?? '-',
-              chartDetail.matNo ?? '-',
-              chartDetail.partName ?? '-',
-              chartDetail.count?.toString() ?? '0'
-            ], isHeader: false),
+            borderRadius:
+                isLast ? const BorderRadius.vertical(bottom: Radius.circular(10)) : null,
           ),
-        );
-      },
-    ),
-  );
+          child: MouseRegion(
+            // onEnter: (_) => setState(() => _hoveredRowIndex = index),
+            // onExit: (_) => setState(() => _hoveredRowIndex = null),
+            child: Material(
+              // สีพื้นเมื่อ hover/selected (โปร่งใสเพื่อยังเห็นเส้นขอบ)
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.10)
+                  : (isHovered ? AppColors.colorBrandTp : Colors.transparent),
+              child: InkWell(
+                onTap: () {
+                  final q = context.read<SearchBloc>().state.currentQuery;
+                  context.read<SearchBloc>().add(LoadFilteredChartData(
+                    startDate: q.startDate, // คงช่วงเดิม (หรือจะเปลี่ยนจากแถวก็ได้)
+                    endDate: q.endDate,
+                    furnaceNo: chartDetail.furnaceNo?.toString() ?? q.furnaceNo,
+                    materialNo: chartDetail.matNo ?? q.materialNo,
+                  ));
+
+                  // หรือเรียก callback/SettingBloc อื่น ๆ ได้ที่นี่
+                },
+                child: _buildTableRow(
+                  [
+                    chartDetail.furnaceNo?.toString() ?? '-',
+                    chartDetail.matNo ?? '-',
+                    chartDetail.partName ?? '-',
+                    chartDetail.count?.toString() ?? '0',
+                  ],
+                  isHeader: false,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  ),
+);
+
 }
 
 Widget _buildTableRow(List<String> cells, {required bool isHeader}) {

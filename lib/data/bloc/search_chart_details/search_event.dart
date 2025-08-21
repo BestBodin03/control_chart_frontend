@@ -27,12 +27,7 @@ final class LoadFilteredChartData extends SearchEvent {
   ];
 }
 
-final class ClearFilters extends SearchEvent {
-  const ClearFilters();
-
-  @override
-  List<Object> get props => [];
-}
+final class ClearFilters extends LoadFilteredChartData {}
 
 final class UpdateDateRange extends SearchEvent {
   const UpdateDateRange({

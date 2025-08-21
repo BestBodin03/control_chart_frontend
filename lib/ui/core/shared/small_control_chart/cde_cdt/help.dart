@@ -9,7 +9,7 @@ import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/control
 import 'package:flutter/material.dart';
 
 Widget buildChartsSectionCdeCdt(SearchState searchState) {
-  String _cdeOrCdtLabel(num? cde, num? cdt) {
+  String cdeOrCdtLabel(num? cde, num? cdt) {
     final a = (cde ?? 0).toDouble();
     final b = (cdt ?? 0).toDouble();
     return a > b ? 'CDE' : b > a ? 'CDT' : 'N/A';
@@ -17,12 +17,10 @@ Widget buildChartsSectionCdeCdt(SearchState searchState) {
 
   return Row(
     children: [
-      // Hardness Chart
       Expanded(
         child: _buildChartContainerCdeCdt(
-          title: _cdeOrCdtLabel(searchState.controlChartStats!.cdeAverage, searchState.controlChartStats!.cdtAverage),
+          title: cdeOrCdtLabel(searchState.controlChartStats?.cdeAverage, searchState.controlChartStats?.cdtAverage),
           searchState: searchState,
-          // chartType: ChartType.surfaceHardness,
         ),
       ),
     ],
@@ -32,7 +30,6 @@ Widget buildChartsSectionCdeCdt(SearchState searchState) {
 Widget _buildChartContainerCdeCdt({
   required String title,
   required SearchState searchState,
-  // required ChartType chartType,
 }) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,15 +52,6 @@ Widget _buildChartContainerCdeCdt({
               color: AppColors.colorBrandTp.withValues(alpha: 0.15), // pale blue tint
               border: Border.all(color: AppColors.colorBrandTp.withValues(alpha: 0.35), width: 1),
               borderRadius: BorderRadius.circular(8.0),
-              // boxShadow: const [
-              //   BoxShadow(
-              //     color: Color.fromARGB(8, 160, 217, 252),
-              //     blurRadius: 1,
-              //     spreadRadius: 1,
-              //     blurStyle: BlurStyle.normal,
-              //     offset: Offset(0, 12),
-              //   ),
-              // ],
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
@@ -274,16 +262,6 @@ Widget _buildMrChartContentCdeCdt({
       '${query.furnaceNo}-'
       '${query.materialNo}-';
   final dataPoints = searchState.chartDataPointsCdeCdt;
-  
-  // for (var i = 0; i < dataPoints.length; i++) {
-  //   final p = dataPoints[i];
-  //   debugPrint('++++++++++++++++++ BEFORE GO TO TEMPLATE ++++++++++++++' '\n');
-  //   debugPrint(
-  //     '[$i] ${p.fullLabel}  value=${p.value.toStringAsFixed(3)}  '
-  //     'mr=${p.mrValue.toStringAsFixed(3)}  furnace=${p.furnaceNo}  mat=${p.matNo}'
-  //   );
-  // }
-
 
   return ClipRRect(
     borderRadius: BorderRadius.circular(4),
