@@ -7,7 +7,7 @@ import '../design_system/app_color.dart';
 
 Widget buildHeaderTable() {
   return SizedBox(
-    height: 32, // Fixed height for performance
+    height: 32,
     child: DecoratedBox(
       decoration: BoxDecoration(
         color: AppColors.colorBrandTp,
@@ -30,8 +30,8 @@ Widget buildHeaderTable() {
 
 Widget buildDataTable(SearchState searchState) {
   final chartDetails = searchState.searchTable ?? [];
-  int? _hoveredRowIndex;
-  int? _selectedRowIndex;
+  int? hoveredRowIndex;
+  int? selectedRowIndex;
 
   
   if (chartDetails.isEmpty) {
@@ -57,8 +57,8 @@ return SizedBox(
       final chartDetail = chartDetails[index];
 
       final isLast = index == chartDetails.length - 1;
-      final isHovered = _hoveredRowIndex == index;
-      final isSelected = _selectedRowIndex == index;
+      final isHovered = hoveredRowIndex == index;
+      final isSelected = selectedRowIndex == index;
 
       return SizedBox(
         height: rowHeight,

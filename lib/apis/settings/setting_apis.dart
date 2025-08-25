@@ -1,13 +1,16 @@
 import 'dart:core';
+import 'package:control_chart/apis/api_response.dart';
 import 'package:control_chart/config/api_config.dart';
 import 'package:control_chart/domain/models/chart_detail.dart';
 import 'package:control_chart/domain/models/customer_product.dart';
 import 'package:control_chart/domain/models/furnace.dart';
+import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/utils/count_extractor.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 
 class SettingApis {
-Future<int> getChartDetailCount() async {
+  Future<int> getChartDetailCount() async {
     try {
       final response = await ApiConfig().get<Response<dynamic>>('/all-chart-details');
       return CountExtractor.extractCountFromResponse(response);
@@ -73,9 +76,21 @@ Future<int> getChartDetailCount() async {
       return {
         'success': false,
         'error': 'Failed to get chart status: $e',
-        'data': null,
+        'data': [],
       };
     }
   }
 
+  Future<ApiResponse<Setting>> getAllProfileSettings() async {
+    try {
+      final Response res = await ApiConfig().get('/setting/all-profiles');
+      return ApiResponse.fromResponse<Setting>(res, Setting.fromJson);
+    } catch (e) {
+      return ApiResponse<Setting>(
+        success: false,
+        data: const [],
+        error: 'Failed to get settings: $e',
+      );
+    }
+  }
 }

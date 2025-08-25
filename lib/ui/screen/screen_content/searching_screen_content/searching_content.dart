@@ -1,5 +1,5 @@
 import 'package:control_chart/ui/core/shared/searching_form.dart';
-import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/setting_show_chart.dart';
+import 'package:control_chart/ui/core/layout/app_drawer/search_show_chart.dart';
 import 'package:flutter/material.dart';
 
 class SearchingContent extends StatefulWidget {
@@ -20,7 +20,7 @@ class SearchingContentState extends State<SearchingContent> {
           children: [
             SearchingForm(),
             SizedBox(width: 16.0),
-            SettingShowChart(),
+            SearchShowChart(),
           ],
         ),
       ),

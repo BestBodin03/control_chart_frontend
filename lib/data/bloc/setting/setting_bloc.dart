@@ -22,25 +22,13 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
     this.searchBloc,
   }) : _settingApis = settingApis,
        super(const SettingState()) {
-    
-    // Data loading events
-    on<LoadChartDetailCount>(_onLoadChartDetailCount);
-    on<LoadAllFurnaces>(_onLoadAllFurnaces);
-    on<LoadAllMatNo>(_onLoadAllMatNo);
-    on<LoadAllData>(_onLoadAllData);
-    
-    // Form events
     on<InitializeForm>(_onInitializeForm);
-    on<SaveFormData>(_onSaveFormData);
-    
-    // Form update events
     on<UpdatePeriodS>(_onUpdatePeriodS);
     on<UpdateStartDate>(_onUpdateStartDate);
     on<UpdateEndDate>(_onUpdateEndDate);
-    
-    // Search events
-    on<FilterChartDetailLoading>(_onFilterChartDetailLoading);
   }
+
+
 
   // Form event handlers
   Future<void> _onInitializeForm(
@@ -76,128 +64,6 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
         furnaces: () => furnaces,
         matNumbers: () => matNumbers,
         errorMessage: () => null, // Clear any previous errors
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        status: () => SettingStatus.error,
-        errorMessage: () => e.toString(),
-      ));
-    }
-  }
-
-  Future<void> _onSaveFormData(
-    SaveFormData event,
-    Emitter<SettingState> emit,
-  ) async {
-    emit(state.copyWith(status: () => SettingStatus.saving));
-
-    try {
-      // Add your save logic here
-      // For example: await _settingApis.saveFormData(state.formState);
-      
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 1));
-      
-      emit(state.copyWith(
-        status: () => SettingStatus.saved,
-        errorMessage: () => null,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        status: () => SettingStatus.error,
-        errorMessage: () => e.toString(),
-      ));
-    }
-  }
-
-  // Data loading event handlers
-  Future<void> _onLoadChartDetailCount(
-    LoadChartDetailCount event,
-    Emitter<SettingState> emit,
-  ) async {
-    // Keep existing data while loading
-    emit(state.copyWith(status: () => SettingStatus.loading));
-
-    try {
-      final count = await _settingApis.getChartDetailCount();
-      
-      emit(state.copyWith(
-        status: () => SettingStatus.loaded,
-        chartDetailCount: () => count,
-        errorMessage: () => null,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        status: () => SettingStatus.error,
-        errorMessage: () => e.toString(),
-      ));
-    }
-  }
-
-  Future<void> _onLoadAllFurnaces(
-    LoadAllFurnaces event,
-    Emitter<SettingState> emit,
-  ) async {
-    emit(state.copyWith(status: () => SettingStatus.loading));
-
-    try {
-      final furnaces = await _settingApis.getAllFurnaces();
-      
-      emit(state.copyWith(
-        status: () => SettingStatus.loaded,
-        furnaces: () => furnaces,
-        errorMessage: () => null,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        status: () => SettingStatus.error,
-        errorMessage: () => e.toString(),
-      ));
-    }
-  }
-
-  Future<void> _onLoadAllMatNo(
-  LoadAllMatNo event,
-  Emitter<SettingState> emit,
-  ) async {
-    emit(state.copyWith(status: () => SettingStatus.loading));
-
-    try {
-      final matNumbers = await _settingApis.getAllMatNo();
-      
-      emit(state.copyWith(
-        status: () => SettingStatus.loaded,
-        matNumbers: () => matNumbers,
-        errorMessage: () => null,
-      ));
-    } catch (e) {
-      emit(state.copyWith(
-        status: () => SettingStatus.error,
-        errorMessage: () => e.toString(),
-      ));
-    }
-  }
-
-  Future<void> _onLoadAllData(
-    LoadAllData event,
-    Emitter<SettingState> emit,
-  ) async {
-    emit(state.copyWith(status: () => SettingStatus.loading));
-
-    try {
-      // Load all data concurrently
-      final results = await Future.wait([
-        _settingApis.getChartDetailCount(),
-        _settingApis.getAllFurnaces(),
-        _settingApis.getAllMatNo(),
-      ]);
-
-      emit(state.copyWith(
-        status: () => SettingStatus.loaded,
-        chartDetailCount: () => results[0] as int,
-        furnaces: () => results[1] as List<Furnace>,
-        matNumbers: () => results[2] as List<CustomerProduct>,
-        errorMessage: () => null,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -265,22 +131,4 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
     emit(state.copyWith(formState: () => updatedFormState));
   }
 
-  // Search event handler
-  void _onFilterChartDetailLoading(
-    FilterChartDetailLoading event,
-    Emitter<SettingState> emit,
-  ) {
-    emit(state.copyWith(status: () => SettingStatus.loading));
-    
-    // This can trigger search in SearchBloc if needed
-    // searchBloc?.add(SomeSearchEvent());
-  }
-
-  // Helper method for common error handling
-  // void _handleError(Emitter<SettingState> emit, String error) {
-  //   emit(state.copyWith(
-  //     status: () => SettingStatus.error,
-  //     errorMessage: () => error,
-  //   ));
-  // }
 }

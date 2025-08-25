@@ -40,11 +40,9 @@ class DateAutoComplete {
 
   static String formatDateLabel(DateTime date, bool isStartDate) {
     if (isStartDate) {
-      // Start date: set to 00:00:00
       final startOfDay = DateTime(date.year, date.month, date.day, 0, 0, 0);
       return _formatToLabel(startOfDay);
     } else {
-      // End date: current time
       return _formatToLabel(date);
     }
   }
@@ -58,7 +56,7 @@ class DateAutoComplete {
     if (parts.length == 3) {
       final day = int.parse(parts[0]);
       final month = int.parse(parts[1]);
-      final year = 2000 + int.parse(parts[2]); // แปลง yy เป็น yyyy
+      final year = 2000 + int.parse(parts[2]);
       return DateTime(year, month, day);
     }
     return DateTime.now();

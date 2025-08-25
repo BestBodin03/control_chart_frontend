@@ -5,14 +5,6 @@ sealed class SettingEvent extends Equatable {
   const SettingEvent();
 }
 
-// Data Loading Events
-final class LoadChartDetailCount extends SettingEvent {
-  const LoadChartDetailCount();
-
-  @override
-  List<Object> get props => [];
-}
-
 final class LoadAllFurnaces extends SettingEvent {
   const LoadAllFurnaces();
 
@@ -27,8 +19,8 @@ final class LoadAllMatNo extends SettingEvent {
   List<Object> get props => [];
 }
 
-final class LoadAllData extends SettingEvent {
-  const LoadAllData();
+final class LoadAllSettingProfile extends SettingEvent {
+  const LoadAllSettingProfile();
 
   @override
   List<Object> get props => [];
@@ -37,21 +29,6 @@ final class LoadAllData extends SettingEvent {
 // Form Events
 final class InitializeForm extends SettingEvent {
   const InitializeForm();
-
-  @override
-  List<Object> get props => [];
-}
-
-final class SaveFormData extends SettingEvent {
-  const SaveFormData();
-
-  @override
-  List<Object> get props => [];
-}
-
-// Search Events
-final class FilterChartDetailLoading extends SettingEvent {
-  const FilterChartDetailLoading();
 
   @override
   List<Object> get props => [];

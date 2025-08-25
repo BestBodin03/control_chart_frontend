@@ -1,6 +1,7 @@
 import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/data/bloc/setting/setting_bloc.dart';
+// import 'package:control_chart/data/bloc/setting/setting_bloc.dart';
 import 'package:control_chart/domain/models/customer_product.dart';
 import 'package:control_chart/domain/models/furnace.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
@@ -50,12 +51,6 @@ class _SearchingFormState extends State<SearchingForm> {
                   const SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว'), backgroundColor: Colors.green),
                 );
               }
-              final err = state.errorMessage;
-              if (err != null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(err), backgroundColor: Colors.red),
-                );
-              }
             },
           ),
           // Bridge SettingBloc dates -> SearchBloc
@@ -84,7 +79,7 @@ class _SearchingFormState extends State<SearchingForm> {
               return const Center(child: CircularProgressIndicator());
             }
             if (state.status == SettingStatus.error) {
-              return Center(child: Text('Error: ${state.errorMessage ?? 'Unknown error'}'));
+              return Center(child: Text('Error: ${'เกิดข้อผิดผลาด'}'));
             }
 
             final form = state.formState;

@@ -12,6 +12,7 @@ part 'chart_details_state.dart';
 
 class ChartDetailsBloc extends Bloc<ChartDetailsEvent, ChartDetailsState> {
   final SearchChartDetailsApis _chartApis;
+
   
   ChartDetailsBloc({required SearchChartDetailsApis chartApis})
   : _chartApis = chartApis,

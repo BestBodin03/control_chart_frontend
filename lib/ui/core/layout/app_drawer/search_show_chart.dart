@@ -2,8 +2,8 @@ import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/furnace_report_layout.dart';
 import 'package:flutter/material.dart';
 
-class SettingShowChart extends StatelessWidget {
-  const SettingShowChart({super.key});
+class SearchShowChart extends StatelessWidget {
+  const SearchShowChart({super.key});
   
   @override
   Widget build(BuildContext context) {

@@ -15,7 +15,7 @@ class MyHomeScreen extends StatefulWidget {
 }
 
 class _MyHomeScreenState extends State<MyHomeScreen> {
-  int _selectedIndex = 0;
+  int _selectedIndex = 2;
 
   void _onItemTapped(int index) {
     setState(() {
@@ -32,7 +32,6 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Remove MultiBlocProvider - SearchBloc is already provided at App level
     return Scaffold(
       appBar: AppBar(
         leading: Builder(
