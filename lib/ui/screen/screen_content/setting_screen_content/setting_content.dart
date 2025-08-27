@@ -1,10 +1,12 @@
+import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/bloc/setting_profile/setting_profile_bloc.dart';
+import 'package:control_chart/data/cubit/setting_form/setting_form_cubit.dart';
 import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
+import 'package:control_chart/ui/core/shared/setting_form.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/import_page.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile_page.dart';
-import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -23,19 +25,16 @@ class SettingContent extends StatefulWidget {
 class _SettingContentState extends State<SettingContent> {
   TabKey _tab = TabKey.profiles;
 
-  // ยังเก็บ state เฉพาะฝั่ง import ไว้ได้
   String? _fileName;
   String _dropdown1 = '';
   String _dropdown2 = '';
 
-  // mapper จาก Setting (domain) -> Profile (UI)
   Profile _toProfile(Setting s) {
     return Profile(
       id: s.id,
       name: s.settingProfileName,
-      summary:
-          'ประเภทการแสดง: ${s.displayType.name}',
-      active: s.isUsed, // หรือ map จาก s.isUsed ถ้าต้องการแสดง active จริง
+      summary: 'ประเภทการแสดง: ${s.displayType.name}',
+      active: s.isUsed,
       createdAt: s.createdAt,
     );
   }
@@ -53,59 +52,63 @@ class _SettingContentState extends State<SettingContent> {
               onSelect: (t) => setState(() => _tab = t),
             ),
           ),
-
-          // Main body: ดึงจาก Bloc
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 32, 32),
               child: switch (_tab) {
                 TabKey.profiles => BlocBuilder<SettingProfileBloc, SettingProfileState>(
-                    builder: (context, state) {
-                      if (state.isLoading || state.isInitial) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (state.isFailed) {
-                        return Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(state.errorMessage ?? 'เกิดข้อผิดพลาด'),
-                              const SizedBox(height: 8),
-                              FilledButton(
-                                onPressed: () => context
-                                    .read<SettingProfileBloc>()
-                                    .add(const LoadAllSettingProfiles()),
-                                child: const Text('ลองใหม่'),
-                              ),
-                            ],
+                  builder: (context, state) {
+                    if (state.isLoading || state.isInitial) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (state.isFailed) {
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(state.errorMessage ?? 'เกิดข้อผิดพลาด'),
+                            const SizedBox(height: 8),
+                            FilledButton(
+                              onPressed: () => context
+                                  .read<SettingProfileBloc>()
+                                  .add(const LoadAllSettingProfiles()),
+                              child: const Text('ลองใหม่'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final items = state.profiles.map(_toProfile).toList();
+                    return ProfilesPage(
+                      items: items,
+                      onToggleActive: (id, v) {
+                        // context.read<SettingProfileBloc>().add(ToggleSettingActive(id, v));
+                      },
+                      onAddProfile: () {
+                        final formCubit = context.read<SettingFormCubit>(); // instance from ancestor
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => BlocProvider.value(
+                              value: formCubit,           // pass the SAME instance
+                              child: const SettingForm(), // <-- your form widget
+                            ),
                           ),
                         );
-                      }
-
-                      // loaded
-                      final items = state.profiles.map(_toProfile).toList();
-                      return ProfilesPage(
-                        items: items,
-                        onToggleActive: (id, v) {
-                          // context.read<SettingProfileBloc>().add(ToggleSettingActive(id, v));
-                        },
-                        onAddProfile: () {
-                          // ถ้าจะให้สร้างโปรไฟล์ใหม่: dispatch ไปที่ Bloc
-                          // context.read<SettingProfileBloc>().add(CreateSettingProfile(...));
-                        },
-                      );
-                    },
-                  ),
+                      },
+                    );
+                  },
+                ),
                 TabKey.importData => ImportPage(
-                    fileName: _fileName,
-                    onPickFile: () {
-                      setState(() => _fileName = 'sample-data.csv (ตัวอย่าง)');
-                    },
-                    dropdown1: _dropdown1,
-                    onDropdown1: (v) => setState(() => _dropdown1 = v),
-                    dropdown2: _dropdown2,
-                    onDropdown2: (v) => setState(() => _dropdown2 = v),
-                  ),
+                  fileName: _fileName,
+                  onPickFile: () {
+                    setState(() => _fileName = 'sample-data.csv (ตัวอย่าง)');
+                  },
+                  dropdown1: _dropdown1,
+                  onDropdown1: (v) => setState(() => _dropdown1 = v),
+                  dropdown2: _dropdown2,
+                  onDropdown2: (v) => setState(() => _dropdown2 = v),
+                ),
               },
             ),
           ),
@@ -114,4 +117,3 @@ class _SettingContentState extends State<SettingContent> {
     );
   }
 }
-

@@ -74,8 +74,8 @@ Map<String, dynamic> _$NelsonRuleToJson(NelsonRule instance) =>
 SpecificSetting _$SpecificSettingFromJson(Map<String, dynamic> json) =>
     SpecificSetting(
       period: Period.fromJson(json['period'] as Map<String, dynamic>),
-      furnaceNo: (json['furnaceNo'] as num).toInt(),
-      cpNo: json['cpNo'] as String,
+      furnaceNo: (json['furnaceNo'] as num?)?.toInt(),
+      cpNo: json['cpNo'] as String?,
     );
 
 Map<String, dynamic> _$SpecificSettingToJson(SpecificSetting instance) =>

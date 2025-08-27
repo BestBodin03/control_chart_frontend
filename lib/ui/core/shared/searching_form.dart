@@ -1,11 +1,9 @@
 import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/data/bloc/setting/setting_bloc.dart';
-// import 'package:control_chart/data/bloc/setting/setting_bloc.dart';
 import 'package:control_chart/domain/models/customer_product.dart';
 import 'package:control_chart/domain/models/furnace.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
-import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/form_component.dart';
 import 'package:control_chart/ui/core/shared/gradient_background.dart';
 import 'package:flutter/material.dart';
@@ -242,53 +240,7 @@ class _SearchingFormState extends State<SearchingForm> {
                                 },
                               );
                             },
-                          ),
-
-                          // const SizedBox(height: 16),
-
-                          // // Conditions
-                          // buildSectionTitle('การแจ้งเตือน'),
-                          // const SizedBox(height: 8),
-                          // buildMultiSelectField(
-                          //   context: context,
-                          //   selectedValues: form.selectedConditions,
-                          //   items: const ['เกิน UCL', 'เกิน LCL', 'เกิน USL', 'เกิน LSL'],
-                          //   onChanged: (values) {
-                          //     // context.read<SettingBloc>().add(UpdateSelectedConditions(values));
-                          //   },
-                          // ),
-
-                          // const SizedBox(height: 16),
-
-                          // // Limit
-                          // buildSectionTitle('ระยะเวลาการเปลี่ยนหน้าจอ (วินาที)'),
-                          // const SizedBox(height: 8),
-                          // buildTextField(
-                          //   value: form.limitValue,
-                          //   onChanged: (value) {
-                          //     // context.read<SettingBloc>().add(UpdateLimitValue(value));
-                          //   },
-                          // ),
-
-                          // const SizedBox(height: 48),
-
-                          // // Submit
-                          // SizedBox(
-                          //   width: double.infinity,
-                          //   height: 42,
-                          //   child: ElevatedButton(
-                          //     onPressed: state.isLoading ? null : () => context.read<SettingBloc>().add(SaveFormData()),
-                          //     style: ElevatedButton.styleFrom(
-                          //       backgroundColor: AppColors.colorBrand,
-                          //       foregroundColor: AppColors.colorBg,
-                          //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          //       elevation: 0,
-                          //     ),
-                          //     child: state.isLoading
-                          //         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
-                          //         : const Text('บันทึก', style: AppTypography.textBody1WBold),
-                          //   ),
-                          // ),
+                          )
                         ],
                       ),
                     ),

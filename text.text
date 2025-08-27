@@ -1,47 +1,40 @@
-const express = require('express');
-const mongoose = require('mongoose');
-
-const app = express();
-const PORT = 3001;
-
-mongoose.connect(MONGO_URI)
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch((err) => console.error('❌ MongoDB connection error:', err));
-
-// Enable JSON parsing middleware
-app.use(express.json());
-
-const rawDataSchema = new mongoose.Schema({}, { strict: false });
-const RawData = mongoose.model('RawData', rawDataSchema, 'raw_data');
-
-app.get('/raw-data', async (req, res) => {
-  try {
-    const raw_data = await RawData.find();
-    res.json(raw_data);
-  } catch (err) {
-    console.error('Error fetching data:', err);
-    res.status(500).json({ error: 'Failed to fetch data' });
-  }
-});
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
-
-// Handle graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('🔄 Shutting down gracefully...');
-  await mongoose.connection.close();
-  console.log('✅ MongoDB connection closed');
-  process.exit(0);
-});
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  console.log(`📊 Raw data endpoint: http://localhost:${PORT}/raw-data`);
-  console.log(`❤️  Health check: http://localhost:${PORT}/health`);
-});
-
-// Export for testing
-module.exports = app;
+{
+  "settingProfileName": String,
+  "isUsed": boolean,
+  "displayType": enum, 
+  "generalSetting": {
+    "chartChangeInterval": int number,
+    "nelsonRule": [
+      {
+        "ruleId": number,
+        "ruleName": String,
+        "isUsed": boolean
+      },
+      {
+        "ruleId": number,
+        "ruleName": String,
+        "isUsed": boolean
+      }
+    ]
+  },
+  "specificSetting": [
+    {
+      "period": {
+        "type": enum, 
+        "startDate": "2025-01-01T00:00:00.000Z" toISOString,
+        "endDate": "2025-02-01T00:00:00.000Z" toISOString
+      },
+      "furnaceNo": number,
+      "cpNo": String
+    },
+    {
+      "period": {
+        "type": "THREE_MONTHS",
+        "startDate": "2025-07-01T00:00:00.000Z",
+        "endDate": "2025-07-31T00:00:00.000Z"
+      },
+      "furnaceNo": number,
+      "cpNo": String
+    }
+  ]
+}

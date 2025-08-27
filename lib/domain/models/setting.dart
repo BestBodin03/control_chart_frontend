@@ -76,16 +76,16 @@ class NelsonRule {
 class SpecificSetting {
   const SpecificSetting({
     required this.period,
-    required this.furnaceNo,
-    required this.cpNo,
+    this.furnaceNo,
+    this.cpNo,
   });
 
   factory SpecificSetting.fromJson(Map<String, dynamic> json) =>
       _$SpecificSettingFromJson(json);
 
   final Period period;
-  final int furnaceNo;
-  final String cpNo;
+  final int? furnaceNo;
+  final String? cpNo;
 
   Map<String, dynamic> toJson() => _$SpecificSettingToJson(this);
 }

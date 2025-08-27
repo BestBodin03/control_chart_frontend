@@ -1,3 +1,4 @@
+import 'package:control_chart/domain/models/choice_item.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:flutter/material.dart';
@@ -9,40 +10,103 @@ Widget buildSectionTitle(String title) {
     );
   }
 
-  Widget buildTextField({
-    required String value,
-    bool readOnly = false,
-    Function(String)? onChanged,
-  }) {
-    return SizedBox(
-      height: 42.0,
-      child: TextField(
-        controller: TextEditingController(text: value),
-        readOnly: readOnly,
-        onChanged: onChanged,
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: AppColors.colorBrandTp),
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
+Widget buildChoiceTabs({
+  required String selectedValue,
+  required List<String> itemsLabel,
+  required List<String> itemsValue,
+  ValueChanged<String>? onChanged,
+  double height = 42,
+  double gap = 8,
+  BorderRadius borderRadius = const BorderRadius.all(Radius.circular(10)),
+  Color activeColor = AppColors.colorBrand,
+  Color inactiveBg = Colors.white,
+  Color inactiveBorder = const Color(0xFFD1D5DB),
+  Color containerBg = const Color(0xFFF3F4F6),
+}) {
+  assert(itemsLabel.length == itemsValue.length,
+      "itemsLabel and itemsValue must have the same length");
+
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      // divide total width equally among buttons
+      final buttonWidth =
+          (constraints.maxWidth - (gap * (itemsLabel.length - 1))) /
+              itemsLabel.length;
+
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(itemsLabel.length, (i) {
+          final label = itemsLabel[i];
+          final value = itemsValue[i];
+          final active = value == selectedValue;
+
+          return SizedBox(
+            width: buttonWidth,
+            height: height,
+            child: TextButton(
+              onPressed: () => onChanged?.call(value),
+              style: TextButton.styleFrom(
+                backgroundColor: active ? AppColors.colorBrand : inactiveBg,
+                foregroundColor: active ? Colors.white : Colors.black87,
+                shape: RoundedRectangleBorder(
+                  borderRadius: borderRadius,
+                  side: BorderSide(
+                    color: active ? activeColor : inactiveBorder,
+                  ),
+                ),
+              ),
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          );
+        }),
+      );
+    },
+  );
+}
+
+Widget buildTextField({
+  required String value,
+  String? hintText,
+  bool readOnly = false,
+  Function(String)? onChanged,
+}) {
+  return SizedBox(
+    height: 42.0,
+    child: TextFormField(
+      initialValue: value,   // 👈 ใช้ initialValue แทน controller
+      readOnly: readOnly,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        hintStyle: TextStyle(color: Colors.grey.shade600),
+        hintText: hintText,
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: AppColors.colorBrandTp),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   Widget buildDropdownField({
     String? value, // เปลี่ยนเป็น nullable
@@ -111,7 +175,7 @@ Widget buildSectionTitle(String title) {
             context: context,
             builder: (context) => StatefulBuilder(
               builder: (context, setState) => AlertDialog(
-                title: const Text('เลือกเงื่อนไข'),
+                title: const Text('เลือกกฎ'),
                 content: 
                 SizedBox(
                   width: 300.0,

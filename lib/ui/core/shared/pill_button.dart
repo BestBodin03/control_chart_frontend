@@ -9,6 +9,7 @@ class PillButton extends StatelessWidget {
     required this.labelSize,
     this.selected = false,
     this.solid = false,
+    this.bg = AppColors.colorBrand,
     this.leading,
   });
 
@@ -17,13 +18,14 @@ class PillButton extends StatelessWidget {
   final double labelSize;
   final bool selected;
   final bool solid;
+  final Color? bg;
   final IconData? leading;
 
   @override
   Widget build(BuildContext context) {
-    final bg = solid
-        ? (selected ? AppColors.colorBrand : const Color(0xFFEFF6FF))
-        : const Color(0xFFEFF6FF);
+    // final bg = solid
+    //     ? (selected ? AppColors.colorBrand : const Color(0xFFEFF6FF))
+    //     : const Color(0xFFEFF6FF);
     final fg = solid
         ? Colors.white
         : (selected ? const Color(0xFF1D4ED8) : const Color(0xFF1D4ED8));

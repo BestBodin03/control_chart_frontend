@@ -1,10 +1,14 @@
+import 'dart:convert';
 import 'dart:core';
 import 'package:control_chart/apis/api_response.dart';
 import 'package:control_chart/config/api_config.dart';
+import 'package:control_chart/data/cubit/setting_form/extension/setting_form_state_to_request.dart';
+import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
 import 'package:control_chart/domain/models/chart_detail.dart';
 import 'package:control_chart/domain/models/customer_product.dart';
 import 'package:control_chart/domain/models/furnace.dart';
 import 'package:control_chart/domain/models/setting.dart';
+import 'package:control_chart/domain/models/setting_request.dart';
 import 'package:control_chart/utils/count_extractor.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -92,5 +96,42 @@ class SettingApis {
         error: 'Failed to get settings: $e',
       );
     }
+  }
+
+  // Future<Response<dynamic>> getOneProfileSettingsById() async {
+  //   try {
+  //     final Response res = await ApiConfig().get('/setting/one-profile/$id', body);
+  //     return ApiResponse.fromResponse<Setting>(res, Setting.fromJson);
+  //   } catch (e) {
+  //     return ApiResponse<Setting>(
+  //       success: false,
+  //       data: const [],
+  //       error: 'Failed to get settings: $e',
+  //     );
+  //   }
+  // }
+
+  Future<Response<dynamic>> addNewSettingProfile(
+    SettingFormState form, {
+    Map<int, String>? ruleNameById,
+  }) async {
+    final req = form.toRequest(ruleNameById: ruleNameById);
+    final body = req.toJson();
+    return await ApiConfig().post('/setting/create', body);
+  }
+
+  Future<Response<dynamic>> updateSettingProfile(
+    String id,
+    SettingFormState form, {
+    Map<int, String>? ruleNameById,
+  }) async {
+    final req = form.toRequest(ruleNameById: ruleNameById);
+    final body = req.toJson();
+
+    print(body);
+
+    // Match your controller: req.params.id → PUT/PATCH '/setting/:id'
+    return await ApiConfig().patch('/setting/update/$id', body);
+    // or: return await ApiConfig().patch('/setting/$id', body);
   }
 }
