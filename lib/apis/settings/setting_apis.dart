@@ -127,11 +127,6 @@ class SettingApis {
   }) async {
     final req = form.toRequest(ruleNameById: ruleNameById);
     final body = req.toJson();
-
-    print(body);
-
-    // Match your controller: req.params.id → PUT/PATCH '/setting/:id'
-    return await ApiConfig().patch('/setting/update/$id', body);
-    // or: return await ApiConfig().patch('/setting/$id', body);
+    return await ApiConfig().patch('/setting/update/$id', data: body);
   }
 }

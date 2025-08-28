@@ -75,7 +75,7 @@ class NelsonRule {
 @JsonSerializable(explicitToJson: true)
 class SpecificSetting {
   const SpecificSetting({
-    required this.period,
+    this.period,
     this.furnaceNo,
     this.cpNo,
   });
@@ -83,7 +83,7 @@ class SpecificSetting {
   factory SpecificSetting.fromJson(Map<String, dynamic> json) =>
       _$SpecificSettingFromJson(json);
 
-  final Period period;
+  final Period? period;
   final int? furnaceNo;
   final String? cpNo;
 
@@ -112,17 +112,17 @@ class Period {
 
 @JsonEnum(alwaysCreate: true)
 enum DisplayType {
-  @JsonValue('FURNACE') furnace,
-  @JsonValue('FURNACE_CP') furnaceCp,
-  @JsonValue('CP') cp,
+  @JsonValue('FURNACE') FURNACE,
+  @JsonValue('FURNACE_CP') FURNACE_CP,
+  @JsonValue('CP') CP,
 }
 
 @JsonEnum(alwaysCreate: true)
 enum PeriodType {
-  @JsonValue('ONE_MONTH') oneMonth,
-  @JsonValue('THREE_MONTHS') threeMonths,
-  @JsonValue('SIX_MONTHS') sixMonths,
-  @JsonValue('ONE_YEAR') oneYear,
-  @JsonValue('CUSTOM') custom,
-  @JsonValue('LIFETIME') lifetime,
+  @JsonValue('ONE_MONTH') ONE_MONTH,
+  @JsonValue('THREE_MONTHS') THREE_MONTHS,
+  @JsonValue('SIX_MONTHS') SIX_MONTHS,
+  @JsonValue('ONE_YEAR') ONE_YEAR,
+  @JsonValue('CUSTOM') CUSTOM,
+  @JsonValue('LIFETIME') LIFETIME,
 }

@@ -14,7 +14,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        // Provide SearchBloc at app level so it persists across navigation
         BlocProvider<SearchBloc>(
           create: (context) => SearchBloc(),
         ),

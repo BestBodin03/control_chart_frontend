@@ -1,19 +1,21 @@
 import 'dart:math';
+
+import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
-import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/dashed_line_painter.dart' show DashedLinePainter;
+import 'package:control_chart/ui/core/shared/table_component.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
   
-class ControlChartComponent extends StatelessWidget implements ChartComponent {
+class ControlChartComponent extends StatelessWidget {
   final List<ChartDataPoint>? dataPoints;
   final ControlChartStats? controlChartStats;
-  // final String xAxisLabel;
-  // final String yAxisLabel;
+  final String xAxisLabel;
+  final String yAxisLabel;
   final Color? dataLineColor;
   final Color? backgroundColor;
   final double? height;
@@ -23,8 +25,8 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     super.key,
     this.dataPoints,
     this.controlChartStats,
-    // this.xAxisLabel = 'Date (mm/dd)',
-    // this.yAxisLabel = 'Surface Hardness',
+    this.xAxisLabel = 'Date (mm/dd)',
+    this.yAxisLabel = 'Surface Hardness',
     this.dataLineColor = AppColors.colorBrand,
     this.backgroundColor,
     this.height = 240,
@@ -40,13 +42,21 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     return Container(
       height: height,
       width: width,
-      // padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: backgroundColor ?? Colors.white,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         children: [
+          // Chart Title
+          // Text(
+          //   'Control Chart',
+          //   style: AppTypography.textBody3B,
+          // ),
+          const SizedBox(height: 16),
+          
+          // The LineChart
           Expanded(
             child: LineChart(
               LineChartData(
@@ -63,21 +73,46 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
               ),
             ),
           ),
+          
+          const SizedBox(height: 16),
+          
+          // Axis Labels
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Y-axis label (rotated)
               RotatedBox(
                 quarterTurns: 3,
+                child: Text(
+                  yAxisLabel, // Surface Hardness
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              // X-axis label
+              Text(
+                xAxisLabel, // Date (mm/dd)
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
               ),
             ],
           ),
+          
+          const SizedBox(height: 16),
+          
+          // Legend
+          buildLegend(),
         ],
       ),
     );
   }
   
-  @override
   FlGridData buildGridData() {
     return FlGridData(
       show: true,
@@ -101,49 +136,60 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     );
   }
 
-  @override
   FlTitlesData buildTitlesData() {
     return FlTitlesData(
         leftTitles: AxisTitles(
-        // axisNameSize: 16, // กำหนดขนาด axis name
+        axisNameSize: 36, // กำหนดขนาด axis name
         axisNameWidget: SizedBox(
           width: height,
+          child: Text(
+            yAxisLabel,
+            style: AppTypography.textBody3BBold,
+            textAlign: TextAlign.center,
+          ),
         ),
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 24,
+          reservedSize: 40,
           interval: _calculateYAxisInterval(),
           getTitlesWidget: (value, meta) {
             return Text(
-              value.toStringAsFixed(0),
+              value.toStringAsFixed(1),
               style: const TextStyle(
                 color: Colors.black54,
-                fontSize: 8,
+                fontSize: 12,
               ),
             );
           },
         ),
         ),
       bottomTitles: AxisTitles(
-        // axisNameSize: 36, // กำหนดขนาด axis name
+        axisNameSize: 36, // กำหนดขนาด axis name
         axisNameWidget: SizedBox(
           width: width,
+          child: Text(
+            xAxisLabel,
+            style: AppTypography.textBody3BBold,
+            textAlign: TextAlign.center,
+          ),
         ),
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 16, // เพิ่มขนาดสำหรับ X-axis labels
+          reservedSize: 32, // เพิ่มขนาดสำหรับ X-axis labels
           interval: _calculateXInterval(),
           getTitlesWidget: (value, meta) {
             final index = value.toInt();
             if (index >= 0 && index < dataPoints!.length) {
-              return 
-                Text(
+              return Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
                   dataPoints![index].label,
                   style: const TextStyle(
                     color: Colors.black54,
-                    fontSize: 8, // เพิ่มขนาดฟอนต์
+                    fontSize: 10, // เพิ่มขนาดฟอนต์
                   ),
-                );
+                ),
+              );
             }
             return const SizedBox.shrink();
           },
@@ -154,7 +200,6 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     );
   }
 
-  @override
   FlBorderData buildBorderData() {
     return FlBorderData(
       show: true,
@@ -165,7 +210,6 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     );
   }
 
-  @override
   ExtraLinesData buildControlLines() {
     return ExtraLinesData(
       extraLinesOnTop: false,
@@ -208,7 +252,6 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     );
   }
 
-  @override
   List<LineChartBarData> buildLineBarsData() {
     final interval = _calculateXInterval().toInt();
     
@@ -223,7 +266,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
         
         isCurved: false,
         color: dataLineColor,
-        barWidth: 2,
+        barWidth: 4,
         isStrokeCapRound: true,
         dotData: FlDotData(
           show: true,
@@ -255,35 +298,27 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     ];
   }
 
-  @override
   LineTouchData buildTouchData() {
     return LineTouchData(
-      handleBuiltInTouches: true,
       touchTooltipData: LineTouchTooltipData(
         maxContentWidth: 150,
-        getTooltipColor: (_) => AppColors.colorBrand.withValues(alpha: 0.9),
-        tooltipBorderRadius: BorderRadius.circular(8),
-        // กัน tooltip หลุดกรอบ/ถูกตัด
-        fitInsideHorizontally: true,
-        fitInsideVertically: true,
-        tooltipMargin: 8,
-        getTooltipItems: (spots) {
-          return spots.map((barSpot) {
+        getTooltipColor: (touchedSpot) => Color.fromARGB(220, 26, 23, 74),
+        tooltipBorderRadius: BorderRadius.circular(8.0),
+        getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
+          return touchedBarSpots.map((barSpot) {
             final index = barSpot.x.toInt();
             if (index >= 0 && index < dataPoints!.length) {
               return LineTooltipItem(
-                "วันที่: ${dataPoints![index].fullLabel}\n"
-                "ค่า: ${dataPoints![index].value.toStringAsFixed(3)}\n"
-                "เตา: ${dataPoints![index].furnaceNo}\n"
-                "เลขแมต: ${dataPoints![index].matNo}",
+                "วันที่: ${dataPoints![index].fullLabel}\n ค่า: ${dataPoints![index].value.toStringAsFixed(3)}\n เตา: ${dataPoints![index].furnaceNo}\n เลขแมต: ${dataPoints![index].matNo} ",
                 AppTypography.textBody3W,
-                textAlign: TextAlign.left,
+                textAlign: TextAlign.left
               );
             }
             return null;
           }).whereType<LineTooltipItem>().toList();
         },
       ),
+      handleBuiltInTouches: true,
     );
   }
 
@@ -291,8 +326,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     return Wrap(
       spacing: 16,
       runSpacing: 8,
-      direction: Axis.horizontal,
-      alignment: WrapAlignment.spaceEvenly,
+      direction: Axis.vertical,
       children: [
         buildLegendItem('USL', Colors.red, false, formatValue(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec)),
         buildLegendItem('UCL', Colors.orange, false, formatValue(controlChartStats?.controlLimitIChart?.ucl)),
@@ -323,6 +357,10 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
           ),
         ),
         const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
             Text(
               label,
               style: const TextStyle(
@@ -330,7 +368,6 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
                 color: AppColors.colorBlack,
               ),
             ),
-        const SizedBox(width: 8),
             Text(
               value ?? 'N/A',
               style: const TextStyle(
@@ -340,6 +377,8 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
               ),
             ),
           ],
+        ),
+      ],
     );
   }
 
@@ -360,32 +399,19 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     final tempInterval = range / targetIntervals;
     
     // Conditional interval selection
-    if (tempInterval < 25) {
-      return 25.0;
-    }
-    else if (tempInterval < 50) {
-      return 50.0;
-    }
-    else if (tempInterval < 75) {
-      return 75.0;
-    }
-    else if (tempInterval < 100) {
-      return 100.0;
-    } 
-    else {
-      return (tempInterval / 100).ceil() * 100.0; // สำหรับค่าใหญ่กว่า
-    } 
+    if (tempInterval < 25) return 25.0;
+    else if (tempInterval < 50) return 50.0;
+    else if (tempInterval < 75) return 75.0;
+    else if (tempInterval < 100) return 100.0;
+    else return (tempInterval / 100).ceil() * 100.0; // สำหรับค่าใหญ่กว่า
   }
 
-  
-
-  @override
   double getMinY() {
     final controlLCL = controlChartStats?.controlLimitIChart?.lcl;
     final specLower = controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;
     final spotMin = getMinSpot();
     final spotMax = getMaxSpot();
-    (spotMax - spotMin).abs();
+    final range = (spotMax - spotMin).abs();
     
     // คำนวณ base min
     double baseMin = spotMin;
@@ -400,7 +426,6 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     return max(0.0, calculatedMin);
   }
 
-  @override
   double getMaxY() {
     final controlUCL = controlChartStats?.controlLimitIChart?.ucl;
     final specUpper = controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
@@ -424,18 +449,14 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     return _getInterval(); // ใช้ interval ที่คำนวณแล้ว
   }
     
-  double _calculateXInterval() {
-    int pointCount = dataPoints!.length;
-    
-    if (pointCount <= 10) return 1.0;
-    return (pointCount / 10).ceilToDouble();
-  }
+    double _calculateXInterval() {
+      int pointCount = dataPoints!.length;
+      
+      if (pointCount <= 10) return 1.0;
+      return (pointCount / 10).ceilToDouble();
+    }
 
-  double getMaxSpot() {
-  if (dataPoints == null || dataPoints!.isEmpty) {
-    return 0.0;
-  }
-  
+  double getMaxSpot() {  
   final maxSpot = dataPoints!
       .map((point) => point.value)
       .where((value) => value > 0)
@@ -445,9 +466,9 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
   }
 
   double getMinSpot() {
-  if (dataPoints == null || dataPoints!.isEmpty) {
-    return 0.0;
-  }
+  // if (dataPoints == null || dataPoints!.isEmpty || controlChartStats!.specAttribute!.surfaceHardnessLowerSpec == 0 || controlChartStats!.specAttribute!.surfaceHardnessLowerSpec == null) {
+  //   return 0.0;
+  // }
   
   final minSpot = dataPoints!
       .map((point) => point.value)
@@ -456,7 +477,6 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
   
   return minSpot;
   }
-
   String formatValue(double? value) {
     if (value == null) return 'N/A';
     return value.toStringAsFixed(3);

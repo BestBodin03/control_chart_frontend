@@ -1,9 +1,10 @@
 import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
+import 'package:control_chart/domain/models/setting.dart';
 
 class SettingRequest {
   final String settingProfileName;
   final bool isUsed;
-  final DisplayTypeReq displayType;
+  final DisplayType displayType;
   final int chartChangeInterval;
   final List<NelsonRuleReq> nelsonRule;
   final List<SpecificReq> specificSetting;
@@ -48,7 +49,7 @@ class NelsonRuleReq {
 }
 
 class SpecificReq {
-  final PeriodTypeReq type;
+  final PeriodType type;
   final DateTime startDate; // Use UTC or convert in toJson()
   final DateTime endDate;   // Use UTC or convert in toJson()
   final int? furnaceNo;

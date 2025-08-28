@@ -1,8 +1,8 @@
+import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/domain/models/setting_request.dart';
 import 'package:flutter/material.dart';
 
 enum SubmitStatus { idle, submitting, success, failure }
-enum DisplayTypeReq { FURNACE, FURNACE_CP, CP }
 enum PeriodTypeReq { ONE_MONTH, THREE_MONTHS, SIX_MONTHS, ONE_YEAR, CUSTOM, LIFETIME }
 
 class RuleSelected {
@@ -27,17 +27,30 @@ class RuleSelected {
       isUsed: isUsed ?? this.isUsed,
     );
   }
+
+  /// factory สำหรับแปลงจาก NelsonRule → RuleSelected
+  factory RuleSelected.fromNelson(NelsonRule n) {
+    return RuleSelected(
+      ruleId: n.ruleId,
+      ruleName: n.ruleName,
+      isUsed: n.isUsed,
+    );
+  }
+
+  @override
+  String toString() =>
+      'RuleSelected(ruleId: $ruleId, ruleName: $ruleName, isUsed: $isUsed)';
 }
 
-/// One repeatable block in the form
-class SpecificSetting {
-  final PeriodTypeReq? periodType;
+
+class SpecificSettingState {
+  final PeriodType? periodType;
   final DateTime? startDate;
   final DateTime? endDate;
   final int? furnaceNo;
   final String? cpNo;
 
-  const SpecificSetting({
+  const SpecificSettingState({
     this.periodType,
     this.startDate,
     this.endDate,
@@ -45,14 +58,14 @@ class SpecificSetting {
     this.cpNo,
   });
 
-  SpecificSetting copyWith({
-    PeriodTypeReq? periodType,
+  SpecificSettingState copyWith({
+    PeriodType? periodType,
     DateTime? startDate,
     DateTime? endDate,
     int? furnaceNo,
     String? cpNo,
   }) {
-    return SpecificSetting(
+    return SpecificSettingState(
       periodType: periodType ?? this.periodType,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
@@ -60,23 +73,55 @@ class SpecificSetting {
       cpNo: cpNo ?? this.cpNo,
     );
   }
+
+  /// ✅ แปลงจาก Domain Model → State
+  factory SpecificSettingState.fromModel(SpecificSetting model) {
+    return SpecificSettingState(
+      periodType: model.period?.type,
+      startDate: model.period?.startDate,
+      endDate: model.period?.endDate,
+      furnaceNo: model.furnaceNo,
+      cpNo: model.cpNo,
+    );
+  }
+
+  /// ✅ แปลงจาก State → Domain Model
+  SpecificSetting toModel() {
+    return SpecificSetting(
+      period: Period(
+        type: periodType ?? PeriodType.ONE_MONTH, // default fallback
+        startDate: startDate,
+        endDate: endDate,
+      ),
+      furnaceNo: furnaceNo,
+      cpNo: cpNo,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'SpecificSettingState(periodType: $periodType, '
+        'startDate: $startDate, endDate: $endDate, '
+        'furnaceNo: $furnaceNo, cpNo: $cpNo)';
+  }
 }
+
 
 /// Single state object with a status enum
 class SettingFormState {
   final String settingProfileName;
   final bool isUsed;
-  final DisplayTypeReq displayType;
+  final DisplayType displayType;
   final int chartChangeInterval;
   final List<RuleSelected> ruleSelected;
-  final List<SpecificSetting> specifics;
+  final List<SpecificSettingState> specifics;
   final SubmitStatus status;
   final String? error;
 
   const SettingFormState({
     this.settingProfileName = '',
     this.isUsed = true,
-    this.displayType = DisplayTypeReq.FURNACE_CP,
+    this.displayType = DisplayType.FURNACE_CP,
     this.chartChangeInterval = 45,
     this.ruleSelected = const [],
     this.specifics = const [],
@@ -96,12 +141,12 @@ class SettingFormState {
         return false;
       }
 
-      if (displayType == DisplayTypeReq.FURNACE ||
-          displayType == DisplayTypeReq.FURNACE_CP) {
+      if (displayType == DisplayType.FURNACE ||
+          displayType == DisplayType.FURNACE_CP) {
         if (sp.furnaceNo == null) return false;
       }
-      if (displayType == DisplayTypeReq.CP ||
-          displayType == DisplayTypeReq.FURNACE_CP) {
+      if (displayType == DisplayType.CP ||
+          displayType == DisplayType.FURNACE_CP) {
         if ((sp.cpNo ?? '').trim().isEmpty) return false;
       }
     }
@@ -113,10 +158,10 @@ class SettingFormState {
   SettingFormState copyWith({
     String? settingProfileName,
     bool? isUsed,
-    DisplayTypeReq? displayType,
+    DisplayType? displayType,
     int? chartChangeInterval,
     List<RuleSelected>? ruleSelected,
-    List<SpecificSetting>? specifics,
+    List<SpecificSettingState>? specifics,
     SubmitStatus? status,
     String? error,
   }) {

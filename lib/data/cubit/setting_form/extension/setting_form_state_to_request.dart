@@ -1,5 +1,6 @@
 // setting_form_state_mapper.dart
 import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
+import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/domain/models/setting_request.dart';
 
 // Assumes these exist in your codebase:
@@ -28,7 +29,7 @@ extension SettingFormStateToRequest on SettingFormState {
 
     // ---- Specific settings ----
     final List<SpecificReq> specificsReq = specifics.map((sp) {
-      final PeriodTypeReq type =
+      final PeriodType type =
           sp.periodType ?? (throw StateError('specific.periodType is null'));
       DateTime start =
           sp.startDate ?? (throw StateError('specific.startDate is null'));
@@ -43,12 +44,12 @@ extension SettingFormStateToRequest on SettingFormState {
       }
 
       // Enforce fields based on displayType
-      late final int furnaceNoVal;
-      late final String cpNoVal;
+      late final int? furnaceNoVal;
+      late final String? cpNoVal;
 
-      if (displayType == DisplayTypeReq.CP) {
+      if (displayType == DisplayType.CP) {
         // furnaceNo not required by API for CP; send 0
-        furnaceNoVal = 0;
+        furnaceNoVal = null;
       } else {
         final f = sp.furnaceNo;
         if (f == null) {
@@ -57,7 +58,7 @@ extension SettingFormStateToRequest on SettingFormState {
         furnaceNoVal = f;
       }
 
-      if (displayType == DisplayTypeReq.FURNACE) {
+      if (displayType == DisplayType.FURNACE) {
         // cpNo not required by API for FURNACE; send empty
         cpNoVal = '';
       } else {

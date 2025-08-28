@@ -133,15 +133,20 @@ Widget build(BuildContext context) {
             child: Wrap(
               spacing: gap,
               runSpacing: gap,
+              // ... ใน ProfilesPage (ตอน map สร้างการ์ด)
               children: items.map((p) {
+                bool hasAnotherActive() => items.any((x) => x.active && x.id != p.id);
+
                 return SizedBox(
                   width: cardWidth,
                   child: ProfileCard(
                     profile: p,
                     onToggle: (v) => onToggleActive(p.id, v),
+                    hasAnotherActive: hasAnotherActive, // ✅ เพิ่ม
                   ),
                 );
               }).toList(),
+
             ),
           ),
         ),

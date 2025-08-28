@@ -34,9 +34,9 @@ Map<String, dynamic> _$SettingToJson(Setting instance) => <String, dynamic>{
 };
 
 const _$DisplayTypeEnumMap = {
-  DisplayType.furnace: 'FURNACE',
-  DisplayType.furnaceCp: 'FURNACE_CP',
-  DisplayType.cp: 'CP',
+  DisplayType.FURNACE: 'FURNACE',
+  DisplayType.FURNACE_CP: 'FURNACE_CP',
+  DisplayType.CP: 'CP',
 };
 
 GeneralSetting _$GeneralSettingFromJson(Map<String, dynamic> json) =>
@@ -73,14 +73,17 @@ Map<String, dynamic> _$NelsonRuleToJson(NelsonRule instance) =>
 
 SpecificSetting _$SpecificSettingFromJson(Map<String, dynamic> json) =>
     SpecificSetting(
-      period: Period.fromJson(json['period'] as Map<String, dynamic>),
+      period:
+          json['period'] == null
+              ? null
+              : Period.fromJson(json['period'] as Map<String, dynamic>),
       furnaceNo: (json['furnaceNo'] as num?)?.toInt(),
       cpNo: json['cpNo'] as String?,
     );
 
 Map<String, dynamic> _$SpecificSettingToJson(SpecificSetting instance) =>
     <String, dynamic>{
-      'period': instance.period.toJson(),
+      'period': instance.period?.toJson(),
       'furnaceNo': instance.furnaceNo,
       'cpNo': instance.cpNo,
     };
@@ -104,10 +107,10 @@ Map<String, dynamic> _$PeriodToJson(Period instance) => <String, dynamic>{
 };
 
 const _$PeriodTypeEnumMap = {
-  PeriodType.oneMonth: 'ONE_MONTH',
-  PeriodType.threeMonths: 'THREE_MONTHS',
-  PeriodType.sixMonths: 'SIX_MONTHS',
-  PeriodType.oneYear: 'ONE_YEAR',
-  PeriodType.custom: 'CUSTOM',
-  PeriodType.lifetime: 'LIFETIME',
+  PeriodType.ONE_MONTH: 'ONE_MONTH',
+  PeriodType.THREE_MONTHS: 'THREE_MONTHS',
+  PeriodType.SIX_MONTHS: 'SIX_MONTHS',
+  PeriodType.ONE_YEAR: 'ONE_YEAR',
+  PeriodType.CUSTOM: 'CUSTOM',
+  PeriodType.LIFETIME: 'LIFETIME',
 };

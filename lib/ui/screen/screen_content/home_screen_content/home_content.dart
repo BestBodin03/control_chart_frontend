@@ -1,10 +1,9 @@
-// import 'package:control_chart/data/bloc/chart_details/chart_details_bloc.dart';
+
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart';
-// import 'package:control_chart/domain/models/control_chart_stats.dart';
-// import 'package:control_chart/ui/core/design_system/app_color.dart';
-import 'package:control_chart/ui/core/shared/medium_control_chart/control_chart_template.dart';
-// import 'package:control_chart/ui/core/shared/table_component.dart';
+import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/help.dart';
+import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_template.dart';
+import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/help.dart';
 import 'package:control_chart/ui/core/shared/searching_form.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,72 +16,81 @@ class HomeContent extends StatefulWidget {
 }
 
 class HomeContentState extends State<HomeContent> {
+
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(8.0),
-      child: Row(
-        children: [
-          const SearchingForm(),
-          const SizedBox(width: 16.0),
-          Column(
-            children: [
-              BlocBuilder<SearchBloc, SearchState>(
+    return Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          children: [
+            // 📊 Charts area fills the remaining height
+            Expanded(
+              child: BlocBuilder<SearchBloc, SearchState>(
                 builder: (context, searchState) {
                   if (searchState.status == SearchStatus.loading) {
-                    // DON'T create new SearchBloc instance here!
-                    // Just show loading indicator
-                    return const CircularProgressIndicator();
+                    return const Center(child: CircularProgressIndicator());
                   }
-                  
+      
                   if (searchState.status == SearchStatus.failure) {
-                    return Column(
-                      children: [
-                        Text('Error: ${searchState.errorMessage}'),
-                        ElevatedButton(
-                          onPressed: () {
-                            // Retry using existing SearchBloc from context
-                            context.read<SearchBloc>().add(LoadFilteredChartData(
-                              startDate: DateTime.now().subtract(const Duration(days: 30)),
-                              endDate: DateTime.now(),
-                            ));
-                          },
-                          child: const Text('ลองใหม่'),
-                        ),
-                      ],
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Error: ${searchState.errorMessage}'),
+                          ElevatedButton(
+                            onPressed: () {
+                              context.read<SearchBloc>().add(
+                                    LoadFilteredChartData(
+                                      startDate: DateTime.now()
+                                          .subtract(const Duration(days: 30)),
+                                      endDate: DateTime.now(),
+                                    ),
+                                  );
+                            },
+                            child: const Text('ลองใหม่'),
+                          ),
+                        ],
+                      ),
                     );
                   }
-                  
+      
                   if (searchState.controlChartStats == null) {
-                    return const Text('No control chart data');
+                    return const Center(child: Text('No control chart data'));
                   }
-
-                  final query = searchState.currentQuery;
-                  final uniqueKey = '${query.startDate?.day}-'
-                      '${query.endDate?.millisecondsSinceEpoch}-'
-                      '${query.furnaceNo}-'
-                      '${query.materialNo}-';
-                      
-                  return ControlChartTemplate(
-                    key: ValueKey(uniqueKey.hashCode.toString()),
-                    dataPoints: searchState.chartDetails.map((chartDetail) => ChartDataPoint(
-                      label: "${chartDetail.chartGeneralDetail.collectedDate.month.toString().padLeft(2, '0')}/${chartDetail.chartGeneralDetail.collectedDate.day.toString().padLeft(2, '0')}",
-                      fullLabel: "${chartDetail.chartGeneralDetail.collectedDate.month.toString().padLeft(2, '0')}/${chartDetail.chartGeneralDetail.collectedDate.day.toString().padLeft(2, '0')}/${chartDetail.chartGeneralDetail.collectedDate.year.toString().padLeft(4)}",
-                      furnaceNo: chartDetail.chartGeneralDetail.furnaceNo.toString(),
-                      matNo: chartDetail.cpNo,
-                      value: chartDetail.machanicDetail.surfaceHardnessMean,
-                      mrValue: 0.0
-                    )).toList(),
-                    controlChartStats: searchState.controlChartStats!,
-                    dataLineColor: const Color.fromARGB(255, 167, 163, 228),
-                    width: 300 * 21 / 9,
+      
+                  final q = searchState.currentQuery;
+                  final uniqueKey = '${q.startDate?.day}-'
+                      '${q.endDate?.millisecondsSinceEpoch}-'
+                      '${q.furnaceNo}-'
+                      '${q.materialNo}-';
+      
+                  return Row(
+                    key: ValueKey(uniqueKey),
+                    children: [
+                      Expanded(
+                        child: SizedBox.expand(
+                          child: buildChartsSectionSurfaceHardness(searchState),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: SizedBox.expand(
+                          child: buildChartsSectionCdeCdt(searchState),
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
-            ],
-          ),
-        ], 
-      ),
-    );
+            ),
+      
+            const SizedBox(height: 16),
+      
+            // // 🔎 Form placed BELOW the charts
+            // const SearchingForm(),
+          ],
+        ),
+      );
+    // );
   }
 }

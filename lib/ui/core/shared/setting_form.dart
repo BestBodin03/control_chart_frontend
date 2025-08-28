@@ -5,6 +5,7 @@ import 'package:control_chart/data/cubit/setting_form/setting_form_cubit.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
 import 'package:control_chart/domain/models/customer_product.dart';
 import 'package:control_chart/domain/models/furnace.dart';
+import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/form_component.dart';
@@ -142,10 +143,10 @@ class _SettingFormState extends State<SettingForm> {
                                     // อัปเดตลง cubit ด้วย (ผูกกับ enum DisplayTypeReq)
                                     cubit.updateDisplayType(
                                       v == 'FURNACE'
-                                          ? DisplayTypeReq.FURNACE
+                                          ? DisplayType.FURNACE
                                           : v == 'FURNACE_CP'
-                                              ? DisplayTypeReq.FURNACE_CP
-                                              : DisplayTypeReq.CP,
+                                              ? DisplayType.FURNACE_CP
+                                              : DisplayType.CP,
                                     );
                                     // สร้างบล็อกเริ่มต้นถ้ายังไม่มี
                                     if (cubit.state.specifics.isEmpty) {
@@ -212,17 +213,17 @@ class _SettingFormState extends State<SettingForm> {
                                   // แปลง enum -> label (inline)
                                   final currentPeriodLabel = () {
                                     switch (sp.periodType) {
-                                      case PeriodTypeReq.ONE_MONTH:
+                                      case PeriodType.ONE_MONTH:
                                         return '1 เดือน';
-                                      case PeriodTypeReq.THREE_MONTHS:
+                                      case PeriodType.THREE_MONTHS:
                                         return '3 เดือน';
-                                      case PeriodTypeReq.SIX_MONTHS:
+                                      case PeriodType.SIX_MONTHS:
                                         return '6 เดือน';
-                                      case PeriodTypeReq.ONE_YEAR:
+                                      case PeriodType.ONE_YEAR:
                                         return '1 ปี';
-                                      case PeriodTypeReq.LIFETIME:
+                                      case PeriodType.LIFETIME:
                                         return 'ตลอดเวลา';
-                                      case PeriodTypeReq.CUSTOM:
+                                      case PeriodType.CUSTOM:
                                         return 'กำหนดเอง';
                                       default:
                                         return form.periodValue; // fallback เดิมถ้ามี
@@ -274,30 +275,30 @@ class _SettingFormState extends State<SettingForm> {
                                               // map label -> enum (inline)
                                               final now = DateTime.now();
                                               DateTime? startAuto;
-                                              PeriodTypeReq? p;
+                                              PeriodType? p;
                                               switch (value) {
                                                 case '1 เดือน':
-                                                  p = PeriodTypeReq.ONE_MONTH;
+                                                  p = PeriodType.ONE_MONTH;
                                                   startAuto = DateTime(now.year, now.month - 1, now.day);
                                                   break;
                                                 case '3 เดือน':
-                                                  p = PeriodTypeReq.THREE_MONTHS;
+                                                  p = PeriodType.THREE_MONTHS;
                                                   startAuto = DateTime(now.year, now.month - 3, now.day);
                                                   break;
                                                 case '6 เดือน':
-                                                  p = PeriodTypeReq.SIX_MONTHS;
+                                                  p = PeriodType.SIX_MONTHS;
                                                   startAuto = DateTime(now.year, now.month - 6, now.day);
                                                   break;
                                                 case '1 ปี':
-                                                  p = PeriodTypeReq.ONE_YEAR;
+                                                  p = PeriodType.ONE_YEAR;
                                                   startAuto = DateTime(now.year - 1, now.month, now.day);
                                                   break;
                                                 case 'ตลอดเวลา':
-                                                  p = PeriodTypeReq.LIFETIME;
+                                                  p = PeriodType.LIFETIME;
                                                   startAuto = DateTime(2020, 1, 1);
                                                   break;
                                                 default:
-                                                  p = PeriodTypeReq.CUSTOM;
+                                                  p = PeriodType.CUSTOM;
                                                   startAuto = null; // กำหนดเอง ไม่ auto set
                                               }
 
@@ -325,7 +326,7 @@ class _SettingFormState extends State<SettingForm> {
                                                   onChanged: (date) {
                                                     if (date == null) return;
                                                     cubit
-                                                      ..updatePeriodType(i, PeriodTypeReq.CUSTOM) // ผู้ใช้เลือกเอง -> กำหนดเอง
+                                                      ..updatePeriodType(i, PeriodType.CUSTOM) // ผู้ใช้เลือกเอง -> กำหนดเอง
                                                       ..updateStartDate(i, date);
                                                   },
                                                 ),
@@ -346,7 +347,7 @@ class _SettingFormState extends State<SettingForm> {
                                                   onChanged: (date) {
                                                     if (date == null) return;
                                                     cubit
-                                                      ..updatePeriodType(i, PeriodTypeReq.CUSTOM)
+                                                      ..updatePeriodType(i, PeriodType.CUSTOM)
                                                       ..updateEndDate(i, date);
                                                   },
                                                 ),
@@ -409,7 +410,11 @@ class _SettingFormState extends State<SettingForm> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               elevation: 0,
                             ),
-                            onPressed: () => context.read<SettingFormCubit>().saveForm(),
+                            onPressed: () => {
+                              context.read<SettingFormCubit>().saveForm(),
+                              
+                              Navigator.pop(context)
+                              },
                             child: const Text('บันทึก', style: AppTypography.textBody2WBold),
                           ),
                         )

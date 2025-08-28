@@ -4,17 +4,50 @@ import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class ProfileCard extends StatelessWidget {
-  const ProfileCard({super.key, required this.profile, required this.onToggle});
+class ProfileCard extends StatefulWidget {
+  const ProfileCard({
+    super.key,
+    required this.profile,
+    required this.onToggle,
+    required this.hasAnotherActive,
+  });
 
   final Profile profile;
   final ValueChanged<bool> onToggle;
+  final bool Function() hasAnotherActive; // ✅
+
+  @override
+  State<ProfileCard> createState() => _ProfileCardState();
+}
+
+class _ProfileCardState extends State<ProfileCard> {
+  late bool _isOn;
+
+  @override
+  void initState() {
+    super.initState();
+    _isOn = widget.profile.active; // ค่าเริ่มจาก backend
+  }
+
+  @override
+  void didUpdateWidget(covariant ProfileCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.profile.active != widget.profile.active) {
+      _isOn = widget.profile.active; // sync ถ้า parent อัปเดต
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
+    final cubit = context.read<SettingFormCubit>();
+    // final isBusy = context.select<SettingFormCubit, bool>(
+    //   (c) => c.state.status == SubmitStatus.submitting,
+    // );
     return SizedBox(
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -37,7 +70,7 @@ class ProfileCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                         Text(
-                          profile.name,
+                          widget.profile.name,
                           style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: const Color(0xFF0F172A),
@@ -57,7 +90,7 @@ class ProfileCard extends StatelessWidget {
 
               // ---------- Summary ----------
               Text(
-                profile.summary,
+                widget.profile.displayType,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: const Color(0xFF475569),
                       height: 1.45,
@@ -71,33 +104,57 @@ class ProfileCard extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    'สร้างเมื่อ ${fmtDate(profile.createdAt)}',
+                    'สร้างเมื่อ ${fmtDate(widget.profile.createdAt)}',
                     style: Theme.of(context)
                         .textTheme
                         .labelSmall
                         ?.copyWith(color: const Color(0xFF64748B)),
                   ),
                   const Spacer(),
-                  BlocBuilder<SettingFormCubit, SettingFormState>(
-                    builder: (context, state) {  
-                    return Switch(
-                      value: profile.active,
-                      activeColor: AppColors.colorBg,
-                      activeTrackColor: AppColors.colorSuccess1,
-                      inactiveThumbColor: AppColors.colorBg,
-                      inactiveTrackColor: const Color.fromARGB(255, 185, 191, 199),
-                      onChanged: (v) async {
-                        final cubit = context.read<SettingFormCubit>();
-                        cubit.loadSettings(SettingFormState()); // ต้องแมพข้อมูลมาก่อน
+                  Switch(
+                        value: _isOn, // ✅ คุมด้วย local state
+                        activeColor: AppColors.colorBg,
+                        activeTrackColor: AppColors.colorSuccess1,
+                        inactiveThumbColor: AppColors.colorBg,
+                        inactiveTrackColor: const Color.fromARGB(255, 193, 194, 194),
+onChanged:(v) async {
+        final prev = _isOn;
+        setState(() => _isOn = v);
 
-                        cubit.updateIsUsed(v);
-                        await cubit.saveForm(id: profile.id); // ตอนนี้ state ครบจบ validation
-                      }
+        cubit
+          ..updateSettingProfileName(widget.profile.name)
+          ..updateDisplayType(widget.profile.profileDisplayType!)
+          ..updateChartChangeInterval(widget.profile.chartChangeInterval!)
+          ..updateRuleSelected(widget.profile.ruleSelected!)
+          ..updateSpecifics(widget.profile.specifics!)
+          ..updateIsUsed(v);
 
-                    );
+        // ✅ รอผลลัพธ์จาก saveForm
+        final success = await cubit.saveForm(id: widget.profile.id);
 
-                    }
-                  ),
+        if (!mounted) return;
+
+        if (!success) {
+          // ❌ ล้มเหลว → revert กลับ
+          setState(() => _isOn = prev);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              duration: Duration(seconds: 1),
+              content: Text('สามารถใช้งานได้เพียง 1 โปรไฟล์เท่านั้น'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+
+        // ✅ สำเร็จ → แจ้ง parent
+        widget.onToggle(v);
+      },
+
+    ),
+
+
                 ],
               ),
             ],

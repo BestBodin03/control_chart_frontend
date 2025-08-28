@@ -1,12 +1,14 @@
 import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/bloc/setting_profile/setting_profile_bloc.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_cubit.dart';
+import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
 import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/setting_form.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/import_page.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile_page.dart';
+import 'package:control_chart/ui/screen/screen_content/setting_screen_content/setting_var.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/top_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,7 +22,10 @@ class SettingContent extends StatefulWidget {
 
   @override
   State<SettingContent> createState() => _SettingContentState();
+
+  
 }
+
 
 class _SettingContentState extends State<SettingContent> {
   TabKey _tab = TabKey.profiles;
@@ -30,14 +35,30 @@ class _SettingContentState extends State<SettingContent> {
   String _dropdown2 = '';
 
   Profile _toProfile(Setting s) {
+    const displayTypeMap = {
+      'FURNACE': 'เตา',
+      'FURNACE_CP': 'เตา/เลขแมต',
+      'CP': 'เลขแมต',
+    };
+
     return Profile(
       id: s.id,
       name: s.settingProfileName,
-      summary: 'ประเภทการแสดง: ${s.displayType.name}',
+      displayType: 'ประเภทการแสดง: ${displayTypeMap[s.displayType.name] ?? s.displayType.name}',
       active: s.isUsed,
       createdAt: s.createdAt,
+      profileDisplayType: s.displayType,
+      chartChangeInterval: s.generalSetting.chartChangeInterval,
+      ruleSelected: s.generalSetting.nelsonRule.map(RuleSelected.fromNelson).toList(),
+      specifics: s.specificSetting.map(SpecificSettingState.fromModel).toList(),
+      status: SubmitStatus.idle, // ✅ แทน null ถ้า field เป็น non-nullable
+      error: null,
     );
+
   }
+
+  
+
 
   @override
   Widget build(BuildContext context) {

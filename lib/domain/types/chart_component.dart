@@ -1,4 +1,5 @@
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/widgets.dart';
 
 abstract class ChartComponent {
   FlGridData buildGridData();
@@ -9,4 +10,5 @@ abstract class ChartComponent {
   double getMinY();
   double getMaxY();
   LineTouchData buildTouchData();
+  // Widget? buildLegend();
 }

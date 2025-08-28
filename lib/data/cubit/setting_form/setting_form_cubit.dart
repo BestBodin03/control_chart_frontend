@@ -1,6 +1,7 @@
 import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/cubit/setting_form/extension/setting_form_state_to_request.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
+import 'package:control_chart/domain/models/setting.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SettingFormCubit extends Cubit<SettingFormState> {
@@ -22,7 +23,7 @@ class SettingFormCubit extends Cubit<SettingFormState> {
   }
 
   /// Update display type
-  void updateDisplayType(DisplayTypeReq displayType) {
+  void updateDisplayType(DisplayType displayType) {
     emit(state.copyWith(displayType: displayType));
   }
 
@@ -59,16 +60,16 @@ class SettingFormCubit extends Cubit<SettingFormState> {
   }
 
   /// Update all specific settings
-  void updateSpecifics(List<SpecificSetting> specifics) {
+  void updateSpecifics(List<SpecificSettingState> specifics) {
     emit(state.copyWith(specifics: specifics));
   }
 
   /// Add a new specific setting block
   void addSpecificSetting() {
     final now = DateTime.now();
-    final updatedSpecifics = List<SpecificSetting>.from(state.specifics)
-      ..add(SpecificSetting(
-        periodType: PeriodTypeReq.ONE_MONTH,
+    final updatedSpecifics = List<SpecificSettingState>.from(state.specifics)
+      ..add(SpecificSettingState(
+        periodType: PeriodType.ONE_MONTH,
         startDate: DateTime(now.year, now.month - 1, now.day),
         endDate: now,
       ));
@@ -78,23 +79,23 @@ class SettingFormCubit extends Cubit<SettingFormState> {
   /// Remove a specific setting block by index
   void removeSpecificSetting(int index) {
     if (index >= 0 && index < state.specifics.length) {
-      final updatedSpecifics = List<SpecificSetting>.from(state.specifics)
+      final updatedSpecifics = List<SpecificSettingState>.from(state.specifics)
         ..removeAt(index);
       emit(state.copyWith(specifics: updatedSpecifics));
     }
   }
 
   /// Update a specific setting block by index
-  void updateSpecificSetting(int index, SpecificSetting setting) {
+  void updateSpecificSetting(int index, SpecificSettingState setting) {
     if (index >= 0 && index < state.specifics.length) {
-      final updatedSpecifics = List<SpecificSetting>.from(state.specifics);
+      final updatedSpecifics = List<SpecificSettingState>.from(state.specifics);
       updatedSpecifics[index] = setting;
       emit(state.copyWith(specifics: updatedSpecifics));
     }
   }
 
   /// Update period type for a specific setting
-  void updatePeriodType(int index, PeriodTypeReq periodType) {
+  void updatePeriodType(int index, PeriodType periodType) {
     if (index >= 0 && index < state.specifics.length) {
       final currentSetting = state.specifics[index];
       final updatedSetting = currentSetting.copyWith(periodType: periodType);
@@ -155,15 +156,15 @@ class SettingFormCubit extends Cubit<SettingFormState> {
     emit(existingState.copyWith(status: SubmitStatus.idle, error: null));
   }
 
-Future<void> saveForm({String? id}) async {
-  if (state.status == SubmitStatus.submitting) return;
+Future<bool> saveForm({String? id}) async {
+  if (state.status == SubmitStatus.submitting) return false;
 
   if (!state.isValid) {
     emit(state.copyWith(
       status: SubmitStatus.failure,
       error: 'Please fill all required fields correctly',
     ));
-    return;
+    return false;
   }
 
   emit(state.copyWith(status: SubmitStatus.submitting, error: null));
@@ -176,16 +177,17 @@ Future<void> saveForm({String? id}) async {
   };
 
   try {
-    // Option A: pass fully-mapped request
-    // final req = state.toRequest(ruleNameById: ruleNameById);
 
     if (id == null) {
+      print('Creating');
       // CREATE
       await _settingApis.addNewSettingProfile(
         state,
         ruleNameById: ruleNameById,
       );
     } else {
+      print('Updating');
+      print(id);
       // UPDATE (send id in path param)
       await _settingApis.updateSettingProfile(
         id,
@@ -195,12 +197,14 @@ Future<void> saveForm({String? id}) async {
     }
 
     emit(state.copyWith(status: SubmitStatus.success));
+    return true;
   } catch (e) {
     emit(state.copyWith(
       status: SubmitStatus.failure,
       error: e.toString(),
     ));
   }
+  return false;
 }
 
 
@@ -238,15 +242,15 @@ Future<void> saveForm({String? id}) async {
         errors.add('End date is required for block $blockNum');
       }
 
-      if (state.displayType == DisplayTypeReq.FURNACE ||
-          state.displayType == DisplayTypeReq.FURNACE_CP) {
+      if (state.displayType == DisplayType.FURNACE ||
+          state.displayType == DisplayType.FURNACE_CP) {
         if (sp.furnaceNo == null) {
           errors.add('Furnace number is required for block $blockNum');
         }
       }
       
-      if (state.displayType == DisplayTypeReq.CP ||
-          state.displayType == DisplayTypeReq.FURNACE_CP) {
+      if (state.displayType == DisplayType.CP ||
+          state.displayType == DisplayType.FURNACE_CP) {
         if ((sp.cpNo ?? '').trim().isEmpty) {
           errors.add('CP number is required for block $blockNum');
         }
