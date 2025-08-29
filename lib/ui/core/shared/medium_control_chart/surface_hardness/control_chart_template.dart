@@ -1,12 +1,11 @@
-
 import 'package:control_chart/domain/models/chart_data_point.dart';
+import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../data/bloc/search_chart_details/search_bloc.dart';
 import '../../../../../domain/models/control_chart_stats.dart';
-import '../../../../../domain/types/chart_component.dart';
 import '../../../design_system/app_color.dart';
 import 'control_chart_component.dart';
 import 'mr_chart_component.dart';
@@ -18,7 +17,7 @@ class ControlChartTemplate extends StatelessWidget {
   final String yAxisLabel;
   final Color? dataLineColor;
   final Color? backgroundColor;
-  final double? height;
+  final double? height; // ไม่จำเป็นเมื่อใช้ LayoutBuilder แต่คงไว้เผื่อ override
   final double? width;
   final bool isMovingRange;
 
@@ -30,7 +29,7 @@ class ControlChartTemplate extends StatelessWidget {
     this.yAxisLabel = 'Attr.',
     this.dataLineColor = AppColors.colorBrand,
     this.backgroundColor = Colors.white,
-    this.height = 300,
+    this.height,
     this.width,
     required this.isMovingRange,
   });
@@ -39,98 +38,92 @@ class ControlChartTemplate extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<SearchBloc, SearchState>(
       builder: (context, searchState) {
-        // แสดงข้อมูล query ที่ใช้ค้นหา
-        return Column(
-          children: [
-            SizedBox(
-              height: height ?? 300,
-              width: width,
-              child: _buildChartContent(),
-            ),
-          ],
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final w = width ?? constraints.maxWidth;
+            final h = height ?? constraints.maxHeight;
+            return SizedBox(
+              width: w,
+              height: h,
+              child: _buildChart(w, h),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildChartContent() {
-    // ตรวจสอบว่ามีข้อมูลหรือไม่
+  Widget _buildChart(double w, double h) {
     if (dataPoints == null || dataPoints!.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.data_usage_outlined,
-              size: 64,
-              // color: Colors.grey[400],
-            ),
-            // SizedBox(height: 16),
-            Text(
-              'ไม่มีข้อมูลสำหรับแสดงผล',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
-            ),
+          children: const [
+            Icon(Icons.data_usage_outlined, size: 64),
+            SizedBox(height: 8),
+            Text('ไม่มีข้อมูลสำหรับแสดงผล'),
           ],
         ),
       );
     }
 
-  final useWidget = ControlChartComponent(
-    dataPoints: dataPoints,
-    controlChartStats: controlChartStats,
-  );
+    // สร้าง component ที่จะใช้จริง (Individual หรือ MR)
+    final useIndividual = ControlChartComponent(
+      dataPoints: dataPoints,
+      controlChartStats: controlChartStats,
+    );
 
-  final useMrWidget = MrChartComponent(
-    dataPoints: dataPoints,
-    controlChartStats: controlChartStats,
-  );
+    final useMr = MrChartComponent(
+      dataPoints: dataPoints,
+      controlChartStats: controlChartStats,
+    );
 
-  // เลือก widget ตาม isMovingRange
-  final ChartComponent selectedWidget = isMovingRange ? useMrWidget : useWidget;
+    final ChartComponent selectedWidget = isMovingRange ? useMr : useIndividual;
 
-      return DecoratedBox(
+    const legendTopPad = 0.0;
+    const legendLeftPad = 8.0;
+    const legendRightPad = 24.0;
+    const innerPadBottom = 0.0;
+    const legendHeight = 32.0;
+    const gapLegendToChart = 16.0;
+
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(4.0, 24.0, 16.0, 4.0),
+        padding: const EdgeInsets.fromLTRB(
+          legendLeftPad, legendTopPad, legendRightPad, innerPadBottom),
         child: Stack(
           children: [
-            // Background layout (legend + chart space)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                const SizedBox(width: 8),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24.0,0,0,0),
-                  child: useWidget.buildLegend(),
-                ),
-              ],
+            Positioned(
+              top: 8,
+              left: 16,
+              right: 0,
+              height: legendHeight,
+              child: Align(
+                alignment: Alignment.center,
+                child: selectedWidget.buildLegend(),
+              ),
             ),
-            
-            // Chart overlay (full width for touch events)
+
             Positioned.fill(
-              top: 32,
-              // right: 72, // เว้นพื้นที่ให้ legend (ปรับตามขนาดจริง)
+              top: legendHeight + gapLegendToChart,
               child: LineChart(
                 LineChartData(
-                  lineTouchData: selectedWidget.buildTouchData(),
-                  gridData: selectedWidget.buildGridData(),
-                  extraLinesData: selectedWidget.buildControlLines(),
-                  titlesData: selectedWidget.buildTitlesData(),
-                  borderData: selectedWidget.buildBorderData(),
-                  lineBarsData: selectedWidget.buildLineBarsData(),
-                  minX: 0,
-                  maxX: dataPoints!.length.toDouble() - 1,
-                  minY: selectedWidget.getMinY(),
-                  maxY: selectedWidget.getMaxY(),
-                  clipData: FlClipData.none(),
+                gridData: selectedWidget.buildGridData(),
+                extraLinesData: selectedWidget.buildControlLines(),
+                titlesData: selectedWidget.buildTitlesData(),
+                borderData: selectedWidget.buildBorderData(),
+                lineBarsData: selectedWidget.buildLineBarsData(),
+                minX: 0,
+                maxX: dataPoints!.length.toDouble() - 1,
+                minY: selectedWidget.getMinY(),
+                maxY: selectedWidget.getMaxY(),
+                lineTouchData: selectedWidget.buildTouchData(),
+                clipData: FlClipData.none(),
                 ),
               ),
             ),

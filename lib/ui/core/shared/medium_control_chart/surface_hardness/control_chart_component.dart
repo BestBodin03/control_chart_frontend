@@ -27,7 +27,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     // this.yAxisLabel = 'Surface Hardness',
     this.dataLineColor = AppColors.colorBrand,
     this.backgroundColor,
-    this.height = 240,
+    this.height,
     this.width = 560,
   });
   
@@ -83,18 +83,18 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
       show: true,
       drawHorizontalLine: true,
       drawVerticalLine: true,
-      horizontalInterval: _calculateYAxisInterval(),
-      // horizontalInterval: 24,
+      // horizontalInterval: dataPoints!.length/10,
+      horizontalInterval: visibleSpot(dataPoints).length.toDouble()/2,
       verticalInterval: 24,
       getDrawingHorizontalLine: (value) {
         return FlLine(
-          color: Colors.grey.shade300,
+          color: Colors.grey.shade100,
           strokeWidth: 0.5,
         );
       },
       getDrawingVerticalLine: (value) {
         return FlLine(
-          color: Colors.grey.shade300,
+          color: Colors.grey.shade100,
           strokeWidth: 0.5,
         );
       },
@@ -133,7 +133,8 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
           showTitles: true,
           reservedSize: 16, // เพิ่มขนาดสำหรับ X-axis labels
           interval: _calculateXInterval(),
-          getTitlesWidget: (value, meta) {
+          getTitlesWidget: 
+          (value, meta) {
             final index = value.toInt();
             if (index >= 0 && index < dataPoints!.length) {
               return 
@@ -183,6 +184,15 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
           color: Colors.amberAccent,
           strokeWidth: 1.5,
         ),
+
+    if (controlChartStats?.specAttribute?.surfaceHardnessTarget != null &&
+        controlChartStats!.specAttribute!.surfaceHardnessTarget != 0.0)
+      HorizontalLine(
+        y: controlChartStats!.specAttribute!.surfaceHardnessTarget!,
+        color: Colors.deepPurple.shade300,
+        strokeWidth: 1.5,
+      ),
+
         
         // Average Line
         HorizontalLine(
@@ -210,16 +220,25 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
 
   @override
   List<LineChartBarData> buildLineBarsData() {
-    final interval = _calculateXInterval().toInt();
-    
+  // final len = dataPoints!.length;
+  // final start = (len - 24).clamp(0, len);
+  // final visible = dataPoints!.sublist(start, len); // <= 24 จุด (ล่าสุด)
+
+  // final spots = List.generate(
+  //   visible.length,
+  //   (i) => FlSpot(i.toDouble(), visible[i].value),
+  // );
+
     return [
       LineChartBarData(
-        spots: dataPoints!
-            .asMap()
-            .entries
-            .where((entry) => entry.key % interval == 0)
-            .map((entry) => FlSpot(entry.key.toDouble(), entry.value.value))
-            .toList(),
+        // spots: dataPoints!
+        //     .asMap()
+        //     .entries
+        //     .where((entry) => entry.key % interval == 0)
+        //     .map((entry) => FlSpot(entry.key.toDouble(), entry.value.value))
+        //     .toList(),
+
+        spots: visibleSpot(dataPoints),
         
         isCurved: false,
         color: dataLineColor,
@@ -287,19 +306,38 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     );
   }
 
+  @override
   Widget buildLegend() {
     return Wrap(
-      spacing: 16,
-      runSpacing: 8,
+      spacing: 8,
+      runSpacing: 4,
       direction: Axis.horizontal,
       alignment: WrapAlignment.spaceEvenly,
       children: [
-        buildLegendItem('USL', Colors.red, false, formatValue(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec)),
-        buildLegendItem('UCL', Colors.orange, false, formatValue(controlChartStats?.controlLimitIChart?.ucl)),
-        buildLegendItem('AVG', Colors.green, false, formatValue(controlChartStats?.average)),
-        buildLegendItem('LCL', Colors.orange, false, formatValue(controlChartStats?.controlLimitIChart?.lcl)),
-        buildLegendItem('LSL', Colors.red, false, formatValue(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec)),
-      ],
+      if (formatValue(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec) != 'N/A')
+        buildLegendItem('Spec', Colors.red, false,
+            formatValue(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec)),
+
+      if (formatValue(controlChartStats?.controlLimitIChart?.ucl) != 'N/A')
+        buildLegendItem('UCL', Colors.orange, false,
+            formatValue(controlChartStats?.controlLimitIChart?.ucl)),
+
+      if (formatValue(controlChartStats?.specAttribute?.surfaceHardnessTarget) != 'N/A')
+        buildLegendItem('Target', Colors.deepPurple.shade300, false,
+            formatValue(controlChartStats?.specAttribute?.surfaceHardnessTarget)),
+
+      if (formatValue(controlChartStats?.average) != 'N/A')
+        buildLegendItem('AVG', Colors.green, false,
+            formatValue(controlChartStats?.average)),
+
+      if (formatValue(controlChartStats?.controlLimitIChart?.lcl) != 'N/A')
+        buildLegendItem('LCL', Colors.orange, false,
+            formatValue(controlChartStats?.controlLimitIChart?.lcl)),
+
+      if (formatValue(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec) != 'N/A')
+        buildLegendItem('Spec', Colors.red, false,
+            formatValue(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec)),
+        ],
     );
   }
 
@@ -427,8 +465,8 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
   double _calculateXInterval() {
     int pointCount = dataPoints!.length;
     
-    if (pointCount <= 10) return 1.0;
-    return (pointCount / 10).ceilToDouble();
+    if (pointCount <= 24) return 1.0;
+    return (pointCount / 24).ceilToDouble();
   }
 
   double getMaxSpot() {
@@ -458,7 +496,29 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
   }
 
   String formatValue(double? value) {
-    if (value == null) return 'N/A';
-    return value.toStringAsFixed(3);
+    if (value == null || value == 0.0) return 'N/A';
+    return value.toStringAsFixed(2);
   }
+
+  List<FlSpot> visibleSpot(List<ChartDataPoint>? dataPoints, {int maxPoints = 24}) {
+    if (dataPoints == null || dataPoints.isEmpty) return const <FlSpot>[];
+
+    final len = dataPoints.length;
+    final start = (len - maxPoints).clamp(0, len);
+    final visibleLen = len - start;
+
+    return List<FlSpot>.generate(
+      visibleLen,
+      (i) => FlSpot(
+        i.toDouble(),                      // x = index ภายในหน้าต่างที่ตัดมา
+        dataPoints[start + i].value,       // y = ค่า point
+      ),
+    );
+  }
+
+  Widget? _legendIfHas(String label, Color color, String v) {
+    if (v == 'N/A') return null;
+    return buildLegendItem(label, color, false, v);
+  }
+
 }

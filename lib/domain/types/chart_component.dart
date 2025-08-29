@@ -10,5 +10,5 @@ abstract class ChartComponent {
   double getMinY();
   double getMaxY();
   LineTouchData buildTouchData();
-  // Widget? buildLegend();
+  Widget? buildLegend();
 }

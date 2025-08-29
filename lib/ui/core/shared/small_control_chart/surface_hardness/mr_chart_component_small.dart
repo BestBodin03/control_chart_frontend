@@ -382,4 +382,10 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
   
   return minSpot;
   }
+  
+  @override
+  Widget? buildLegend() {
+    // TODO: implement buildLegend
+    throw UnimplementedError();
+  }
 }

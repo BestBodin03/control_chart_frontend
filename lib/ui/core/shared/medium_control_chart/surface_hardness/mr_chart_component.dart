@@ -5,6 +5,7 @@ import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
+import 'package:control_chart/ui/core/shared/dashed_line_painter.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
@@ -185,11 +186,11 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
           strokeWidth: 2,
         ),
 
-        HorizontalLine(
-          y: controlChartStats?.controlLimitMRChart?.lcl ?? 0.0,
-          color: Colors.amberAccent,
-          strokeWidth: 1.5,
-        ),
+        // HorizontalLine(
+        //   y: controlChartStats?.controlLimitMRChart?.lcl ?? 0.0,
+        //   color: Colors.amberAccent,
+        //   strokeWidth: 1.5,
+        // ),
 
       ],
     );
@@ -382,5 +383,67 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
       .fold<double>(double.infinity, min);
   
   return minSpot;
+  }
+  
+  @override
+  Widget buildLegend() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      direction: Axis.horizontal,
+      alignment: WrapAlignment.spaceEvenly,
+      children: [
+        // buildLegendItem('USL', Colors.red, false, formatValue(controlChartStats?.specAttribute?.)),
+        buildLegendItem('UCL', Colors.orange, false, formatValue(controlChartStats?.controlLimitMRChart?.ucl)),
+        buildLegendItem('AVG', Colors.green, false, formatValue(controlChartStats?.average)),
+        // buildLegendItem('LCL', Colors.orange, false, formatValue(controlChartStats?.controlLimitIChart?.lcl)),
+        // buildLegendItem('LSL', Colors.red, false, formatValue(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec)),
+      ],
+    );
+  }
+
+  Widget buildLegendItem(String label, Color color, bool isDashed, String? value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 8,
+          height: 2,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: color,
+              border: isDashed ? Border.all(color: color, width: 1) : null,
+            ),
+            child: isDashed
+                ? CustomPaint(
+                    painter: DashedLinePainter(color: color),
+                  )
+                : null,
+          ),
+        ),
+        const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.colorBlack,
+              ),
+            ),
+        const SizedBox(width: 8),
+            Text(
+              value ?? 'N/A',
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.colorBlack,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+    );
+  }
+
+  String formatValue(double? value) {
+    if (value == null) return 'N/A';
+    return value.toStringAsFixed(2);
   }
 }

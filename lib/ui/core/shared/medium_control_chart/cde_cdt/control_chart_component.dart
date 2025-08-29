@@ -253,7 +253,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
             return FlDotCirclePainter(
               radius: 4,
               color: dotColor,
-              strokeWidth: 2,
+              strokeWidth: 1,
               strokeColor: Colors.white,
             );
           },
@@ -299,7 +299,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
     final spotMax = getMaxY();
     final range = (spotMax - spotMin).abs();
 
-    debugPrint('The Range = $range, max - min: ($spotMax - $spotMin)');
+    // debugPrint('The Range = $range, max - min: ($spotMax - $spotMin)');
 
     return range < 0.25 ? 0.05
         : range < 0.5  ? 0.10
@@ -357,5 +357,11 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
     if (cde == null) return cdt ?? fallback;
     if (cdt == null) return cde;
     return cde > cdt ? cde : cdt;
+  }
+  
+  @override
+  Widget? buildLegend() {
+    // TODO: implement buildLegend
+    throw UnimplementedError();
   }
 }

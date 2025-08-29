@@ -6,18 +6,14 @@ import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardne
 import 'package:flutter/material.dart';
 
 Widget buildChartsSectionSurfaceHardness(SearchState searchState) {
-  return Row(
-    children: [
-      Expanded(
-        child: _buildChartContainer(
-          title: 'Surface Hardness',
-          searchState: searchState,
-          // chartType: ChartType.cdeCdt,
-        ),
-      ),
-    ],
+  return SizedBox.expand( // ← กินพื้นที่ที่ _ChartFillBox จัดให้แบบเต็ม ๆ
+    child: _buildChartContainer(
+      title: 'Surface Hardness',
+      searchState: searchState,
+    ),
   );
 }
+
 
 // Add enum for chart types
 // enum ChartType { surfaceHardness, cdeCdt }
@@ -25,95 +21,109 @@ Widget buildChartsSectionSurfaceHardness(SearchState searchState) {
 Widget _buildChartContainer({
   required String title,
   required SearchState searchState,
-  // required ChartType chartType,
 }) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(0,0,0,8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              title,
-              style: AppTypography.textBody2BBold),
-          ],
-        ),
-      ),
-      // Outer bordered card
-      SizedBox(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-              color: AppColors.colorBrandTp.withValues(alpha: 0.15), // pale blue tint
-              border: Border.all(color: AppColors.colorBrandTp.withValues(alpha: 0.35), width: 1),
-              borderRadius: BorderRadius.circular(8.0),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Chart type label
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text(
-                    "Individual", 
-                    style: AppTypography.textBody3BBold,
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final totalH = constraints.maxHeight;
+      const outerPadTop = 8.0;
+      const outerPadBottom = 16.0;
+      const titleH = 24.0;              // ความสูงข้อความหัวข้อด้านบน
+      const sectionLabelH = 20.0;       // ความสูง label "Individual"/"Moving Range"
+      const gapV = 8.0;                 // ช่องว่างระหว่างส่วนต่าง ๆ
+      // ความสูงที่เหลือสำหรับกราฟจริง (สองใบ)
+      final chartsAreaH = (totalH
+          - outerPadTop - outerPadBottom
+          - titleH
+          - gapV // ระหว่าง title กับการ์ด
+          - 8.0 // padding ในการ์ดเหนือ "Individual"
+          - sectionLabelH
+          - gapV
+          - sectionLabelH
+          - 8.0 // padding ใต้การ์ด
+      ).clamp(0.0, double.infinity);
 
-                // Individual Chart container
-                _buildSingleChart(
-                  searchState: searchState,
-                  // chartType: chartType,
-                  isMovingRange: false,
-                ),
+      final eachChartH = (chartsAreaH / 2).clamp(0.0, double.infinity);
 
-                // Chart type label
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text(
-                    "Moving Range", 
-                    style: AppTypography.textBody3BBold,
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-
-                // Moving Range Chart container
-                _buildMrChart(
-                  searchState: searchState,
-                  // chartType: chartType,
-                  isMovingRange: true,
-                ),
-              ],
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0,0,0,8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [ Text(title, style: AppTypography.textBody2BBold) ],
             ),
           ),
-        ),
-      ),
-    ],
+
+          // Card ครอบสองกราฟ
+          Expanded(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.colorBrandTp.withValues(alpha: 0.15),
+                border: Border.all(
+                  color: AppColors.colorBrandTp.withValues(alpha: 0.35),
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Column(
+                  children: [
+                    // Label
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 4.0),
+                      child: Text("Individual", style: AppTypography.textBody3BBold),
+                    ),
+                    // ✅ กราฟบน: ล็อกความสูง
+                    _buildSingleChart(
+                      searchState: searchState,
+                      isMovingRange: false,
+                      height: eachChartH,
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 4.0),
+                      child: Text("Moving Range", style: AppTypography.textBody3BBold),
+                    ),
+                    // ✅ กราฟล่าง: ล็อกความสูง
+                    _buildMrChart(
+                      searchState: searchState,
+                      isMovingRange: true,
+                      height: eachChartH,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    },
   );
 }
 
+
 Widget _buildSingleChart({
   required SearchState searchState,
-  // required ChartType chartType,
   required bool isMovingRange,
+  required double height,        // ← เพิ่ม
 }) {
   return SizedBox(
     width: double.infinity,
-    // width: 100.0,
-    // height: 180,
+    height: height,              // ← ล็อกความสูงจริง
     child: DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.grey.shade50, // Changed from black26 to light background
+        color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
       ),
       child: _buildChartContent(
         searchState: searchState,
-        // chartType: chartType,
         isMovingRange: isMovingRange,
+        forcedHeight: height,     // ← ส่ง Height ลงไปถึง Template
       ),
     ),
   );
@@ -121,31 +131,32 @@ Widget _buildSingleChart({
 
 Widget _buildMrChart({
   required SearchState searchState,
-  // required ChartType chartType,
   required bool isMovingRange,
+  required double height,        // ← เพิ่ม
 }) {
   return SizedBox(
     width: double.infinity,
-    // width: 100.0,
-    // height: 144.0,
+    height: height,              // ← ล็อกความสูงจริง
     child: DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.grey.shade50, // Changed from black26 to light background
+        color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
       ),
       child: _buildMrChartContent(
         searchState: searchState,
-        // chartType: chartType,
         isMovingRange: true,
+        forcedHeight: height,     // ← ส่ง Height ลงไปถึง Template
       ),
     ),
   );
 }
 
+
 Widget _buildChartContent({
   required SearchState searchState,
   // required ChartType chartType,
   required bool isMovingRange,
+  double? forcedHeight, 
 }) {
   // Handle loading state
   if (searchState.status == SearchStatus.loading) {
@@ -202,7 +213,7 @@ Widget _buildChartContent({
       dataLineColor: AppColors.colorBrand,
       width: double.infinity,
       // width: 100.0,
-      // height: 144.0, 
+      height: forcedHeight, 
       isMovingRange: false,
     ),
   );
@@ -212,6 +223,7 @@ Widget _buildMrChartContent({
   required SearchState searchState,
   // required ChartType chartType,
   required bool isMovingRange,
+  double? forcedHeight, 
 }) {
   // Handle loading state
   if (searchState.status == SearchStatus.loading) {
@@ -268,7 +280,7 @@ Widget _buildMrChartContent({
       dataLineColor: AppColors.colorBrand,
       width: double.infinity,
       // width: 100.0,
-      height: 144.0, 
+      height: forcedHeight, 
       isMovingRange: true,
     ),
   );

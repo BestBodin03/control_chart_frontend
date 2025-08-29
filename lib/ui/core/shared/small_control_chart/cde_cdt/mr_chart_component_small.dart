@@ -285,7 +285,7 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
     final range = getMaxY();
     // final theMaxY = getMaxY();
 
-    debugPrint('The Range = $range, max - min: ($spotMax - $spotMin)');
+    // debugPrint('The Range = $range, max - min: ($spotMax - $spotMin)');
 
 
     return range <= 0.25 ? 0.05
@@ -340,5 +340,11 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
     if (cde == null) return cdt ?? fallback;
     if (cdt == null) return cde;
     return cde > cdt ? cde : cdt;
+  }
+  
+  @override
+  Widget? buildLegend() {
+    // TODO: implement buildLegend
+    throw UnimplementedError();
   }
 }

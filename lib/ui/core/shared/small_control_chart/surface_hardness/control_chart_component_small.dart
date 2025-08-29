@@ -88,13 +88,13 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
       verticalInterval: 24,
       getDrawingHorizontalLine: (value) {
         return FlLine(
-          color: Colors.grey.shade300,
+          color: Colors.grey.shade100,
           strokeWidth: 0.5,
         );
       },
       getDrawingVerticalLine: (value) {
         return FlLine(
-          color: Colors.grey.shade300,
+          color: Colors.grey.shade100,
           strokeWidth: 0.5,
         );
       },
@@ -399,6 +399,12 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
       .fold<double>(double.infinity, min);
   
   return minSpot;
+  }
+  
+  @override
+  Widget? buildLegend() {
+    // TODO: implement buildLegend
+    throw UnimplementedError();
   }
 
 }
