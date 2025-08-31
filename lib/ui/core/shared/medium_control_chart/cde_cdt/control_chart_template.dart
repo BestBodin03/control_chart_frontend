@@ -37,93 +37,81 @@ class ControlChartTemplateCdeCdt extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<SearchBloc, SearchState>(
       builder: (context, searchState) {
-        // แสดงข้อมูล query ที่ใช้ค้นหา
-        return Column(
-          children: [
-            SizedBox(
-              height: height ?? 300,
-              width: width,
-              child: _buildChartContent(),
-            ),
-          ],
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final w = width ?? constraints.maxWidth;
+            final h = height ?? constraints.maxHeight;
+            return SizedBox(
+              width: w,
+              height: h,
+              child: _buildChart(w, h),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildChartContent() {
-    // ตรวจสอบว่ามีข้อมูลหรือไม่
+  Widget _buildChart(double w, double h) {
     if (dataPoints == null || dataPoints!.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.data_usage_outlined,
-              size: 64,
-              // color: Colors.grey[400],
-            ),
-            // SizedBox(height: 16),
-            Text(
-              'ไม่มีข้อมูลสำหรับแสดงผล',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
-            ),
+          children: const [
+            Icon(Icons.data_usage_outlined, size: 64),
+            SizedBox(height: 8),
+            Text('ไม่มีข้อมูลสำหรับแสดงผล'),
           ],
         ),
       );
     }
 
-  final useWidget = ControlChartComponent(
-    dataPoints: dataPoints,
-    controlChartStats: controlChartStats,
-  );
+    // สร้าง component ที่จะใช้จริง (Individual หรือ MR)
+    final useIndividual = ControlChartComponent(
+      dataPoints: dataPoints,
+      controlChartStats: controlChartStats,
+    );
 
-  final useMrWidget = MrChartComponent(
-    dataPoints: dataPoints,
-    controlChartStats: controlChartStats,
-  );
+    final useMr = MrChartComponent(
+      dataPoints: dataPoints,
+      controlChartStats: controlChartStats,
+    );
 
-  // เลือก widget ตาม isMovingRange
-  final ChartComponent selectedWidget = isMovingRange ? useMrWidget : useWidget;
+    final ChartComponent selectedWidget = isMovingRange ? useMr : useIndividual;
 
-  // // 1) Which widget?
-  // debugPrint('Selected chart widget: ${selectedWidget.runtimeType} '
-  //           '(isMovingRange=$isMovingRange)');
+    const legendTopPad = 0.0;
+    const legendLeftPad = 8.0;
+    const legendRightPad = 24.0;
+    const innerPadBottom = 0.0;
+    const legendHeight = 32.0;
+    const gapLegendToChart = 16.0;
 
-  // // 2) What values will be plotted?
-  // final List<double> shownValues = isMovingRange
-  //   ? dataPoints!.map((p) => p.mrValue).toList()
-  //   : dataPoints!.map((p) => p.value).toList();
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          legendLeftPad, legendTopPad, legendRightPad, innerPadBottom),
+        child: Stack(
+          children: [
+            Positioned(
+              top: 8,
+              left: 16,
+              right: 0,
+              height: legendHeight,
+              child: Align(
+                alignment: Alignment.center,
+                child: selectedWidget.buildLegend(),
+              ),
+            ),
 
-  // debugPrint('Showing ${shownValues.length} points; first 10: '
-  //   '${shownValues.take(10).map((v) => v.toStringAsFixed(3)).toList()}');
-
-  // // 3) Index-by-index (best for tracing)
-  // for (var i = 0; i < dataPoints!.length; i++) {
-  //   final p = dataPoints![i];
-  //   final shown = isMovingRange ? p.mrValue : p.value;
-  //   debugPrint('[$i] ${p.fullLabel}  -> ${shown.toStringAsFixed(3)} '
-  //             '(furnace=${p.furnaceNo}, mat=${p.matNo})');
-  // }
-
-  return DecoratedBox(
-    decoration: BoxDecoration(
-      color: backgroundColor,
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: Colors.grey.shade300),
-    ),
-    child: Padding(
-      padding: EdgeInsets.fromLTRB(4.0, 24.0, 16.0, 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Chart area
-          Expanded(
-            child: LineChart(
-              LineChartData(
+            Positioned.fill(
+              top: legendHeight + gapLegendToChart,
+              child: LineChart(
+                LineChartData(
                 gridData: selectedWidget.buildGridData(),
                 extraLinesData: selectedWidget.buildControlLines(),
                 titlesData: selectedWidget.buildTitlesData(),
@@ -135,13 +123,9 @@ class ControlChartTemplateCdeCdt extends StatelessWidget {
                 maxY: selectedWidget.getMaxY(),
                 lineTouchData: selectedWidget.buildTouchData(),
                 clipData: FlClipData.none(),
+                ),
               ),
             ),
-          ),
-            
-            // Legend at right
-            // const SizedBox(width: 16),
-            // useWidget.buildLegend(),
           ],
         ),
       ),

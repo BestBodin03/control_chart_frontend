@@ -5,6 +5,7 @@ import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
+import 'package:control_chart/ui/core/shared/dashed_line_painter.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
@@ -173,7 +174,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
         // USL (Upper Specification Limit)
         if ((_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec, controlChartStats?.specAttribute?.cdtUpperSpec)) > 0.0)
           HorizontalLine(
-            y: controlChartStats!.specAttribute!.surfaceHardnessUpperSpec!,
+            y: (_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec, controlChartStats?.specAttribute?.cdtUpperSpec))?? 0.0,
             color: Colors.red.shade400,
             strokeWidth: 2,
           ),
@@ -198,9 +199,9 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
         ),
         
         // LSL (Lower Specification Limit)
-      if ((controlChartStats?.specAttribute?.surfaceHardnessLowerSpec ?? 0.0) > 0.0)
+        if ((_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec, controlChartStats?.specAttribute?.cdtLowerSpec)) > 0.0)
         HorizontalLine(
-          y: controlChartStats!.specAttribute!.surfaceHardnessLowerSpec!,
+          y: _chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec, controlChartStats?.specAttribute?.cdtLowerSpec) ?? 0.0,
           color: Colors.red.shade400,
           strokeWidth: 2,
         ),
@@ -237,14 +238,14 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
               (_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec,
                               controlChartStats?.specAttribute?.cdtUpperSpec))
                                > 0.0 &&
-              (value > _chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec,
-                                      controlChartStats?.specAttribute?.cdtUpperSpec) ||
-              value < _chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec,
-                                      controlChartStats?.specAttribute?.cdtLowerSpec)))
+              (value > _chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec ?? 0.0,
+                                      controlChartStats?.specAttribute?.cdtUpperSpec ?? 0.0) ||
+              value < _chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec ?? 0.0,
+                                      controlChartStats?.specAttribute?.cdtLowerSpec ?? 0.0)))
               ? Colors.red // Out of spec
-              : (value >= _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart!.ucl,
+              : (value >= _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart?.ucl,
                                           controlChartStats?.cdtControlLimitIChart?.ucl) ||
-                value <= _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart!.lcl,
+                value <= _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart?.lcl,
                                           controlChartStats?.cdtControlLimitIChart?.lcl))
                 ? Colors.orange // Warning zone
                 : dotColor; // unchanged (safe zone)
@@ -360,8 +361,110 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
   }
   
   @override
-  Widget? buildLegend() {
-    // TODO: implement buildLegend
-    throw UnimplementedError();
+  Widget buildLegend() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      direction: Axis.horizontal,
+      alignment: WrapAlignment.spaceEvenly,
+      children: [
+
+  if (formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec,
+      controlChartStats?.specAttribute?.cdtUpperSpec)) != 'N/A')
+    buildLegendItem('Spec', Colors.red, false,
+        formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec,
+      controlChartStats?.specAttribute?.cdtUpperSpec))),
+
+  // UCL (choose CDE/CDT I-Chart)
+  if (formatValue(_chooseCdeOrCdt(
+        controlChartStats?.cdeControlLimitIChart?.ucl,
+        controlChartStats?.cdtControlLimitIChart?.ucl,
+      )) != 'N/A')
+    buildLegendItem('UCL', Colors.orange, false,
+        formatValue(_chooseCdeOrCdt(
+          controlChartStats?.cdeControlLimitIChart?.ucl,
+          controlChartStats?.cdtControlLimitIChart?.ucl,
+        ))),
+
+  if (formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeTarget,
+      controlChartStats?.specAttribute?.cdtTarget)) != 'N/A')
+    buildLegendItem('Spec', Colors.deepPurple.shade300, false,
+        formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeTarget,
+      controlChartStats?.specAttribute?.cdtTarget))),
+
+  // AVG (choose CDE/CDT MR-Chart CL)
+  if (formatValue(_chooseCdeOrCdt(
+        controlChartStats?.cdeControlLimitMRChart?.cl,
+        controlChartStats?.cdtControlLimitMRChart?.cl,
+      )) != 'N/A')
+    buildLegendItem('AVG', Colors.green, false,
+        formatValue(_chooseCdeOrCdt(
+          controlChartStats?.cdeControlLimitMRChart?.cl,
+          controlChartStats?.cdtControlLimitMRChart?.cl,
+        ))),
+
+  // LCL (choose CDE/CDT I-Chart)
+  if (formatValue(_chooseCdeOrCdt(
+        controlChartStats?.cdeControlLimitIChart?.lcl,
+        controlChartStats?.cdtControlLimitIChart?.lcl,
+      )) != 'N/A')
+    buildLegendItem('LCL', Colors.orange, false,
+        formatValue(_chooseCdeOrCdt(
+          controlChartStats?.cdeControlLimitIChart?.lcl,
+          controlChartStats?.cdtControlLimitIChart?.lcl,
+        ))),
+
+  if (formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec,
+      controlChartStats?.specAttribute?.cdtLowerSpec)) != 'N/A')
+    buildLegendItem('Spec', Colors.red, false,
+        formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec,
+      controlChartStats?.specAttribute?.cdtLowerSpec))),
+]
+
+    );
+  }
+
+  Widget buildLegendItem(String label, Color color, bool isDashed, String? value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 8,
+          height: 2,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: color,
+              border: isDashed ? Border.all(color: color, width: 1) : null,
+            ),
+            child: isDashed
+                ? CustomPaint(
+                    painter: DashedLinePainter(color: color),
+                  )
+                : null,
+          ),
+        ),
+        const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.colorBlack,
+              ),
+            ),
+        const SizedBox(width: 8),
+            Text(
+              value ?? 'N/A',
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.colorBlack,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+    );
+  }
+  String formatValue(double? value) {
+    if (value == null || value <= 0) return 'N/A';
+    return value.toStringAsFixed(3);
   }
 }

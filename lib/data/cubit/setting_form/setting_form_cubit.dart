@@ -2,6 +2,8 @@ import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/cubit/setting_form/extension/setting_form_state_to_request.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
 import 'package:control_chart/domain/models/setting.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class SettingFormCubit extends Cubit<SettingFormState> {
@@ -157,8 +159,10 @@ class SettingFormCubit extends Cubit<SettingFormState> {
   }
 
 Future<bool> saveForm({String? id}) async {
-  if (state.status == SubmitStatus.submitting) return false;
+  // กันยิงซ้ำระหว่างกำลัง submit หรือ cubit ถูกปิดไปแล้ว
+  if (state.status == SubmitStatus.submitting || isClosed) return false;
 
+  // ตรวจความถูกต้องก่อนส่ง
   if (!state.isValid) {
     emit(state.copyWith(
       status: SubmitStatus.failure,
@@ -167,45 +171,96 @@ Future<bool> saveForm({String? id}) async {
     return false;
   }
 
+  // สถานะกำลังส่ง
   emit(state.copyWith(status: SubmitStatus.submitting, error: null));
 
-  // build ruleNameById from current state
-  final ruleNameById = <int, String>{
-    for (final r in state.ruleSelected)
-      if (r.ruleId != null && (r.ruleName?.trim().isNotEmpty ?? false))
-        r.ruleId!: r.ruleName!.trim(),
-  };
+  // สร้างแมพ ruleNameById แบบปลอดภัยต่อ null/ค่าว่าง
+  final Map<int, String> ruleNameById = {};
+  for (final r in state.ruleSelected) {
+    final rid = r.ruleId;
+    final name = r.ruleName?.trim();
+    if (rid != null && name != null && name.isNotEmpty) {
+      ruleNameById[rid] = name;
+    }
+  }
+
+  // กัน path ผิดกรณี id เป็น "" หรือ "   "
+  final String? safeId =
+      (id == null || id.trim().isEmpty) ? null : id.trim();
 
   try {
-
-    if (id == null) {
-      print('Creating');
-      // CREATE
-      await _settingApis.addNewSettingProfile(
+    // เรียก API และเก็บ Response ไว้ตรวจ status/payload
+    Response<dynamic> res;
+    if (safeId == null) {
+      debugPrint('[saveForm] Creating profile...');
+      res = await _settingApis.addNewSettingProfile(
         state,
         ruleNameById: ruleNameById,
       );
     } else {
-      print('Updating');
-      print(id);
-      // UPDATE (send id in path param)
-      await _settingApis.updateSettingProfile(
-        id,
+      debugPrint('[saveForm] Updating id=$safeId');
+      res = await _settingApis.updateSettingProfile(
+        safeId,
         state,
         ruleNameById: ruleNameById,
       );
     }
 
-    emit(state.copyWith(status: SubmitStatus.success));
-    return true;
-  } catch (e) {
-    emit(state.copyWith(
-      status: SubmitStatus.failure,
-      error: e.toString(),
-    ));
+    // --- ตรวจผลลัพธ์ฝั่ง HTTP ---
+    final code = res.statusCode ?? 0;
+    final okHttp = code >= 200 && code < 300;
+
+    // บางแบ็กเอนด์ตอบ 200 แต่ { success:false }
+    bool? okPayload;
+    String? serverMsg;
+    final body = res.data;
+    if (body is Map<String, dynamic>) {
+      okPayload = body['success'] as bool?;
+      serverMsg = (body['message'] ?? body['error'])?.toString();
+    }
+
+    if (okHttp && (okPayload == null || okPayload == true)) {
+      emit(state.copyWith(status: SubmitStatus.success));
+      return true;
+    } else {
+      final msg = serverMsg ??
+          'Unexpected response (HTTP $code) ${body is Map ? body : body?.toString() ?? ''}';
+      debugPrint('[saveForm] Fail: $msg');
+      emit(state.copyWith(status: SubmitStatus.failure, error: msg));
+      return false;
+    }
+  } on DioException catch (e, st) {
+    // ดึงข้อความจากฝั่งเซิร์ฟเวอร์ให้มากที่สุด
+    String msg = e.message ?? 'Network error';
+    final status = e.response?.statusCode;
+    final data = e.response?.data;
+
+    // พยายามอ่าน message/error จาก payload
+    if (data is Map<String, dynamic>) {
+      msg = (data['message'] ?? data['error'] ?? msg).toString();
+    } else if (data != null) {
+      msg = data.toString();
+    }
+
+    // จับเคสต่อเซิร์ฟเวอร์ไม่ได้ให้ข้อความอ่านง่าย
+    if (e.type == DioExceptionType.connectionError &&
+        (msg.contains('ECONNREFUSED') || msg.contains('Connection refused'))) {
+      msg = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ (connection refused)';
+    }
+
+    debugPrint('[saveForm] DioException HTTP $status : $msg');
+    debugPrint('[saveForm] Stack: $st');
+
+    emit(state.copyWith(status: SubmitStatus.failure, error: msg));
+    return false;
+  } catch (e, st) {
+    debugPrint('[saveForm] Unexpected error: $e');
+    debugPrint('[saveForm] Stack: $st');
+    emit(state.copyWith(status: SubmitStatus.failure, error: e.toString()));
+    return false;
   }
-  return false;
 }
+
 
 
 
