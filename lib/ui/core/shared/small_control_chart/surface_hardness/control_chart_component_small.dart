@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:math' as math;
 
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
@@ -19,7 +20,7 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
   final double? height;
   final double? width;
 
-  const ControlChartComponentSmall({
+  ControlChartComponentSmall({
     super.key,
     this.dataPoints,
     this.controlChartStats,
@@ -217,16 +218,16 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
         spots: dataPoints!
             .asMap()
             .entries
-            .where((entry) => entry.key % interval == 0)
+            .where((entry) => entry.key % 1 == 0)
             .map((entry) => FlSpot(entry.key.toDouble(), entry.value.value))
             .toList(),
         
         isCurved: false,
         color: dataLineColor,
-        barWidth: 2,
+        barWidth: 3,
         isStrokeCapRound: true,
         dotData: FlDotData(
-          show: true,
+          show: false,
           getDotPainter: (spot, percent, barData, index) {
             final realIndex = spot.x.toInt();
             final value = dataPoints![realIndex].value;
@@ -286,42 +287,6 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
       ),
     );
   }
-
-  double _getInterval() {
-    final spotMin = getMinSpot();
-    final spotMax = getMaxSpot();
-    final range = (spotMax - spotMin).abs();
-    
-    if (range < 10) {
-      return 2.5; // hardcode สำหรับ range เล็ก
-    }
-
-    if (range < 5) {
-      return 1.25; // hardcode สำหรับ range เล็ก
-    }
-    
-    final targetIntervals = 2;
-    final tempInterval = range / targetIntervals;
-    
-    // Conditional interval selection
-    if (tempInterval < 25) {
-      return 25.0;
-    }
-    else if (tempInterval < 50) {
-      return 50.0;
-    }
-    else if (tempInterval < 75) {
-      return 75.0;
-    }
-    else if (tempInterval < 100) {
-      return 100.0;
-    } 
-    else {
-      return (tempInterval / 100).ceil() * 100.0; // สำหรับค่าใหญ่กว่า
-    } 
-  }
-
-  
 
   @override
   double getMinY() {
@@ -400,11 +365,134 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
   
   return minSpot;
   }
+
+// ---------- Utilities ----------
+double? _minNonNull(List<double?> xs) {
+  double? m;
+  for (final v in xs) {
+    if (v == null) continue;
+    m = (m == null) ? v : (v < m! ? v : m);
+  }
+  return m;
+}
+
+double? _maxNonNull(List<double?> xs) {
+  double? m;
+  for (final v in xs) {
+    if (v == null) continue;
+    m = (m == null) ? v : (v > m! ? v : m);
+  }
+  return m;
+}
+
+// ปัด interval ให้เป็น “nice step” (1, 2, 2.5, 5) × 10^k โดยปัด "ขึ้น"
+double _niceStepCeil(double x) {
+  if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
+  final exp = (math.log(x) / math.log(10)).floor(); // log10
+  final mag = math.pow(10.0, exp).toDouble();
+  final mant = x / mag;
+  if (mant <= 0.125) return 0.125 * mag;
+  if (mant <= 0.25) return 0.25 * mag;
+  if (mant <= 0.5) return 0.5 * mag;
+  if (mant <= 1.0) return 1.0 * mag;
+  if (mant <= 2.0) return 2.0 * mag;
+  if (mant <= 2.5) return 2.5 * mag;
+  if (mant <= 5.0) return 5.0 * mag;
+  return 10.0 * mag;
+}
+
+  // หา next nice step ที่ “ใหญ่ขึ้นจาก step ปัจจุบัน”
+  double _nextNiceStep(double step) {
+    // log10(step) = log(step) / log(10)
+    final exp = (math.log(step) / math.log(10)).floor();
+    final mag = math.pow(10.0, exp).toDouble();
+    final mant = step / mag;
+
+    if (mant < 1.0)  return 1.0 * mag;
+    if (mant < 2.0)  return 2.0 * mag;
+    if (mant < 2.5)  return 2.5 * mag;
+    if (mant < 5.0)  return 5.0 * mag;
+    return 10.0 * mag; // ข้ามขึ้นไปอีกหลัก
+  }
+// ---------- Core scaling ----------
+// เก็บค่าไว้ให้ getMinY/getMaxY ใช้ เพื่อให้ divisions = 6 เสมอ
+double? _cachedMinY;
+double? _cachedMaxY;
+double? _cachedInterval;
+
+/// ข้อกำหนด:
+/// - ต้องได้ divisions = 6 (range / interval == 6)
+/// - minY = ค่าต่ำสุดจาก SpotMin, SpecLower, LCL (จริง ๆ คือ "สแนปลง" จากค่านี้)
+/// - maxY = ค่าสูงสุดจาก SpotMax, SpecUpper, UCL (จริง ๆ คือ "สแนปขึ้น" แล้วขยายให้ครบ 6 ช่อง)
+double _getInterval() {
+  // 1) อ่านค่า base จาก Spot/Spec/CL
+  final spotMin = getMinSpot();
+  final spotMax = getMaxSpot();
+
+  final specLower = controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;
+  final specUpper = controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
+  final lcl       = controlChartStats?.controlLimitIChart?.lcl;
+  final ucl       = controlChartStats?.controlLimitIChart?.ucl;
+
+  // baseMin/baseMax คือ "ขอบโลกความจริง" ก่อนสแนป
+  final baseMin = _minNonNull([spotMin, specLower, lcl]) ?? spotMin;
+  final baseMax = _maxNonNull([spotMax, specUpper, ucl]) ?? spotMax;
+
+  // กันกรณีข้อมูลไม่สมเหตุผล
+  if (baseMax <= baseMin) {
+    _cachedMinY = baseMin;
+    _cachedMaxY = baseMin + 4; // สร้างช่วงบังคับ
+    _cachedInterval = 1.0;
+    return _cachedInterval!;
+  }
+
+  // 2) คำนวณ interval แบบ "อยากได้" ให้มี 6 ช่อง
+  final ideal = (baseMax - baseMin) / 4.0;
+
+  // 3) เลือก nice step ที่ "ปัดขึ้น" จาก ideal
+  double interval = _niceStepCeil(ideal);
+
+  // 4) สแนป min ลง & max ขึ้น ด้วย interval นี้
+  double minY = (baseMin / interval).floor() * interval;
+  double maxY = (baseMax / interval).ceil()  * interval;
+
+  // 5) ตรวจจำนวนช่องจริง
+  int d = ((maxY - minY) / interval).round();
+
+  if (d < 4) {
+    // ขยาย max ให้ครบ 6 ช่อง
+    maxY = minY + 4 * interval;
+    d = 4;
+  } else if (d > 4) {
+    // เพิ่ม interval เป็น next nice step จนกว่าจะ ≤ 6 แล้วบังคับให้ = 6
+    while (true) {
+      interval = _nextNiceStep(interval);
+      minY = (baseMin / interval).floor() * interval;
+      maxY = (baseMax / interval).ceil()  * interval;
+      d = ((maxY - minY) / interval).round();
+      if (d <= 4) {
+        maxY = minY + 4 * interval;
+        d = 4;
+        break;
+      }
+    }
+  } else {
+    // d == 6 แล้ว — ผ่าน
+  }
+
+  // 6) เก็บค่า cache ให้ getMinY/getMaxY ใช้
+  _cachedMinY = minY;
+  _cachedMaxY = maxY;
+  _cachedInterval = interval;
+
+  // ต้องได้ range/interval == 6 เสมอ
+  // (maxY - minY) / interval == 6
+  return interval;
+}
   
   @override
   Widget? buildLegend() {
     // TODO: implement buildLegend
     throw UnimplementedError();
   }
-
 }

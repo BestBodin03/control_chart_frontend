@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:math' as math;
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
@@ -19,7 +20,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
   final double? height;
   final double? width;
 
-  const ControlChartComponent({
+  ControlChartComponent({
     super.key,
     this.dataPoints,
     this.controlChartStats,
@@ -83,8 +84,8 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
       show: true,
       drawHorizontalLine: true,
       drawVerticalLine: true,
-      // horizontalInterval: dataPoints!.length/10,
-      horizontalInterval: visibleSpot(dataPoints).length.toDouble()/2,
+      horizontalInterval: dataPoints!.length/10,
+      // horizontalInterval: visibleSpot(dataPoints).length.toDouble()/4,
       verticalInterval: 24,
       getDrawingHorizontalLine: (value) {
         return FlLine(
@@ -125,26 +126,24 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
         ),
         ),
       bottomTitles: AxisTitles(
-        // axisNameSize: 36, // กำหนดขนาด axis name
-        axisNameWidget: SizedBox(
-          width: width,
-        ),
+        axisNameWidget: SizedBox(width: width),
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 16, // เพิ่มขนาดสำหรับ X-axis labels
+          reservedSize: 28, // 👈 เพิ่มพื้นที่เผื่อ label หมุน
           interval: _calculateXInterval(),
-          getTitlesWidget: 
-          (value, meta) {
+          getTitlesWidget: (value, meta) {
             final index = value.toInt();
             if (index >= 0 && index < dataPoints!.length) {
-              return 
-                Text(
+              return RotatedBox(
+                quarterTurns: 3, // 1 = 90 องศา, 3 = -90 องศา
+                child: Text(
                   dataPoints![index].label,
                   style: const TextStyle(
                     color: Colors.black54,
-                    fontSize: 8, // เพิ่มขนาดฟอนต์
+                    fontSize: 8,
                   ),
-                );
+                ),
+              );
             }
             return const SizedBox.shrink();
           },
@@ -231,14 +230,14 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
 
     return [
       LineChartBarData(
-        // spots: dataPoints!
-        //     .asMap()
-        //     .entries
-        //     .where((entry) => entry.key % interval == 0)
-        //     .map((entry) => FlSpot(entry.key.toDouble(), entry.value.value))
-        //     .toList(),
+        spots: dataPoints!
+            .asMap()
+            .entries
+            .where((entry) => entry.key % 1 == 0)
+            .map((entry) => FlSpot(entry.key.toDouble(), entry.value.value))
+            .toList(),
 
-        spots: visibleSpot(dataPoints),
+        // spots: visibleSpot(dataPoints),
         
         isCurved: false,
         color: dataLineColor,
@@ -381,42 +380,6 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     );
   }
 
-  double _getInterval() {
-    final spotMin = getMinSpot();
-    final spotMax = getMaxSpot();
-    final range = (spotMax - spotMin).abs();
-    
-    if (range < 10) {
-      return 2.5; // hardcode สำหรับ range เล็ก
-    }
-
-    if (range < 5) {
-      return 1.25; // hardcode สำหรับ range เล็ก
-    }
-    
-    final targetIntervals = 2;
-    final tempInterval = range / targetIntervals;
-    
-    // Conditional interval selection
-    if (tempInterval < 25) {
-      return 25.0;
-    }
-    else if (tempInterval < 50) {
-      return 50.0;
-    }
-    else if (tempInterval < 75) {
-      return 75.0;
-    }
-    else if (tempInterval < 100) {
-      return 100.0;
-    } 
-    else {
-      return (tempInterval / 100).ceil() * 100.0; // สำหรับค่าใหญ่กว่า
-    } 
-  }
-
-  
-
   @override
   double getMinY() {
     final controlLCL = controlChartStats?.controlLimitIChart?.lcl;
@@ -424,6 +387,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     final spotMin = getMinSpot();
     final spotMax = getMaxSpot();
     (spotMax - spotMin).abs();
+    // print('$spotMin, $spotMax');
     
     // คำนวณ base min
     double baseMin = spotMin;
@@ -495,26 +459,147 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
   return minSpot;
   }
 
+// ---------- Utilities ----------
+double? _minNonNull(List<double?> xs) {
+  double? m;
+  for (final v in xs) {
+    if (v == null) continue;
+    m = (m == null) ? v : (v < m ? v : m);
+  }
+  return m;
+}
+
+double? _maxNonNull(List<double?> xs) {
+  double? m;
+  for (final v in xs) {
+    if (v == null) continue;
+    m = (m == null) ? v : (v > m ? v : m);
+  }
+  return m;
+}
+
+// ปัด interval ให้เป็น “nice step” (1, 2, 2.5, 5) × 10^k โดยปัด "ขึ้น"
+double _niceStepCeil(double x) {
+  if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
+  final exp = (math.log(x) / math.log(10)).floor(); // log10
+  final mag = math.pow(10.0, exp).toDouble();
+  final mant = x / mag;
+  if (mant <= 1.0) return 1.0 * mag;
+  if (mant <= 2.0) return 2.0 * mag;
+  if (mant <= 2.5) return 2.5 * mag;
+  if (mant <= 5.0) return 5.0 * mag;
+  return 10.0 * mag;
+}
+
+  // หา next nice step ที่ “ใหญ่ขึ้นจาก step ปัจจุบัน”
+  double _nextNiceStep(double step) {
+    // log10(step) = log(step) / log(10)
+    final exp = (math.log(step) / math.log(10)).floor();
+    final mag = math.pow(10.0, exp).toDouble();
+    final mant = step / mag;
+
+    if (mant < 1.0)  return 1.0 * mag;
+    if (mant < 2.0)  return 2.0 * mag;
+    if (mant < 2.5)  return 2.5 * mag;
+    if (mant < 5.0)  return 5.0 * mag;
+    return 10.0 * mag; // ข้ามขึ้นไปอีกหลัก
+  }
+// ---------- Core scaling ----------
+// เก็บค่าไว้ให้ getMinY/getMaxY ใช้ เพื่อให้ divisions = 6 เสมอ
+double? _cachedMinY;
+double? _cachedMaxY;
+double? _cachedInterval;
+
+/// ข้อกำหนด:
+/// - ต้องได้ divisions = 6 (range / interval == 6)
+/// - minY = ค่าต่ำสุดจาก SpotMin, SpecLower, LCL (จริง ๆ คือ "สแนปลง" จากค่านี้)
+/// - maxY = ค่าสูงสุดจาก SpotMax, SpecUpper, UCL (จริง ๆ คือ "สแนปขึ้น" แล้วขยายให้ครบ 6 ช่อง)
+double _getInterval() {
+  // 1) อ่านค่า base จาก Spot/Spec/CL
+  final spotMin = getMinSpot();
+  final spotMax = getMaxSpot();
+
+  final specLower = controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;
+  final specUpper = controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
+  final lcl       = controlChartStats?.controlLimitIChart?.lcl;
+  final ucl       = controlChartStats?.controlLimitIChart?.ucl;
+
+  // baseMin/baseMax คือ "ขอบโลกความจริง" ก่อนสแนป
+  final baseMin = _minNonNull([spotMin, specLower, lcl]) ?? spotMin;
+  final baseMax = _maxNonNull([spotMax, specUpper, ucl]) ?? spotMax;
+
+  // กันกรณีข้อมูลไม่สมเหตุผล
+  if (baseMax <= baseMin) {
+    _cachedMinY = baseMin;
+    _cachedMaxY = baseMin + 4; // สร้างช่วงบังคับ
+    _cachedInterval = 1.0;
+    return _cachedInterval!;
+  }
+
+  // 2) คำนวณ interval แบบ "อยากได้" ให้มี 6 ช่อง
+  final ideal = (baseMax - baseMin) / 4.0;
+
+  // 3) เลือก nice step ที่ "ปัดขึ้น" จาก ideal
+  double interval = _niceStepCeil(ideal);
+
+  // 4) สแนป min ลง & max ขึ้น ด้วย interval นี้
+  double minY = (baseMin / interval).floor() * interval;
+  double maxY = (baseMax / interval).ceil()  * interval;
+
+  // 5) ตรวจจำนวนช่องจริง
+  int d = ((maxY - minY) / interval).round();
+
+  if (d < 4) {
+    // ขยาย max ให้ครบ 6 ช่อง
+    maxY = minY + 4 * interval;
+    d = 4;
+  } else if (d > 4) {
+    // เพิ่ม interval เป็น next nice step จนกว่าจะ ≤ 6 แล้วบังคับให้ = 6
+    while (true) {
+      interval = _nextNiceStep(interval);
+      minY = (baseMin / interval).floor() * interval;
+      maxY = (baseMax / interval).ceil()  * interval;
+      d = ((maxY - minY) / interval).round();
+      if (d <= 4) {
+        maxY = minY + 4 * interval;
+        d = 4;
+        break;
+      }
+    }
+  } else {
+    // d == 6 แล้ว — ผ่าน
+  }
+
+  // 6) เก็บค่า cache ให้ getMinY/getMaxY ใช้
+  _cachedMinY = minY;
+  _cachedMaxY = maxY;
+  _cachedInterval = interval;
+
+  // ต้องได้ range/interval == 6 เสมอ
+  // (maxY - minY) / interval == 6
+  return interval;
+}
+
   String formatValue(double? value) {
     if (value == null || value == 0.0) return 'N/A';
     return value.toStringAsFixed(2);
   }
 
-  List<FlSpot> visibleSpot(List<ChartDataPoint>? dataPoints, {int maxPoints = 24}) {
-    if (dataPoints == null || dataPoints.isEmpty) return const <FlSpot>[];
+  // List<FlSpot> visibleSpot(List<ChartDataPoint>? dataPoints, {int maxPoints = 24}) {
+  //   if (dataPoints == null || dataPoints.isEmpty) return const <FlSpot>[];
 
-    final len = dataPoints.length;
-    final start = (len - maxPoints).clamp(0, len);
-    final visibleLen = len - start;
+  //   final len = dataPoints.length;
+  //   final start = (len - maxPoints).clamp(0, len);
+  //   final visibleLen = len - start;
 
-    return List<FlSpot>.generate(
-      visibleLen,
-      (i) => FlSpot(
-        i.toDouble(),                      // x = index ภายในหน้าต่างที่ตัดมา
-        dataPoints[start + i].value,       // y = ค่า point
-      ),
-    );
-  }
+  //   return List<FlSpot>.generate(
+  //     visibleLen,
+  //     (i) => FlSpot(
+  //       i.toDouble(),                      // x = index ภายในหน้าต่างที่ตัดมา
+  //       dataPoints[start + i].value,       // y = ค่า point
+  //     ),
+  //   );
+  // }
 
   Widget? _legendIfHas(String label, Color color, String v) {
     if (v == 'N/A') return null;

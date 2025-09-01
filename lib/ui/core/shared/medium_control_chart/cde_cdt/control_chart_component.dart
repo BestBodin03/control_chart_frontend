@@ -125,31 +125,31 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
           },
         ),
         ),
-      bottomTitles: AxisTitles(
-        // axisNameSize: 36, // กำหนดขนาด axis name
-        axisNameWidget: SizedBox(
-          width: width,
-        ),
-        sideTitles: SideTitles(
-          showTitles: true,
-          reservedSize: 16, // เพิ่มขนาดสำหรับ X-axis labels
-          interval: _calculateXInterval(),
-          getTitlesWidget: (value, meta) {
-            final index = value.toInt();
-            if (index >= 0 && index < dataPoints!.length) {
-              return 
-                Text(
-                  dataPoints![index].label,
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 8, // เพิ่มขนาดฟอนต์
+        bottomTitles: AxisTitles(
+          axisNameWidget: SizedBox(width: width),
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 28, // 👈 เพิ่มพื้นที่เผื่อ label หมุน
+            interval: _calculateXInterval(),
+            getTitlesWidget: (value, meta) {
+              final index = value.toInt();
+              if (index >= 0 && index < dataPoints!.length) {
+                return RotatedBox(
+                  quarterTurns: 3, // 1 = 90 องศา, 3 = -90 องศา
+                  child: Text(
+                    dataPoints![index].label,
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 8,
+                    ),
                   ),
                 );
-            }
-            return const SizedBox.shrink();
-          },
+              }
+              return const SizedBox.shrink();
+            },
+          ),
         ),
-      ),
+
       topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
     );
@@ -321,7 +321,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
     final usl = _chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec ?? 0.0, 
     controlChartStats?.specAttribute?.cdtUpperSpec ?? 0.0);
     final maxY = max(getMaxSpot(), max(ucl, usl));
-    return maxY <= 0.25 ? 0.25 : maxY <= 0.5 ? 0.5 : 1.0;
+    return maxY <= 0.25 ? 0.25 : maxY <= 0.5 ? 0.5 : maxY*0.2;
   }
 
 
@@ -332,8 +332,8 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
   double _calculateXInterval() {
     int pointCount = dataPoints!.length;
     
-    if (pointCount <= 10) return 1.0;
-    return (pointCount / 10).ceilToDouble();
+    if (pointCount <= 24) return 1.0;
+    return (pointCount / 24).ceilToDouble();
   }
 
 

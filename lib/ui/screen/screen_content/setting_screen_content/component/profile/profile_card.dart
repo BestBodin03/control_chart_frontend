@@ -14,11 +14,15 @@ class ProfileCard extends StatefulWidget {
     required this.profile,
     required this.onToggle,
     required this.hasAnotherActive,
+    this.onTap, // ✅ Added callback for card tap
+    this.onEdit, // ✅ Added callback for edit tap
   });
 
   final Profile profile;
   final ValueChanged<bool> onToggle;
-  final bool Function() hasAnotherActive; // ✅
+  final bool Function() hasAnotherActive;
+  final VoidCallback? onTap; // ✅ Optional callback when card is tapped
+  final VoidCallback? onEdit; // ✅ Optional callback when edit is tapped
 
   @override
   State<ProfileCard> createState() => _ProfileCardState();
@@ -41,35 +45,39 @@ class _ProfileCardState extends State<ProfileCard> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<SettingFormCubit>();
-    // final isBusy = context.select<SettingFormCubit, bool>(
-    //   (c) => c.state.status == SubmitStatus.submitting,
-    // );
-    return SizedBox(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
-          color: AppColors.colorBgGrey,
-          boxShadow: [
-            BoxShadow(color: Colors.white.withValues(alpha: 0.6),
-             blurRadius: 2, offset: const Offset(-5, -5)),
-            BoxShadow(color: AppColors.colorBrandTp.withValues(alpha: 0.4),
-             blurRadius: 4, offset: const Offset(5, 5)),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-                // ---------- Header: ชื่อ + pill ไอคอน ----------
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                        Text(
+    
+    return GestureDetector(
+      onTap: widget.onTap, // ✅ Handle card tap
+      child: MouseRegion(
+        cursor: widget.onTap != null 
+            ? SystemMouseCursors.click 
+            : SystemMouseCursors.basic, // ✅ Change cursor when clickable
+        child: SizedBox(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.all(Radius.circular(16)),
+              color: AppColors.colorBgGrey,
+              boxShadow: [
+                BoxShadow(color: Colors.white.withValues(alpha: 0.6),
+                 blurRadius: 2, offset: const Offset(-5, -5)),
+                BoxShadow(color: AppColors.colorBrandTp.withValues(alpha: 0.4),
+                 blurRadius: 4, offset: const Offset(5, 5)),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ---------- Header: ชื่อ + pill ไอคอน ----------
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded( // ✅ Allow text to take available space
+                        child: Text(
                           widget.profile.name,
                           style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
@@ -78,86 +86,99 @@ class _ProfileCardState extends State<ProfileCard> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const Icon(
-                          Icons.edit,
-                          color: AppColors.colorBrand,
-                          size: 20,
+                      ),
+                      GestureDetector(
+                        onTap: widget.onEdit ?? () {
+                          // ✅ Default edit behavior or use provided callback
+                          print('Edit tapped for ${widget.profile.name}');
+                        },
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: Container(
+                            padding: const EdgeInsets.all(4), // ✅ Increase tap area
+                            child: const Icon(
+                              Icons.edit,
+                              color: AppColors.colorBrand,
+                              size: 20,
+                            ),
+                          ),
                         ),
-                ],
-              ),
-
-              const SizedBox(height: 8),
-
-              // ---------- Summary ----------
-              Text(
-                widget.profile.displayType,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF475569),
-                      height: 1.45,
-                    ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-
-              const SizedBox(height: 8),
-
-              Row(
-                children: [
-                  Text(
-                    'สร้างเมื่อ ${fmtDate(widget.profile.createdAt)}',
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelSmall
-                        ?.copyWith(color: const Color(0xFF64748B)),
+                      ),
+                    ],
                   ),
-                  const Spacer(),
-                  Switch(
-                        value: _isOn, // ✅ คุมด้วย local state
-                        activeColor: AppColors.colorBg,
-                        activeTrackColor: AppColors.colorSuccess1,
-                        inactiveThumbColor: AppColors.colorBg,
-                        inactiveTrackColor: const Color.fromARGB(255, 193, 194, 194),
-onChanged:(v) async {
-        final prev = _isOn;
-        setState(() => _isOn = v);
 
-        cubit
-          ..updateSettingProfileName(widget.profile.name)
-          ..updateDisplayType(widget.profile.profileDisplayType!)
-          ..updateChartChangeInterval(widget.profile.chartChangeInterval!)
-          ..updateRuleSelected(widget.profile.ruleSelected!)
-          ..updateSpecifics(widget.profile.specifics!)
-          ..updateIsUsed(v);
+                  const SizedBox(height: 8),
 
-        // ✅ รอผลลัพธ์จาก saveForm
-        final success = await cubit.saveForm(id: widget.profile.id);
+                  // ---------- Summary ----------
+                  Text(
+                    widget.profile.displayType,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: const Color(0xFF475569),
+                          height: 1.45,
+                        ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
 
-        if (!mounted) return;
+                  const SizedBox(height: 8),
 
-        if (!success) {
-          // ❌ ล้มเหลว → revert กลับ
-          setState(() => _isOn = prev);
+                  Row(
+                    children: [
+                      Text(
+                        'สร้างเมื่อ ${fmtDate(widget.profile.createdAt)}',
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelSmall
+                            ?.copyWith(color: const Color(0xFF64748B)),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () {}, // ✅ Prevent parent tap when tapping switch area
+                        child: Switch(
+                          value: _isOn, // ✅ คุมด้วย local state
+                          activeColor: AppColors.colorBg,
+                          activeTrackColor: AppColors.colorSuccess1,
+                          inactiveThumbColor: AppColors.colorBg,
+                          inactiveTrackColor: const Color.fromARGB(255, 193, 194, 194),
+                          onChanged: (v) async {
+                            final prev = _isOn;
+                            setState(() => _isOn = v);
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              duration: Duration(seconds: 1),
-              content: Text('สามารถใช้งานได้เพียง 1 โปรไฟล์เท่านั้น'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-          return;
-        }
+                            cubit
+                              ..updateSettingProfileName(widget.profile.name)
+                              ..updateDisplayType(widget.profile.profileDisplayType!)
+                              ..updateChartChangeInterval(widget.profile.chartChangeInterval!)
+                              ..updateRuleSelected(widget.profile.ruleSelected!)
+                              ..updateSpecifics(widget.profile.specifics!)
+                              ..updateIsUsed(v);
 
-        // ✅ สำเร็จ → แจ้ง parent
-        widget.onToggle(v);
-      },
+                            // ✅ รอผลลัพธ์จาก saveForm
+                            final success = await cubit.saveForm(id: widget.profile.id);
 
-    ),
+                            if (!mounted) return;
 
+                            if (!success) {
+                              // ❌ ล้มเหลว → revert กลับ
+                              setState(() => _isOn = prev);
 
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  duration: Duration(seconds: 1),
+                                  content: Text('สามารถใช้งานได้เพียง 1 โปรไฟล์เท่านั้น'),
+                                  backgroundColor: Colors.orange,
+                                ),
+                              );
+                              return;
+                            }
+                            widget.onToggle(v);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),

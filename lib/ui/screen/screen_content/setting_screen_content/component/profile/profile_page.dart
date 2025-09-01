@@ -4,6 +4,7 @@ import 'package:control_chart/ui/core/shared/pill_button.dart';
 import 'package:control_chart/ui/core/shared/setting_form.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile_card.dart';
+import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile_detail_sheet.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -99,28 +100,6 @@ Widget build(BuildContext context) {
               solid: true,
               bg: AppColors.colorAlert1,
               onTap: () {},
-              // onTap: () {
-              //   showDialog(
-              //     context: context,
-              //     builder: (ctx) => Dialog(
-              //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              //       child: DecoratedBox(
-              //         decoration: BoxDecoration(
-              //           color: AppColors.colorBgGrey,
-              //           borderRadius: BorderRadius.circular(10),
-              //           boxShadow: [
-              //             // BoxShadow(color: Colors.white.withValues(alpha: 0.6), blurRadius: 10, offset: const Offset(-5, -5)),
-              //             BoxShadow(color: AppColors.colorBrandTp.withValues(alpha: 0.4), blurRadius: 15, offset: const Offset(5, 5)),
-              //           ],
-              //         ),
-              //         child: Padding(
-              //           padding: const EdgeInsets.all(8),
-              //           child: SettingForm(),
-              //         ),
-              //       ),
-              //     ),
-              //   );
-              // },
             ),
           ],
         ),
@@ -143,6 +122,14 @@ Widget build(BuildContext context) {
                     profile: p,
                     onToggle: (v) => onToggleActive(p.id, v),
                     hasAnotherActive: hasAnotherActive, // ✅ เพิ่ม
+                    onTap: () {
+                      // ✅ Show profile details when card is tapped
+                      _showProfileDetails(context, p);
+                    },
+                    onEdit: () {
+                      // ✅ Handle edit icon tap
+                      _showEditProfile(context, p);
+                    },
                   ),
                 );
               }).toList(),
@@ -153,6 +140,72 @@ Widget build(BuildContext context) {
       ],
     );
   });
+}
+
+// ✅ Show profile details in bottom sheet
+void _showProfileDetails(BuildContext context, Profile profile) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => ProfileDetailSheet(profile: profile),
+  );
+}
+
+// ✅ Show edit profile dialog
+void _showEditProfile(BuildContext context, Profile profile) {
+  final formCubit = context.read<SettingFormCubit>();
+  
+  // Pre-populate form with profile data
+  formCubit
+    ..updateSettingProfileName(profile.name)
+    ..updateDisplayType(profile.profileDisplayType!)
+    ..updateChartChangeInterval(profile.chartChangeInterval!)
+    ..updateRuleSelected(profile.ruleSelected!)
+    ..updateSpecifics(profile.specifics!)
+    ..updateIsUsed(profile.active);
+
+  showDialog(
+    context: context,
+    builder: (ctx) => BlocProvider.value(
+      value: formCubit,
+      child: Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        child: SingleChildScrollView(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.colorBgGrey,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.colorBrandTp.withValues(alpha: 0.4),
+                  blurRadius: 15,
+                  offset: const Offset(5, 5),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'แก้ไขโปรไฟล์: ${profile.name}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const SettingForm(),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 }

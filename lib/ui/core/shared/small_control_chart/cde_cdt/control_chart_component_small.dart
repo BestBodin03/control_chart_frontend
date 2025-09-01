@@ -191,11 +191,11 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
           strokeWidth: 2,
         ),
 
-        HorizontalLine(
-          y: _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart?.lcl, controlChartStats?.cdtControlLimitIChart?.lcl),
-          color: Colors.amberAccent,
-          strokeWidth: 1.5,
-        ),
+        // HorizontalLine(
+        //   y: _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart?.lcl, controlChartStats?.cdtControlLimitIChart?.lcl),
+        //   color: Colors.amberAccent,
+        //   strokeWidth: 1.5,
+        // ),
         
         // LSL (Lower Specification Limit)
       if ((controlChartStats?.specAttribute?.surfaceHardnessLowerSpec ?? 0.0) > 0.0)
@@ -217,16 +217,16 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
         spots: dataPoints!
             .asMap()
             .entries
-            .where((entry) => entry.key % interval == 0)
+            .where((entry) => entry.key % 1 == 0)
             .map((entry) => FlSpot(entry.key.toDouble(), entry.value.value))
             .toList(),
         
         isCurved: false,
         color: dataLineColor,
-        barWidth: 2,
+        barWidth: 3,
         isStrokeCapRound: true,
         dotData: FlDotData(
-          show: true,
+          show: false,
           getDotPainter: (spot, percent, barData, index) {
             final realIndex = spot.x.toInt();
             final value = dataPoints![realIndex].value;
@@ -319,8 +319,9 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
     controlChartStats?.cdtControlLimitIChart?.ucl ?? 0.0);
     final usl = _chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec ?? 0.0, 
     controlChartStats?.specAttribute?.cdtUpperSpec ?? 0.0);
+    final spot = _chooseCdeOrCdt(getMaxSpot(controlChartStats), getMaxSpot());
     final maxY = max(getMaxSpot(), max(ucl, usl));
-    return maxY <= 0.25 ? 0.25 : maxY <= 0.5 ? 0.5 : 1.0;
+    return maxY <= 0.25 ? 0.25 : maxY <= 0.5 ? 0.5 : maxY*1.2;
   }
 
 
@@ -331,12 +332,13 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
   double _calculateXInterval() {
     int pointCount = dataPoints!.length;
     
-    if (pointCount <= 10) return 1.0;
-    return (pointCount / 10).ceilToDouble();
+    // if (pointCount <= 10) return 1.0;
+    // return (pointCount / 10).ceilToDouble();
+    return pointCount.toDouble();
   }
 
 
-  double getMaxSpot() {
+  double getMaxSpot(List<dynamic>) {
   if (dataPoints == null || dataPoints!.isEmpty) {
     return 0.0;
   }

@@ -209,7 +209,7 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
         .asMap()
         .entries
         .take(nullMrValue)
-        .where((entry) => (entry.key - 1) % interval == 0)
+        .where((entry) => (entry.key - 1) % 1 == 0)
         .map((entry) => FlSpot(
           entry.key.toDouble() + 1.0,
           entry.value.mrValue
@@ -218,10 +218,10 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
         
         isCurved: false,
         color: dataLineColor,
-        barWidth: 2,
+        barWidth: 3,
         isStrokeCapRound: true,
         dotData: FlDotData(
-          show: true,
+          show: false,
           getDotPainter: (spot, percent, barData, index) {
             final realIndex = spot.x.toInt();
             final value = dataPoints![realIndex].mrValue;
@@ -304,7 +304,7 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
     final ucl = _chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.ucl ?? 0, 
     controlChartStats?.cdtControlLimitMRChart?.ucl ?? 0);
     final maxY = max(getMaxSpot(), ucl);
-    return maxY <= 0.25 ? 0.25 : maxY <= 0.5 ? 0.5 : 1.0;
+    return maxY <= 0.25 ? 0.25 : maxY <= 0.5 ? 0.5 : maxY*1.2;
   }
 
   double _calculateYAxisInterval() {
