@@ -54,7 +54,9 @@ class SearchChartDetailsApis {
       }
       
       final data = response['data'] as Map<String, dynamic>;
-      final stats = ControlChartStats.fromJson(data);   
+      final stats = ControlChartStats.fromJson(data);
+
+      // print(stats.yAxisRange?.maxYsurfaceHardnessControlChart.toString());   
          
       return stats;
     } catch (e) {

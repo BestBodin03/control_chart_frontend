@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:math' as math;
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
@@ -18,7 +19,7 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
   final double? width;
   final bool isMovingRange;
 
-  const MrChartComponentSmall({
+  MrChartComponentSmall({
     super.key, 
     this.dataPoints,
     this.controlChartStats,
@@ -278,33 +279,117 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
     );
   } 
 
-  double _getInterval() {
-    final spotMin = getMinSpot();
-    final spotMax = getMaxSpot();
-    // final range = (spotMax - spotMin).abs();
-    final range = getMaxY();
-    // final theMaxY = getMaxY();
+// ---------- Cache ----------
+double? _cachedMinY;
+double? _cachedMaxY;
+double? _cachedInterval;
 
-    // debugPrint('The Range = $range, max - min: ($spotMax - $spotMin)');
+// ---------- Public ----------
+@override
+double getMaxY() {
+  if (_cachedInterval == null) _getInterval();
+  return _cachedMaxY ?? 0.0;
+}
+
+@override
+double getMinY() {
+  if (_cachedInterval == null) _getInterval();
+  return _cachedMinY ?? 0.0;
+}
 
 
-    return range <= 0.25 ? 0.05
-        : range <= 0.5  ? 0.10
-        : range <= 1.0  ? 0.20
-        : 0.20;
+double _getInterval() {
+  const divisions = 5; // => 6 ticks
+  final spotMin = 0.0;
+  final spotMax =
+        _chooseCdeOrCdt(controlChartStats?.yAxisRange?.maxYcdeMrChart, 
+        controlChartStats?.yAxisRange?.maxYcdtMrChart);
+
+  if (spotMax <= spotMin) {
+    _cachedMinY = spotMin;
+    _cachedMaxY = spotMin + divisions;
+    _cachedInterval = 1.0;
+    return _cachedInterval!;
   }
 
-  @override
-  double getMinY() {
-    return 0.0;
+  // target step for desired divisions
+  final ideal = (spotMax - spotMin) / divisions;
+  double interval = _niceStepCeil(ideal);
+
+  // snap min to multiple of step; max exactly divisions*step above
+  double minY = (spotMin / interval).floor() * interval;
+  double maxY = minY + divisions * interval;
+
+  // if not yet covering data max, bump to next nice step(s)
+  while (maxY < spotMax - 1e-12) {
+    interval = _nextNiceStep(interval);
+    minY = (spotMin / interval).floor() * interval;
+    maxY = minY + divisions * interval;
   }
 
-  @override
-  double getMaxY() {
-    final ucl = _chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.ucl ?? 0, 
-    controlChartStats?.cdtControlLimitMRChart?.ucl ?? 0);
-    final maxY = max(getMaxSpot(), ucl);
-    return maxY <= 0.25 ? 0.25 : maxY <= 0.5 ? 0.5 : maxY*1.2;
+  _cachedMinY = minY;
+  _cachedMaxY = maxY;
+  _cachedInterval = interval;
+  return interval;
+}
+
+  // utilities -------
+  double _roundUpToPowerOf10(double x) {
+    if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
+    
+    final exp = (math.log(x) / math.log(10)).floor();
+    final base = math.pow(10.0, exp).toDouble();
+    
+    if (x <= base) {
+      return base;
+    } else {
+      final nextPower = math.pow(10.0, exp + 1).toDouble();
+      
+      // สำหรับค่าเล็ก ให้ใช้ค่ากลาง (base * 5)
+      if (x < 1.0) {
+        final intermediate = base * 5;
+        if (x <= intermediate && intermediate < nextPower) {
+          return intermediate;
+        }
+      }
+      
+      return nextPower;
+    }
+  }
+
+  double _niceStepCeil(double x) {
+    if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
+    final exp = (math.log(x) / math.log(10)).floor();
+    final mag = math.pow(10.0, exp).toDouble();
+    final mant = x / mag;
+    if (mant <= 0.025) return 0.025 * mag;
+    if (mant <= 0.050) return 0.050 * mag;
+    if (mant <= 0.075) return 0.075 * mag;
+    if (mant <= 0.125) return 0.125 * mag;
+    if (mant <= 0.25) return 0.25 * mag;
+    if (mant <= 0.5) return 0.5 * mag;
+    if (mant <= 1.0) return 1.0 * mag;
+    if (mant <= 2.0) return 2.0 * mag;
+    if (mant <= 2.5) return 2.5 * mag;
+    if (mant <= 5.0) return 5.0 * mag;
+    return 10.0 * mag;
+  }
+
+  double _nextNiceStep(double step) {
+    final exp = (math.log(step) / math.log(10)).floor();
+    final mag = math.pow(10.0, exp).toDouble();
+    final mant = step / mag;
+    if (mant <= 0.025) return 0.025 * mag;
+    if (mant <= 0.050) return 0.050 * mag;
+    if (mant <= 0.075) return 0.075 * mag;
+    if (mant <= 0.125) return 0.125 * mag;
+    if (mant <= 0.25) return 0.25 * mag;
+    if (mant <= 0.5) return 0.5 * mag;
+    if (mant < 1.0) return 1.0 * mag;
+    if (mant < 2.0) return 2.0 * mag;
+    if (mant < 2.5) return 2.5 * mag;
+    if (mant < 5.0) return 5.0 * mag;
+    return 10.0 * mag;
   }
 
   double _calculateYAxisInterval() {
@@ -316,24 +401,6 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
     
     if (pointCount <= 10) return 1.0;
     return (pointCount / 10).ceilToDouble();
-  }
-
-
-  double getMaxSpot() {
-  if (dataPoints == null || dataPoints!.isEmpty) {
-    return 0.0;
-  }
-  
-  final maxSpot = dataPoints!
-      .map((point) => point.mrValue)
-      .where((value) => value > 0)
-      .fold<double>(double.negativeInfinity, max);
-
-  return maxSpot;
-  }
-
-  double getMinSpot() {
-    return 0.0;
   }
 
   double _chooseCdeOrCdt(double? cde, double? cdt, {double fallback = 0}) {

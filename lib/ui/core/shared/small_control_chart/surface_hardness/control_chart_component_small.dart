@@ -211,7 +211,7 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
 
   @override
   List<LineChartBarData> buildLineBarsData() {
-    final interval = _calculateXInterval().toInt();
+    // final interval = _calculateXInterval().toInt();
     
     return [
       LineChartBarData(
@@ -287,46 +287,100 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
       ),
     );
   }
+  
+// ---------- Cache ----------
+double? _cachedMinY;
+double? _cachedMaxY;
+double? _cachedInterval;
 
-  @override
-  double getMinY() {
-    final controlLCL = controlChartStats?.controlLimitIChart?.lcl;
-    final specLower = controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;
-    final spotMin = getMinSpot();
-    final spotMax = getMaxSpot();
-    (spotMax - spotMin).abs();
-    
-    // คำนวณ base min
-    double baseMin = spotMin;
-    if (specLower != null && specLower > 0) {
-      baseMin = min(baseMin, specLower * 0.95);
-    } else if (controlLCL != null && controlLCL > 0) {
-      baseMin = min(baseMin, controlLCL * 0.95);
-    }
-    
-    final interval = _getInterval();
-    final calculatedMin = (baseMin / interval).floor() * interval;
-    return max(0.0, calculatedMin);
+// ---------- Public ----------
+@override
+double getMaxY() {
+  if (_cachedInterval == null) _getInterval();
+  return _cachedMaxY ?? 0.0;
+}
+
+@override
+double getMinY() {
+  if (_cachedInterval == null) _getInterval();
+  return _cachedMinY ?? 0.0;
+}
+
+
+double _getInterval() {
+  const divisions = 5; // => 6 ticks
+  final spotMin = controlChartStats?.yAxisRange?.minYsurfaceHardnessControlChart ?? 0.0;
+  final spotMax = controlChartStats?.yAxisRange?.maxYsurfaceHardnessControlChart ?? spotMin;
+
+  if (spotMax <= spotMin) {
+    _cachedMinY = spotMin;
+    _cachedMaxY = spotMin + divisions;
+    _cachedInterval = 1.0;
+    return _cachedInterval!;
   }
 
-  @override
-  double getMaxY() {
-    final controlUCL = controlChartStats?.controlLimitIChart?.ucl;
-    final specUpper = controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
-    final spotMin = getMinSpot();
-    final spotMax = getMaxSpot();
-    (spotMax - spotMin).abs();
-    
-    // คำนวณ base max
-    double baseMax = spotMax;
-    if (specUpper != null && specUpper > 0) {
-      baseMax = max(baseMax, specUpper * 1.05);
-    } else if (controlUCL != null && controlUCL > 0) {
-      baseMax = max(baseMax, controlUCL * 1.05);
-    }
-    
-    final interval = _getInterval();
-    return (baseMax / interval).ceil() * interval;
+  // target step for desired divisions
+  final ideal = (spotMax - spotMin) / divisions;
+  double interval = _niceStepCeil(ideal);
+
+  // snap min to multiple of step; max exactly divisions*step above
+  double minY = (spotMin / interval).floor() * interval;
+  double maxY = minY + divisions * interval;
+
+  // if not yet covering data max, bump to next nice step(s)
+  while (maxY < spotMax - 1e-12) {
+    interval = _nextNiceStep(interval);
+    minY = (spotMin / interval).floor() * interval;
+    maxY = minY + divisions * interval;
+  }
+
+  _cachedMinY = minY;
+  _cachedMaxY = maxY;
+  _cachedInterval = interval;
+  return interval;
+}
+
+// ---------- Utilities ----------
+  double _roundUpToPowerOf10(double x) {
+    if (x <= 0 || x.isNaN || x.isInfinite) return x;
+    final exp = (math.log(x) / math.log(10)).floor();
+    final base = math.pow(10.0, exp).toDouble();
+    return (x <= base) ? base : math.pow(10.0, exp + 1).toDouble();
+  }
+
+  double _niceStepCeil(double x) {
+    if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
+    final exp = (math.log(x) / math.log(10)).floor();
+    final mag = math.pow(10.0, exp).toDouble();
+    final mant = x / mag;
+    if (mant <= 0.025) return 0.025 * mag;
+    if (mant <= 0.050) return 0.050 * mag;
+    if (mant <= 0.075) return 0.075 * mag;
+    if (mant <= 0.125) return 0.125 * mag;
+    if (mant <= 0.25) return 0.25 * mag;
+    if (mant <= 0.5) return 0.5 * mag;
+    if (mant <= 1.0) return 1.0 * mag;
+    if (mant <= 2.0) return 2.0 * mag;
+    if (mant <= 2.5) return 2.5 * mag;
+    if (mant <= 5.0) return 5.0 * mag;
+    return 10.0 * mag;
+  }
+
+  double _nextNiceStep(double step) {
+    final exp = (math.log(step) / math.log(10)).floor();
+    final mag = math.pow(10.0, exp).toDouble();
+    final mant = step / mag;
+    if (mant <= 0.025) return 0.025 * mag;
+    if (mant <= 0.050) return 0.050 * mag;
+    if (mant <= 0.075) return 0.075 * mag;
+    if (mant <= 0.125) return 0.125 * mag;
+    if (mant <= 0.25) return 0.25 * mag;
+    if (mant <= 0.5) return 0.5 * mag;
+    if (mant < 1.0) return 1.0 * mag;
+    if (mant < 2.0) return 2.0 * mag;
+    if (mant < 2.5) return 2.5 * mag;
+    if (mant < 5.0) return 5.0 * mag;
+    return 10.0 * mag;
   }
 
   double _calculateYAxisInterval() {
@@ -336,159 +390,10 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
   double _calculateXInterval() {
     int pointCount = dataPoints!.length;
     
-    if (pointCount <= 10) return 1.0;
-    return (pointCount / 10).ceilToDouble();
+    if (pointCount <= 24) return 1.0;
+    return (pointCount / 24).ceilToDouble();
   }
 
-  double getMaxSpot() {
-  if (dataPoints == null || dataPoints!.isEmpty) {
-    return 0.0;
-  }
-  
-  final maxSpot = dataPoints!
-      .map((point) => point.value)
-      .where((value) => value > 0)
-      .fold<double>(double.negativeInfinity, max);
-
-  return maxSpot;
-  }
-
-  double getMinSpot() {
-  if (dataPoints == null || dataPoints!.isEmpty) {
-    return 0.0;
-  }
-  
-  final minSpot = dataPoints!
-      .map((point) => point.value)
-      .where((value) => value > 0)
-      .fold<double>(double.infinity, min);
-  
-  return minSpot;
-  }
-
-// ---------- Utilities ----------
-double? _minNonNull(List<double?> xs) {
-  double? m;
-  for (final v in xs) {
-    if (v == null) continue;
-    m = (m == null) ? v : (v < m! ? v : m);
-  }
-  return m;
-}
-
-double? _maxNonNull(List<double?> xs) {
-  double? m;
-  for (final v in xs) {
-    if (v == null) continue;
-    m = (m == null) ? v : (v > m! ? v : m);
-  }
-  return m;
-}
-
-// ปัด interval ให้เป็น “nice step” (1, 2, 2.5, 5) × 10^k โดยปัด "ขึ้น"
-double _niceStepCeil(double x) {
-  if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
-  final exp = (math.log(x) / math.log(10)).floor(); // log10
-  final mag = math.pow(10.0, exp).toDouble();
-  final mant = x / mag;
-  if (mant <= 0.125) return 0.125 * mag;
-  if (mant <= 0.25) return 0.25 * mag;
-  if (mant <= 0.5) return 0.5 * mag;
-  if (mant <= 1.0) return 1.0 * mag;
-  if (mant <= 2.0) return 2.0 * mag;
-  if (mant <= 2.5) return 2.5 * mag;
-  if (mant <= 5.0) return 5.0 * mag;
-  return 10.0 * mag;
-}
-
-  // หา next nice step ที่ “ใหญ่ขึ้นจาก step ปัจจุบัน”
-  double _nextNiceStep(double step) {
-    // log10(step) = log(step) / log(10)
-    final exp = (math.log(step) / math.log(10)).floor();
-    final mag = math.pow(10.0, exp).toDouble();
-    final mant = step / mag;
-
-    if (mant < 1.0)  return 1.0 * mag;
-    if (mant < 2.0)  return 2.0 * mag;
-    if (mant < 2.5)  return 2.5 * mag;
-    if (mant < 5.0)  return 5.0 * mag;
-    return 10.0 * mag; // ข้ามขึ้นไปอีกหลัก
-  }
-// ---------- Core scaling ----------
-// เก็บค่าไว้ให้ getMinY/getMaxY ใช้ เพื่อให้ divisions = 6 เสมอ
-double? _cachedMinY;
-double? _cachedMaxY;
-double? _cachedInterval;
-
-/// ข้อกำหนด:
-/// - ต้องได้ divisions = 6 (range / interval == 6)
-/// - minY = ค่าต่ำสุดจาก SpotMin, SpecLower, LCL (จริง ๆ คือ "สแนปลง" จากค่านี้)
-/// - maxY = ค่าสูงสุดจาก SpotMax, SpecUpper, UCL (จริง ๆ คือ "สแนปขึ้น" แล้วขยายให้ครบ 6 ช่อง)
-double _getInterval() {
-  // 1) อ่านค่า base จาก Spot/Spec/CL
-  final spotMin = getMinSpot();
-  final spotMax = getMaxSpot();
-
-  final specLower = controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;
-  final specUpper = controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
-  final lcl       = controlChartStats?.controlLimitIChart?.lcl;
-  final ucl       = controlChartStats?.controlLimitIChart?.ucl;
-
-  // baseMin/baseMax คือ "ขอบโลกความจริง" ก่อนสแนป
-  final baseMin = _minNonNull([spotMin, specLower, lcl]) ?? spotMin;
-  final baseMax = _maxNonNull([spotMax, specUpper, ucl]) ?? spotMax;
-
-  // กันกรณีข้อมูลไม่สมเหตุผล
-  if (baseMax <= baseMin) {
-    _cachedMinY = baseMin;
-    _cachedMaxY = baseMin + 4; // สร้างช่วงบังคับ
-    _cachedInterval = 1.0;
-    return _cachedInterval!;
-  }
-
-  // 2) คำนวณ interval แบบ "อยากได้" ให้มี 6 ช่อง
-  final ideal = (baseMax - baseMin) / 4.0;
-
-  // 3) เลือก nice step ที่ "ปัดขึ้น" จาก ideal
-  double interval = _niceStepCeil(ideal);
-
-  // 4) สแนป min ลง & max ขึ้น ด้วย interval นี้
-  double minY = (baseMin / interval).floor() * interval;
-  double maxY = (baseMax / interval).ceil()  * interval;
-
-  // 5) ตรวจจำนวนช่องจริง
-  int d = ((maxY - minY) / interval).round();
-
-  if (d < 4) {
-    // ขยาย max ให้ครบ 6 ช่อง
-    maxY = minY + 4 * interval;
-    d = 4;
-  } else if (d > 4) {
-    // เพิ่ม interval เป็น next nice step จนกว่าจะ ≤ 6 แล้วบังคับให้ = 6
-    while (true) {
-      interval = _nextNiceStep(interval);
-      minY = (baseMin / interval).floor() * interval;
-      maxY = (baseMax / interval).ceil()  * interval;
-      d = ((maxY - minY) / interval).round();
-      if (d <= 4) {
-        maxY = minY + 4 * interval;
-        d = 4;
-        break;
-      }
-    }
-  } else {
-    // d == 6 แล้ว — ผ่าน
-  }
-
-  // 6) เก็บค่า cache ให้ getMinY/getMaxY ใช้
-  _cachedMinY = minY;
-  _cachedMaxY = maxY;
-  _cachedInterval = interval;
-
-  // ต้องได้ range/interval == 6 เสมอ
-  // (maxY - minY) / interval == 6
-  return interval;
-}
   
   @override
   Widget? buildLegend() {

@@ -99,6 +99,10 @@ ControlChartStats _$ControlChartStatsFromJson(Map<String, dynamic> json) =>
               : SpecAttribute.fromJson(
                 json['specAttribute'] as Map<String, dynamic>,
               ),
+      yAxisRange:
+          json['yAxisRange'] == null
+              ? null
+              : YAxisRange.fromJson(json['yAxisRange'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$ControlChartStatsToJson(ControlChartStats instance) =>
@@ -126,6 +130,7 @@ Map<String, dynamic> _$ControlChartStatsToJson(ControlChartStats instance) =>
       'cdeMrChartSpots': instance.cdeMrChartSpots,
       'cdtMrChartSpots': instance.cdtMrChartSpots,
       'specAttribute': instance.specAttribute,
+      'yAxisRange': instance.yAxisRange,
     };
 
 ControlLimitIChart _$ControlLimitIChartFromJson(Map<String, dynamic> json) =>

@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:math' as math;
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
@@ -18,7 +19,7 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
   final double? width;
   final bool isMovingRange;
 
-  const MrChartComponentSmall({
+  MrChartComponentSmall({
     super.key, 
     this.dataPoints,
     this.controlChartStats,
@@ -271,116 +272,111 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent  {
     );
   }
 
-  double _getInterval() {
-    final spotMin = getMinSpot();
-    final spotMax = getMaxSpot();
-    final range = (spotMax - spotMin).abs();
-    
-    if (range < 10) {
-      return 2.5; // hardcode สำหรับ range เล็ก
-    }
+  // ---------- Cache ----------
+  double? _cachedMinY;
+  double? _cachedMaxY;
+  double? _cachedInterval;
 
-    if (range < 5) {
-      return 1.25; // hardcode สำหรับ range เล็ก
-    }
+  // ---------- Public ----------
+@override
+double getMaxY() {
+  if (_cachedInterval == null) _getInterval();
+  return _cachedMaxY ?? 0.0;
+}
 
-    if (range < 1) {
-      return 0.25; // hardcode สำหรับ range เล็ก
-    }
-    
-    final targetIntervals = 2;
-    final tempInterval = range / targetIntervals;
-    
-    if (tempInterval < 25) {
-      return 25.0;
-    }
-    else if (tempInterval < 50) {
-      return 50.0;
-    }
-    else if (tempInterval < 75) {
-      return 75.0;
-    }
-    else if (tempInterval < 100) {
-      return 100.0;
-    } 
-    else {
-      return (tempInterval / 100).ceil() * 50.0; // สำหรับค่าใหญ่กว่า
-    }
+@override
+double getMinY() {
+  if (_cachedInterval == null) _getInterval();
+  return _cachedMinY ?? 0.0;
+}
+
+
+double _getInterval() {
+  const divisions = 5; // => 6 ticks
+  final spotMin = 0.0;
+  final spotMax =
+      controlChartStats?.yAxisRange?.maxYsurfaceHardnessMrChart ?? spotMin;
+
+  if (spotMax <= spotMin) {
+    _cachedMinY = spotMin;
+    _cachedMaxY = spotMin + divisions;
+    _cachedInterval = 1.0;
+    return _cachedInterval!;
   }
 
+  // target step for desired divisions
+  final ideal = (spotMax - spotMin) / divisions;
+  double interval = _niceStepCeil(ideal);
 
-  @override
-  double getMinY() {
-    final controlLCL = controlChartStats?.controlLimitMRChart?.lcl;
-    // final specLower = controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;
-    final spotMin = getMinSpot();
-    final spotMax = getMaxSpot();
-    (spotMax - spotMin).abs();
-    
-    // คำนวณ base min
-    double baseMin = spotMin;
-    if (controlLCL != null && controlLCL > 0) {
-      baseMin = min(baseMin, controlLCL * 0.95);
-    }
-    
-    final interval = _getInterval();
-    final calculatedMin = (baseMin / interval).floor() * interval;
-    return max(0.0, calculatedMin);
+  // snap min to multiple of step; max exactly divisions*step above
+  double minY = (spotMin / interval).floor() * interval;
+  double maxY = minY + divisions * interval;
+
+  // if not yet covering data max, bump to next nice step(s)
+  while (maxY < spotMax - 1e-12) {
+    interval = _nextNiceStep(interval);
+    minY = (spotMin / interval).floor() * interval;
+    maxY = minY + divisions * interval;
   }
 
-  @override
-  double getMaxY() {
-    final controlUCL = controlChartStats?.controlLimitMRChart?.ucl;
-    // final specUpper = controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
-    final spotMin = getMinSpot();
-    final spotMax = getMaxSpot();
-    (spotMax - spotMin).abs();
-    
-    // คำนวณ base max
-    double baseMax = spotMax;
-    if (controlUCL != null && controlUCL > 0) {
-      baseMax = max(baseMax, controlUCL * 1.05);
-    }
-    
-    final interval = _getInterval();
-    return (baseMax / interval).ceil() * interval;
+  _cachedMinY = minY;
+  _cachedMaxY = maxY;
+  _cachedInterval = interval;
+  return interval;
+}
+
+  // ---------- Utilities ----------
+  double _roundUpToPowerOf10(double x) {
+  if (x <= 0 || x.isNaN || x.isInfinite) return x;
+      final exp = (math.log(x) / math.log(10)).floor();
+      final base = math.pow(10.0, exp).toDouble();
+      return (x <= base) ? base : math.pow(10.0, exp + 1).toDouble();
+  }
+
+  double _niceStepCeil(double x) {
+    if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
+    final exp = (math.log(x) / math.log(10)).floor();
+    final mag = math.pow(10.0, exp).toDouble();
+    final mant = x / mag;
+    if (mant <= 0.025) return 0.025 * mag;
+    if (mant <= 0.050) return 0.050 * mag;
+    if (mant <= 0.075) return 0.075 * mag;
+    if (mant <= 0.125) return 0.125 * mag;
+    if (mant <= 0.25) return 0.25 * mag;
+    if (mant <= 0.5) return 0.5 * mag;
+    if (mant <= 1.0) return 1.0 * mag;
+    if (mant <= 2.0) return 2.0 * mag;
+    if (mant <= 2.5) return 2.5 * mag;
+    if (mant <= 5.0) return 5.0 * mag;
+    return 10.0 * mag;
+  }
+
+  double _nextNiceStep(double step) {
+    final exp = (math.log(step) / math.log(10)).floor();
+    final mag = math.pow(10.0, exp).toDouble();
+    final mant = step / mag;
+    if (mant <= 0.025) return 0.025 * mag;
+    if (mant <= 0.050) return 0.050 * mag;
+    if (mant <= 0.075) return 0.075 * mag;
+    if (mant <= 0.125) return 0.125 * mag;
+    if (mant <= 0.25) return 0.25 * mag;
+    if (mant <= 0.5) return 0.5 * mag;
+    if (mant < 1.0) return 1.0 * mag;
+    if (mant < 2.0) return 2.0 * mag;
+    if (mant < 2.5) return 2.5 * mag;
+    if (mant < 5.0) return 5.0 * mag;
+    return 10.0 * mag;
   }
 
   double _calculateYAxisInterval() {
     return _getInterval();
   }
     
-    double _calculateXInterval() {
-      int pointCount = dataPoints!.length;
-      
-      if (pointCount <= 10) return 1.0;
-      return (pointCount / 10).ceilToDouble();
-    }
-
-  double getMaxSpot() {
-  if (dataPoints == null || dataPoints!.isEmpty) {
-    return 0.0;
-  }
-  
-  final maxSpot = dataPoints!
-      .map((point) => point.mrValue)
-      .where((value) => value > 0)
-      .fold<double>(double.negativeInfinity, max);
-
-  return maxSpot;
-  }
-
-  double getMinSpot() {
-  if (dataPoints == null || dataPoints!.isEmpty) {
-    return 0.0;
-  }
-  
-  final minSpot = dataPoints!
-      .map((point) => point.mrValue)
-      .where((value) => value > 0)
-      .fold<double>(double.infinity, min);
-  
-  return minSpot;
+  double _calculateXInterval() {
+    int pointCount = dataPoints!.length;
+    
+    if (pointCount <= 10) return 1.0;
+    return (pointCount / 10).ceilToDouble();
   }
   
   @override

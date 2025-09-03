@@ -1,3 +1,4 @@
+import 'package:control_chart/domain/models/y_axis_range.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'control_chart_stats.g.dart';
@@ -29,7 +30,8 @@ class ControlChartStats {
   final List<double>? mrChartSpots;
   final List<double>? cdeMrChartSpots;
   final List<double>? cdtMrChartSpots;
-  final SpecAttribute? specAttribute;  // Added this field
+  final SpecAttribute? specAttribute;
+  final YAxisRange? yAxisRange;
 
   const ControlChartStats({
     this.numberOfSpots,
@@ -54,11 +56,12 @@ class ControlChartStats {
     this.mrChartSpots,      
     this.cdeMrChartSpots,
     this.cdtMrChartSpots,
-    this.specAttribute,     
+    this.specAttribute,   
+    this.yAxisRange  
   });
 
   // Add empty constructor for error handling
-  const ControlChartStats.empty()
+  const ControlChartStats.empty(this.yAxisRange)
       : numberOfSpots = 0,
         average = 0.0,
         cdeAverage = 0.0,

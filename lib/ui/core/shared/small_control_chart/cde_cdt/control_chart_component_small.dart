@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:math' as math;
 
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
@@ -18,7 +19,7 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
   final double? height;
   final double? width;
 
-  const ControlChartComponentSmall({
+  ControlChartComponentSmall({
     super.key,
     this.dataPoints,
     this.controlChartStats,
@@ -210,7 +211,7 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
 
   @override
   List<LineChartBarData> buildLineBarsData() {
-    final interval = _calculateXInterval().toInt();
+    // final interval = _calculateXInterval().toInt();
     
     return [
       LineChartBarData(
@@ -294,41 +295,114 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
       ),
     );
   }
-  double _getInterval() {
-    final spotMin = getMinSpot();
-    final spotMax = getMaxY();
-    final range = (spotMax - spotMin).abs();
 
-    // debugPrint('The Range = $range, max - min: ($spotMax - $spotMin)');
+// ---------- Cache ----------
+// ---------- Cache ----------
+double? _cachedMinY;
+double? _cachedMaxY;
+double? _cachedInterval;
 
-    return range < 0.25 ? 0.05
-        : range < 0.5  ? 0.10
-        : range < 1.0  ? 0.20
-        : 0.20;
+// ---------- Public ----------
+@override
+double getMaxY() {
+  if (_cachedInterval == null) _getInterval();
+  return _cachedMaxY ?? 0.0;
+}
+
+@override
+double getMinY() {
+  if (_cachedInterval == null) _getInterval();
+  return _cachedMinY ?? 0.0;
+}
+
+
+double _getInterval() {
+  const divisions = 5; // => 6 ticks
+  final spotMin =
+      _chooseCdeOrCdt(controlChartStats?.yAxisRange?.minYcdeControlChart, 
+      controlChartStats?.yAxisRange?.minYcdtControlChart);
+  final spotMax =
+      _chooseCdeOrCdt(controlChartStats?.yAxisRange?.maxYcdeControlChart, 
+      controlChartStats?.yAxisRange?.maxYcdtControlChart);
+
+  if (spotMax <= spotMin) {
+    _cachedMinY = spotMin;
+    _cachedMaxY = spotMin + divisions;
+    _cachedInterval = 1.0;
+    return _cachedInterval!;
+  }
+
+  // target step for desired divisions
+  final ideal = (spotMax - spotMin) / divisions;
+  double interval = _niceStepCeil(ideal);
+
+  // snap min to multiple of step; max exactly divisions*step above
+  double minY = (spotMin / interval).floor() * interval;
+  double maxY = minY + divisions * interval;
+
+  // if not yet covering data max, bump to next nice step(s)
+  while (maxY < spotMax - 1e-12) {
+    interval = _nextNiceStep(interval);
+    minY = (spotMin / interval).floor() * interval;
+    maxY = minY + divisions * interval;
+  }
+
+  _cachedMinY = minY;
+  _cachedMaxY = maxY;
+  _cachedInterval = interval;
+  return interval;
+}
+// ---------- Utilities ----------
+
+double _roundUpToPowerOf10(double x) {
+  if (x <= 0 || x.isNaN || x.isInfinite) return x;
+  final exp = (math.log(x) / math.log(10)).floor();
+  final base = math.pow(10.0, exp).toDouble();
+  return (x <= base) ? base : math.pow(10.0, exp + 1).toDouble();
+}
+
+  double _niceStepCeil(double x) {
+    if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
+    final exp = (math.log(x) / math.log(10)).floor();
+    final mag = math.pow(10.0, exp).toDouble();
+    final mant = x / mag;
+    if (mant <= 0.025) return 0.025 * mag;
+    if (mant <= 0.050) return 0.050 * mag;
+    if (mant <= 0.075) return 0.075 * mag;
+    if (mant <= 0.125) return 0.125 * mag;
+    if (mant <= 0.25) return 0.25 * mag;
+    if (mant <= 0.5) return 0.5 * mag;
+    if (mant <= 1.0) return 1.0 * mag;
+    if (mant <= 2.0) return 2.0 * mag;
+    if (mant <= 2.5) return 2.5 * mag;
+    if (mant <= 5.0) return 5.0 * mag;
+    return 10.0 * mag;
+  }
+
+  double _nextNiceStep(double step) {
+    final exp = (math.log(step) / math.log(10)).floor();
+    final mag = math.pow(10.0, exp).toDouble();
+    final mant = step / mag;
+    if (mant <= 0.025) return 0.025 * mag;
+    if (mant <= 0.050) return 0.050 * mag;
+    if (mant <= 0.075) return 0.075 * mag;
+    if (mant <= 0.125) return 0.125 * mag;
+    if (mant <= 0.25) return 0.25 * mag;
+    if (mant <= 0.5) return 0.5 * mag;
+    if (mant < 1.0) return 1.0 * mag;
+    if (mant < 2.0) return 2.0 * mag;
+    if (mant < 2.5) return 2.5 * mag;
+    if (mant < 5.0) return 5.0 * mag;
+    return 10.0 * mag;
   }
 
 
-  @override
-  double getMinY() {
-    return 0.0;
+  double _chooseCdeOrCdt(double? cde, double? cdt, {double fallback = 0}) {
+    if (cde == null) return cdt ?? fallback;
+    if (cdt == null) return cde;
+    return cde > cdt ? cde : cdt;
   }
 
-  @override
-  double getMaxY() {
-    final ucl = _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart?.ucl ?? 0.0, 
-    controlChartStats?.cdtControlLimitIChart?.ucl ?? 0.0);
-    final usl = _chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec ?? 0.0, 
-    controlChartStats?.specAttribute?.cdtUpperSpec ?? 0.0);
-    final spot = _chooseCdeOrCdt(getMaxSpot(controlChartStats), getMaxSpot());
-    final maxY = max(getMaxSpot(), max(ucl, usl));
-    return maxY <= 0.25 ? 0.25 : maxY <= 0.5 ? 0.5 : maxY*1.2;
-  }
-
-
-  double _calculateYAxisInterval() {
-    return _getInterval();
-  }
-    
   double _calculateXInterval() {
     int pointCount = dataPoints!.length;
     
@@ -337,28 +411,13 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
     return pointCount.toDouble();
   }
 
-
-  double getMaxSpot(List<dynamic>) {
-  if (dataPoints == null || dataPoints!.isEmpty) {
-    return 0.0;
+  double _calculateYAxisInterval() {
+    return _getInterval();
   }
   
-  final maxSpot = dataPoints!
-      .map((point) => point.mrValue)
-      .where((value) => value > 0)
-      .fold<double>(double.negativeInfinity, max);
-
-  return maxSpot;
-  }
-
-  double getMinSpot() {
-    return 0.0;
-  }
-
-  double _chooseCdeOrCdt(double? cde, double? cdt, {double fallback = 0}) {
-    if (cde == null) return cdt ?? fallback;
-    if (cdt == null) return cde;
-    return cde > cdt ? cde : cdt;
+  String formatValue(double? value) {
+    if (value == null || value <= 0) return 'N/A';
+    return value.toStringAsFixed(3);
   }
   
   @override
