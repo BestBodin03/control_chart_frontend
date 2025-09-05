@@ -3,30 +3,32 @@ import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/control_chart_template.dart';
+import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/material.dart';
 
 Widget buildChartsSectionCdeCdt(SearchState searchState) {
-  String cdeOrCdtLabel(num? cde, num? cdt) {
-    final a = (cde ?? 0).toDouble();
-    final b = (cdt ?? 0).toDouble();
-    return a > b ? 'CDE' : b > a ? 'CDT' : 'N/A';
-  }
 
-  return Row(
-    children: [
-      Expanded(
-        child: _buildChartContainerCdeCdt(
-          title: cdeOrCdtLabel(searchState.controlChartStats?.cdeAverage, searchState.controlChartStats?.cdtAverage),
-          searchState: searchState,
-        ),
+return Row(
+  children: [
+    Expanded(
+      child: _buildChartContainerCdeCdt(
+        title:
+          "Furnace ${searchState.currentQuery.furnaceNo ?? "-"} "
+          " | Material ${searchState.currentQuery.materialNo ?? '-'}"
+          " | Date ${fmtDate(searchState.currentQuery.startDate)} - ${fmtDate(searchState.currentQuery.endDate)}",
+        searchState: searchState,
       ),
-    ],
-  );
+    ),
+  ],
+);
+
 }
 
 Widget _buildChartContainerCdeCdt({
   required String title,
   required SearchState searchState,
+
+
 }) {
   return LayoutBuilder(
     builder: (context, constraints) {
@@ -49,6 +51,24 @@ Widget _buildChartContainerCdeCdt({
       ).clamp(0.0, double.infinity);
 
       final eachChartH = (chartsAreaH / 2).clamp(0.0, double.infinity);
+
+  String cdeOrCdtLabel(num? cde, num? cdt, num? compoundLayer) {
+    final a = (cde ?? 0).toDouble();
+    final b = (cdt ?? 0).toDouble();
+    final c = (compoundLayer ?? 0).toDouble();
+
+    int nonZeroCount = 0;
+    if (a != 0) nonZeroCount++;
+    if (b != 0) nonZeroCount++;
+    if (c != 0) nonZeroCount++;
+
+    if (nonZeroCount > 1) return 'N/A';
+    if (a != 0) return 'CDE';
+    if (b != 0) return 'CDT';
+    if (c != 0) return 'Compound Layer';
+
+    return 'N/A';
+  }
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,9 +98,13 @@ Widget _buildChartContainerCdeCdt({
                 child: Column(
                   children: [
                     // Label
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.symmetric(vertical: 4.0),
-                      child: Text("Individual", style: AppTypography.textBody3BBold),
+                      child: Text("Control Chart | ${cdeOrCdtLabel(
+                          searchState.controlChartStats?.cdeAverage,
+                          searchState.controlChartStats?.cdtAverage,
+                          searchState.controlChartStats?.compoundLayerAverage,
+                        )}", style: AppTypography.textBody3BBold),
                     ),
                     // ✅ กราฟบน: ล็อกความสูง
                     _buildSingleChart(
@@ -91,10 +115,18 @@ Widget _buildChartContainerCdeCdt({
 
                     const SizedBox(height: 8),
 
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4.0),
-                      child: Text("Moving Range", style: AppTypography.textBody3BBold),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Text(
+                        "Moving Range | ${cdeOrCdtLabel(
+                          searchState.controlChartStats?.cdeAverage,
+                          searchState.controlChartStats?.cdtAverage,
+                          searchState.controlChartStats?.compoundLayerAverage,
+                        )}",
+                        style: AppTypography.textBody3BBold,
+                      ),
                     ),
+
                     // ✅ กราฟล่าง: ล็อกความสูง
                     _buildMrChart(
                       searchState: searchState,

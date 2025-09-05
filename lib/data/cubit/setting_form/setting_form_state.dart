@@ -2,6 +2,10 @@ import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/domain/models/setting_request.dart';
 import 'package:flutter/material.dart';
 
+import 'package:control_chart/domain/models/setting.dart';
+import 'package:control_chart/domain/models/setting_request.dart';
+import 'package:flutter/material.dart';
+
 enum SubmitStatus { idle, submitting, success, failure }
 enum PeriodTypeReq { ONE_MONTH, THREE_MONTHS, SIX_MONTHS, ONE_YEAR, CUSTOM, LIFETIME }
 
@@ -41,7 +45,6 @@ class RuleSelected {
   String toString() =>
       'RuleSelected(ruleId: $ruleId, ruleName: $ruleName, isUsed: $isUsed)';
 }
-
 
 class SpecificSettingState {
   final PeriodType? periodType;
@@ -106,7 +109,6 @@ class SpecificSettingState {
   }
 }
 
-
 /// Single state object with a status enum
 class SettingFormState {
   final String settingProfileName;
@@ -118,6 +120,11 @@ class SettingFormState {
   final SubmitStatus status;
   final String? error;
 
+  // 🔹 Step 1: ฟิลด์สำหรับ dropdown แบบไดนามิก
+  final bool dropdownLoading;
+  final List<String> furnaceOptions;     // จาก API -> data.furnaceNo
+  final List<String> cpOptions;       // จาก API -> data.cpNo
+
   const SettingFormState({
     this.settingProfileName = '',
     this.isUsed = true,
@@ -127,6 +134,11 @@ class SettingFormState {
     this.specifics = const [],
     this.status = SubmitStatus.idle,
     this.error,
+
+    // 🔹 ค่าเริ่มต้นของ Step 1
+    this.dropdownLoading = false,
+    this.furnaceOptions = const [],
+    this.cpOptions = const [],
   });
 
   bool get isValid {
@@ -153,8 +165,6 @@ class SettingFormState {
     return true;
   }
 
-
-
   SettingFormState copyWith({
     String? settingProfileName,
     bool? isUsed,
@@ -164,6 +174,11 @@ class SettingFormState {
     List<SpecificSettingState>? specifics,
     SubmitStatus? status,
     String? error,
+
+    // 🔹 รองรับฟิลด์ใหม่ใน copyWith
+    bool? dropdownLoading,
+    List<String>? furnaceOptions,
+    List<String>? cpOptions,
   }) {
     return SettingFormState(
       settingProfileName: settingProfileName ?? this.settingProfileName,
@@ -174,6 +189,26 @@ class SettingFormState {
       specifics: specifics ?? this.specifics,
       status: status ?? this.status,
       error: error,
+
+      dropdownLoading: dropdownLoading ?? this.dropdownLoading,
+      furnaceOptions: furnaceOptions ?? this.furnaceOptions,
+      cpOptions: cpOptions ?? this.cpOptions,
     );
   }
+
+  @override
+  String toString() => 'SettingFormState('
+      'settingProfileName: $settingProfileName, '
+      'isUsed: $isUsed, '
+      'displayType: $displayType, '
+      'chartChangeInterval: $chartChangeInterval, '
+      'ruleSelected: $ruleSelected, '
+      'specifics: $specifics, '
+      'status: $status, '
+      'error: $error, '
+      'dropdownLoading: $dropdownLoading, '
+      'furnaceOptions: $furnaceOptions, '
+      'cpOptions: $cpOptions'
+      ')';
 }
+

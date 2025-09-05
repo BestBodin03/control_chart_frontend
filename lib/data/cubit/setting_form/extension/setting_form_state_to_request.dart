@@ -60,10 +60,10 @@ extension SettingFormStateToRequest on SettingFormState {
 
       if (displayType == DisplayType.FURNACE) {
         // cpNo not required by API for FURNACE; send empty
-        cpNoVal = '';
+        cpNoVal = null;
       } else {
-        final c = (sp.cpNo ?? '').trim();
-        if (c.isEmpty) {
+        final c = (sp.cpNo);
+        if (c!.isEmpty) {
           throw StateError('specific.cpNo is empty for $displayType');
         }
         cpNoVal = c;

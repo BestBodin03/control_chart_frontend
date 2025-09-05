@@ -233,7 +233,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
         spots: dataPoints!
             .asMap()
             .entries
-            .where((entry) => entry.key % 1 == 0)
+            .take(30)
             .map((entry) => FlSpot(entry.key.toDouble(), entry.value.value))
             .toList(),
 
@@ -261,9 +261,9 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
             }
             
             return FlDotCirclePainter(
-              radius: 4,
+              radius: 3.5,
               color: dotColor,
-              strokeWidth: 2,
+              strokeWidth: 1,
               strokeColor: Colors.white,
             );
           },
@@ -433,12 +433,12 @@ double _getInterval() {
 }
 
 // ---------- Utilities ----------
-  double _roundUpToPowerOf10(double x) {
-    if (x <= 0 || x.isNaN || x.isInfinite) return x;
-    final exp = (math.log(x) / math.log(10)).floor();
-    final base = math.pow(10.0, exp).toDouble();
-    return (x <= base) ? base : math.pow(10.0, exp + 1).toDouble();
-  }
+  // double _roundUpToPowerOf10(double x) {
+  //   if (x <= 0 || x.isNaN || x.isInfinite) return x;
+  //   final exp = (math.log(x) / math.log(10)).floor();
+  //   final base = math.pow(10.0, exp).toDouble();
+  //   return (x <= base) ? base : math.pow(10.0, exp + 1).toDouble();
+  // }
 
   double _niceStepCeil(double x) {
     if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
@@ -482,8 +482,8 @@ double _getInterval() {
   double _calculateXInterval() {
     int pointCount = dataPoints!.length;
     
-    if (pointCount <= 24) return 1.0;
-    return (pointCount / 24).floorToDouble();
+    if (pointCount <= 30) return 1.0;
+    return (pointCount / 30).floorToDouble();
   }
 
   String formatValue(double? value) {

@@ -1,6 +1,9 @@
 import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/data/bloc/setting/setting_bloc.dart';
+import 'package:control_chart/data/bloc/setting_profile/setting_profile_bloc.dart';
+import 'package:control_chart/data/cubit/setting_cubit.dart';
+import 'package:control_chart/data/cubit/setting_cubit_state.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_cubit.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
 import 'package:control_chart/domain/models/customer_product.dart';
@@ -23,6 +26,7 @@ class SettingForm extends StatefulWidget {
 
 class _SettingFormState extends State<SettingForm> {
   late final SettingBloc _settingBloc;
+  late final SettingFormCubit _settingCubit;
   static const _periodItems = ['1 เดือน', '3 เดือน', '6 เดือน', '1 ปี', 'ตลอดเวลา', 'กำหนดเอง'];
   String selectedDisplayType = '';
   final double backgroundOpacity = 0.2;
@@ -31,7 +35,16 @@ class _SettingFormState extends State<SettingForm> {
   void initState() {
     super.initState();
     _settingBloc = SettingBloc(settingApis: SettingApis())..add(InitializeForm());
+
+    // โหลดตัวเลือกทั้งหมดตั้งต้น (ไม่ส่งพารามิเตอร์)
+    // ต้องแน่ใจว่ามี SettingFormCubit อยู่บน context แล้ว
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<SettingFormCubit>().loadDropdownOptions();
+      }
+    });
   }
+
 
   @override
   void dispose() {
@@ -45,38 +58,32 @@ class _SettingFormState extends State<SettingForm> {
       value: _settingBloc,
       child: MultiBlocListener(
         listeners: [
-          // Notifications
-          BlocListener<SettingBloc, SettingState>(
-            listener: (context, state) {
-              if (state.isSaved) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('บันทึกข้อมูลเรียบร้อยแล้ว'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
+          BlocListener<SettingFormCubit, SettingFormState>(
+            listenWhen: (prev, curr) {
+              // ฟังเมื่อมีการเปลี่ยน start/end date ใน specifics ใด ๆ
+              if (prev.specifics.length != curr.specifics.length) return true;
+              for (var i = 0; i < curr.specifics.length; i++) {
+                final p = prev.specifics[i];
+                final c = curr.specifics[i];
+                if (p.startDate != c.startDate || p.endDate != c.endDate) return true;
               }
+              return false;
             },
-          ),
-          // Bridge SettingBloc dates -> SearchBloc
-          BlocListener<SettingBloc, SettingState>(
-            listenWhen: (prev, curr) =>
-                prev.formState.startDate != curr.formState.startDate ||
-                prev.formState.endDate != curr.formState.endDate,
             listener: (context, state) {
-              final start = _toDateTime(state.formState.startDate);
-              final end = _toDateTime(state.formState.endDate);
-              if (start == null || end == null) return;
+              // เลือก block ตัวแรกเป็นตัวอ้างอิง (ถ้าคุณมี active index ให้ใช้ตัวนั้นแทน)
+              if (state.specifics.isEmpty) return;
+              final sp = state.specifics.first;
+              if (sp.startDate == null || sp.endDate == null) return;
 
               final search = context.read<SearchBloc>().state.currentQuery;
               context.read<SearchBloc>().add(
-                    LoadFilteredChartData(
-                      startDate: start,
-                      endDate: end,
-                      furnaceNo: search.furnaceNo,
-                      materialNo: search.materialNo,
-                    ),
-                  );
+                LoadFilteredChartData(
+                  startDate: sp.startDate!,
+                  endDate: sp.endDate!,
+                  furnaceNo: search.furnaceNo,
+                  materialNo: search.materialNo,
+                ),
+              );
             },
           ),
         ],
@@ -111,6 +118,20 @@ class _SettingFormState extends State<SettingForm> {
                           builder: (context, s) {
                             final cubit = context.read<SettingFormCubit>();
 
+                            if (selectedDisplayType.isEmpty) {
+                              switch (s.displayType) {
+                                case DisplayType.FURNACE:
+                                  selectedDisplayType = 'FURNACE';
+                                  break;
+                                case DisplayType.FURNACE_CP:
+                                  selectedDisplayType = 'FURNACE_CP';
+                                  break;
+                                case DisplayType.CP:
+                                  selectedDisplayType = 'CP';
+                                  break;
+                              }
+                            }
+
                             // ค่าที่ถูกเลือกอยู่ตอนนี้ (ดึงจาก state.ruleSelected ที่ isUsed == true)
                             final selectedRuleNames = s.ruleSelected
                                 .where((r) => r.isUsed == true)
@@ -135,12 +156,11 @@ class _SettingFormState extends State<SettingForm> {
                                 buildSectionTitle('การแสดงผล'),
                                 const SizedBox(height: 8),
                                 buildChoiceTabs(
-                                  selectedValue: selectedDisplayType, // local UI ของคุณ
+                                  selectedValue: selectedDisplayType,
                                   itemsLabel: const ['เตา', 'เตา/เลขแมต', 'เลขแมต'],
                                   itemsValue: const ['FURNACE', 'FURNACE_CP', 'CP'],
                                   onChanged: (v) {
                                     setState(() => selectedDisplayType = v);
-                                    // อัปเดตลง cubit ด้วย (ผูกกับ enum DisplayTypeReq)
                                     cubit.updateDisplayType(
                                       v == 'FURNACE'
                                           ? DisplayType.FURNACE
@@ -148,12 +168,12 @@ class _SettingFormState extends State<SettingForm> {
                                               ? DisplayType.FURNACE_CP
                                               : DisplayType.CP,
                                     );
-                                    // สร้างบล็อกเริ่มต้นถ้ายังไม่มี
                                     if (cubit.state.specifics.isEmpty) {
                                       cubit.addSpecificSetting();
                                     }
                                   },
                                 ),
+                                
                                 const SizedBox(height: 16),
 
                                 // -------------------- กฎแผนภูมิควบคุม --------------------
@@ -209,27 +229,6 @@ class _SettingFormState extends State<SettingForm> {
                               return Column(
                                 children: List.generate(state.specifics.length, (i) {
                                   final sp = state.specifics[i];
-
-                                  // แปลง enum -> label (inline)
-                                  final currentPeriodLabel = () {
-                                    switch (sp.periodType) {
-                                      case PeriodType.ONE_MONTH:
-                                        return '1 เดือน';
-                                      case PeriodType.THREE_MONTHS:
-                                        return '3 เดือน';
-                                      case PeriodType.SIX_MONTHS:
-                                        return '6 เดือน';
-                                      case PeriodType.ONE_YEAR:
-                                        return '1 ปี';
-                                      case PeriodType.LIFETIME:
-                                        return 'ตลอดเวลา';
-                                      case PeriodType.CUSTOM:
-                                        return 'กำหนดเอง';
-                                      default:
-                                        return form.periodValue; // fallback เดิมถ้ามี
-                                    }
-                                  }();
-
                                   return DecoratedBox(
                                     decoration: BoxDecoration(
                                       border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1)),
@@ -262,96 +261,137 @@ class _SettingFormState extends State<SettingForm> {
                                               ),
                                             ],
                                           ),
+
                                           const SizedBox(height: 8),
 
-                                          // Period dropdown (ใช้ cubit + sp)
+                                          // ===== ใน BlocBuilder<SettingFormCubit, SettingFormState> ด้านใน loop ของ specifics (มี index i) =====
+
                                           buildDropdownField(
                                             context: context,
-                                            value: currentPeriodLabel,
-                                            items: _periodItems,
+                                            value: _periodTypeToLabel(sp.periodType),      // ✅ bind กับ Cubit state
+                                            items: const ['1 เดือน','3 เดือน','6 เดือน','1 ปี','ตลอดเวลา','กำหนดเอง'],
                                             onChanged: (value) {
                                               if (value == null) return;
 
-                                              // map label -> enum (inline)
                                               final now = DateTime.now();
                                               DateTime? startAuto;
-                                              PeriodType? p;
+                                              PeriodType period;
+
                                               switch (value) {
                                                 case '1 เดือน':
-                                                  p = PeriodType.ONE_MONTH;
+                                                  period = PeriodType.ONE_MONTH;
                                                   startAuto = DateTime(now.year, now.month - 1, now.day);
                                                   break;
                                                 case '3 เดือน':
-                                                  p = PeriodType.THREE_MONTHS;
+                                                  period = PeriodType.THREE_MONTHS;
                                                   startAuto = DateTime(now.year, now.month - 3, now.day);
                                                   break;
                                                 case '6 เดือน':
-                                                  p = PeriodType.SIX_MONTHS;
+                                                  period = PeriodType.SIX_MONTHS;
                                                   startAuto = DateTime(now.year, now.month - 6, now.day);
                                                   break;
                                                 case '1 ปี':
-                                                  p = PeriodType.ONE_YEAR;
+                                                  period = PeriodType.ONE_YEAR;
                                                   startAuto = DateTime(now.year - 1, now.month, now.day);
                                                   break;
                                                 case 'ตลอดเวลา':
-                                                  p = PeriodType.LIFETIME;
-                                                  startAuto = DateTime(2020, 1, 1);
+                                                  period = PeriodType.LIFETIME;
+                                                  startAuto = DateTime(2024, 1, 1);
                                                   break;
-                                                default:
-                                                  p = PeriodType.CUSTOM;
-                                                  startAuto = null; // กำหนดเอง ไม่ auto set
+                                                default: // 'กำหนดเอง'
+                                                  period = PeriodType.CUSTOM;
+                                                  startAuto = null;
                                               }
 
-                                              cubit.updatePeriodType(i, p);
-                                              if (p != PeriodTypeReq.CUSTOM) {
+                                              // ✅ อัปเดต periodType ก่อน
+                                              cubit.updatePeriodType(i, period);
+
+                                              // ✅ ถ้าไม่ใช่ CUSTOM ให้เซตช่วงวันที่อัตโนมัติ
+                                              if (period != PeriodType.CUSTOM) {
                                                 cubit
                                                   ..updateStartDate(i, startAuto!)
                                                   ..updateEndDate(i, now);
                                               }
+
+                                              // (ถ้าต้องการ trigger search ทันที)
+                                              // if (sp.startDate != null && sp.endDate != null) {
+                                              //   _dispatchSearchWith(context, start: startAuto ?? sp.startDate, end: now);
+                                              // }
                                             },
                                           ),
+
+
 
                                           const SizedBox(height: 16),
 
                                           // Start / End Date (ใช้ค่าใน sp)
                                           Row(
                                             children: [
+                                              // START DATE
                                               Expanded(
                                                 child: buildDateField(
                                                   context: context,
                                                   value: sp.startDate,
-                                                  label: _dateLabel(sp.startDate) ?? 'เลือก',
+                                                  label: _dateLabel(sp.startDate) ?? 'Select Date',
                                                   date: sp.startDate ?? DateTime.now(),
-                                                  onTap: () => _selectDate(context, true),
-                                                  onChanged: (date) {
-                                                    if (date == null) return;
+
+                                                  // ✅ ทำทุกอย่างใน onTap (async)
+                                                  onTap: () async {
+                                                    final picked = await showDatePicker(
+                                                      context: context,
+                                                      initialDate: sp.startDate ?? DateTime.now(),
+                                                      firstDate: DateTime(2020),
+                                                      lastDate: DateTime(2050),
+                                                    );
+                                                    if (picked == null) return;
+
+                                                    final cubit = context.read<SettingFormCubit>();
                                                     cubit
-                                                      ..updatePeriodType(i, PeriodType.CUSTOM) // ผู้ใช้เลือกเอง -> กำหนดเอง
-                                                      ..updateStartDate(i, date);
+                                                      .updateStartDate(i, picked, setCustom: true);
+                                                      // ..updatePeriodType(i, PeriodType.CUSTOM);
+
+                                                    _dispatchSearchWith(
+                                                      context,
+                                                      start: picked,
+                                                      end: sp.endDate ?? DateTime.now(),
+                                                    );
                                                   },
                                                 ),
                                               ),
+
                                               const SizedBox(width: 16),
                                               const Text(
                                                 'ถึง',
                                                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87),
                                               ),
                                               const SizedBox(width: 16),
+                              
+                                              // END DATE
                                               Expanded(
                                                 child: buildDateField(
                                                   context: context,
                                                   value: sp.endDate,
                                                   label: _dateLabel(sp.endDate) ?? 'Select Date',
                                                   date: sp.endDate ?? DateTime.now(),
-                                                  onTap: () => _selectDate(context, false),
-                                                  onChanged: (date) {
-                                                    if (date == null) return;
+                                                  onTap: () async {
+                                                    final picked = await showDatePicker(
+                                                      context: context,
+                                                      initialDate: sp.endDate ?? DateTime.now(),
+                                                      firstDate: DateTime(2020),
+                                                      lastDate: DateTime(2050),
+                                                    );
+                                                    if (picked == null) return;
+
+                                                    final cubit = context.read<SettingFormCubit>();
+                                                    
                                                     cubit
-                                                      ..updatePeriodType(i, PeriodType.CUSTOM)
-                                                      ..updateEndDate(i, date);
+                                                      ..updateEndDate(i, picked, setCustom: true)
+                                                      ..updatePeriodType(i, PeriodType.CUSTOM);
+
                                                   },
                                                 ),
                                               ),
+
                                             ],
                                           ),
 
@@ -364,11 +404,14 @@ class _SettingFormState extends State<SettingForm> {
                                             buildDropdownField(
                                               context: context,
                                               value: sp.furnaceNo?.toString() ?? "0",
-                                              items: _getFurnaceNumbers(furnaces),
-                                              hint: "เลือกเตา",
+                                              items: _getFurnaceNumbers(state.furnaceOptions),
+                                              hint: "All Furnaces",
                                               onChanged: (selected) {
-                                                final val = (selected == "0" ? null : int.tryParse(selected ?? ""));
+                                                cubit.loadDropdownOptions(furnaceNo: selected?.toString(), cpNo: null);
+                                                final val = (selected == 0 ? null : int.tryParse(selected ?? ""));
                                                 if (val != null) cubit.updateFurnaceNo(i, val);
+                                                
+                                                
                                               },
                                             ),
                                             const SizedBox(height: 16),
@@ -381,11 +424,13 @@ class _SettingFormState extends State<SettingForm> {
                                             buildDropdownField(
                                               context: context,
                                               value: sp.cpNo ?? "เลือกเลขแมต",
-                                              items: _getMatNumbers(matNumbers),
+                                              items: _getMatNumbers(state.cpOptions),
                                               hint: "เลือกเลขแมต",
                                               onChanged: (selected) {
+                                                // cubit.loadDropdownOptions(furnaceNo: null, cpNo: sp.cpNo);
                                                 final val = selected == "เลือกเลขแมต" ? "" : (selected ?? "");
                                                 cubit.updateCpNo(i, val);
+                                                
                                               },
                                             ),
                                             const SizedBox(height: 48),
@@ -410,14 +455,35 @@ class _SettingFormState extends State<SettingForm> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               elevation: 0,
                             ),
-                            onPressed: () => {
-                              context.read<SettingFormCubit>().saveForm(),
-                              
-                              Navigator.pop(context)
-                              },
-                            child: const Text('บันทึก', style: AppTypography.textBody2WBold),
+                            onPressed: () async {
+                              final cubit = context.read<SettingFormCubit>();
+                              final ok = await cubit.saveForm();
+
+                                if (ok) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('บันทึกข้อมูลเรียบร้อยแล้ว'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                  Navigator.pop(context, true); // ✅ ส่ง true กลับไป
+                                } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(cubit.state.error ?? 'บันทึกไม่สำเร็จ'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                // ❌ error → ไม่ pop, อยู่หน้าเดิมให้แก้ไข
+                              }
+                            },
+                            child: const Text(
+                              'บันทึก',
+                              style: AppTypography.textBody2WBold,
+                            ),
                           ),
                         )
+
 
                       ],
                     ),
@@ -432,11 +498,22 @@ class _SettingFormState extends State<SettingForm> {
   }
 
   // ============== Helpers ==============
-
+                                          // helper: แปลง enum -> label ที่ dropdown ใช้
+                                          String _periodTypeToLabel(PeriodType? p) {
+                                            switch (p) {
+                                              case PeriodType.ONE_MONTH:    return '1 เดือน';
+                                              case PeriodType.THREE_MONTHS: return '3 เดือน';
+                                              case PeriodType.SIX_MONTHS:   return '6 เดือน';
+                                              case PeriodType.ONE_YEAR:     return '1 ปี';
+                                              case PeriodType.LIFETIME:     return 'ตลอดเวลา';
+                                              case PeriodType.CUSTOM:
+                                              default:                      return 'กำหนดเอง';
+                                            }
+                                          }
   static DateTime? _toDateTime(dynamic v) {
     if (v == null) return null;
     if (v is DateTime) return v;
-    if (v is String) return DateTime.tryParse(v);
+    if (v is String)  return DateTime.tryParse(v);
     return null;
   }
 
@@ -450,68 +527,59 @@ class _SettingFormState extends State<SettingForm> {
     String? material,
   }) {
     final startDT = start is DateTime ? start : _toDateTime(start);
-    final endDT = end is DateTime ? end : _toDateTime(end);
+    final endDT   = end   is DateTime ? end   : _toDateTime(end);
     if (startDT == null || endDT == null) return;
 
     final q = context.read<SearchBloc>().state.currentQuery;
-    context.read<SearchBloc>().add(
-          LoadFilteredChartData(
-            startDate: startDT,
-            endDate: endDT,
-            furnaceNo: furnace ?? q.furnaceNo,
-            materialNo: material ?? q.materialNo,
-          ),
-        );
+    context.read<SearchBloc>().add(LoadFilteredChartData(
+      startDate: startDT,
+      endDate: endDT,
+      furnaceNo: furnace ?? q.furnaceNo,
+      materialNo: material ?? q.materialNo,
+    ));
   }
 
-  void _updateDateRangeByPeriod(BuildContext context, String period) {
-    final now = DateTime.now();
-    DateTime startDate;
-    switch (period) {
-      case '1 เดือน':
-        startDate = DateTime(now.year, now.month - 1, now.day);
-        break;
-      case '3 เดือน':
-        startDate = DateTime(now.year, now.month - 3, now.day);
-        break;
-      case '6 เดือน':
-        startDate = DateTime(now.year, now.month - 6, now.day);
-        break;
-      case '1 ปี':
-        startDate = DateTime(now.year - 1, now.month, now.day);
-        break;
-      case 'ตลอดเวลา':
-        startDate = DateTime(2020, 1, 1);
-        break;
-      default:
-        return;
-    }
-    context.read<SettingBloc>()
-      ..add(UpdateStartDate(startDate: startDate))
-      ..add(UpdateEndDate(endDate: now));
-  }
+  // // Update by period (เดิม)
+  // void _updateDateRangeByPeriod(BuildContext context, String period) {
+  //   final now = DateTime.now();
+  //   final cubit = context.read<SettingFormCubit>();
+  //   DateTime startDate;
+  //   switch (period) {
+  //     case '1 เดือน':   startDate = DateTime(now.year, now.month - 1, now.day); break;
+  //     case '3 เดือน':   startDate = DateTime(now.year, now.month - 3, now.day); break;
+  //     case '6 เดือน':   startDate = DateTime(now.year, now.month - 6, now.day); break;
+  //     case '1 ปี':      startDate = DateTime(now.year - 1, now.month, now.day); break;
+  //     case 'ตลอดเวลา':  startDate = DateTime(2020, 1, 1); break;
+  //     default: // 'กำหนดเอง'
+  //       return; // ไม่ auto-update
+  //   }
 
-  List<String> _getFurnaceNumbers(List<Furnace> furnaces) {
-    final sorted = (furnaces.map((f) => f.furnaceNo).toList()..sort());
+  //   cubit
+  //   ..updateStartDate(index, date),
+  //   ..updateEndDate(index, endDate);
+  //   // SearchBloc จะถูกอัปเดตผ่าน BlocListener อยู่แล้ว
+  // }
+
+  List<String> _getFurnaceNumbers(List<String> furnaces) {
+    final sorted = (furnaces.map((f) => f).toList()..sort());
     return ["0", ...sorted.map((n) => n.toString())];
   }
 
-  List<String> _getMatNumbers(List<CustomerProduct> mats) {
-    final sorted = (mats.map((m) => m.cpNo).toList()..sort());
-    return ["เลือกเลขแมต", ...sorted.map((n) => n.toString())];
+  List<String> _getMatNumbers(List<String> mats) {
+    final sorted = (mats.map((m) => m).toList()..sort());
+    return ["All Material No.", ...sorted.map((n) => n.toString())];
   }
+
 
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
     final settingState = _settingBloc.state;
     final searchState = context.read<SearchBloc>().state;
 
     final initial = isStartDate
-        ? (searchState.currentQuery.startDate ??
-            _toDateTime(settingState.formState.startDate) ??
-            DateTime.now())
-        : (searchState.currentQuery.endDate ??
-            _toDateTime(settingState.formState.endDate) ??
-            DateTime.now());
+        ? (searchState.currentQuery.startDate ?? 
+        _toDateTime(settingState.formState.startDate) ?? DateTime.now())
+        : (searchState.currentQuery.endDate   ?? 
+        _toDateTime(settingState.formState.endDate)   ?? DateTime.now());
 
     final picked = await showDatePicker(
       context: context,
@@ -522,22 +590,14 @@ class _SettingFormState extends State<SettingForm> {
 
     if (picked == null) return;
 
+    // Rule 1: เมื่อผู้ใช้เลือกวันเอง -> บังคับ period = "กำหนดเอง" + อัปเดตทั้งสอง Bloc
     final q = searchState.currentQuery;
     final newStart = isStartDate ? picked : (q.startDate ?? picked);
-    final newEnd = isStartDate ? (q.endDate ?? picked) : picked;
+    final newEnd   = isStartDate ? (q.endDate ?? picked) : picked;
 
     context.read<SettingBloc>().add(UpdatePeriodS('กำหนดเอง'));
     context.read<SettingBloc>()
       ..add(UpdateStartDate(startDate: newStart))
       ..add(UpdateEndDate(endDate: newEnd));
-
-    context.read<SearchBloc>().add(
-          LoadFilteredChartData(
-            startDate: newStart,
-            endDate: newEnd,
-            furnaceNo: q.furnaceNo,
-            materialNo: q.materialNo,
-          ),
-        );
   }
 }

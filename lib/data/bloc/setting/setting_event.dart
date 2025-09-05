@@ -50,7 +50,6 @@ final class UpdateStartDate extends SettingEvent {
   });
 
   final DateTime startDate;
-
   @override
   List<Object> get props => [startDate];
 }

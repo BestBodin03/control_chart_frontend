@@ -171,36 +171,53 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
       extraLinesOnTop: false,
       horizontalLines: [
         // USL (Upper Specification Limit)
-        if ((_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec, controlChartStats?.specAttribute?.cdtUpperSpec)) > 0.0)
+        if ((_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec,
+         controlChartStats?.specAttribute?.cdtUpperSpec,
+         controlChartStats?.specAttribute?.compoundLayerUpperSpec,
+         )) > 0.0)
           HorizontalLine(
-            y: (_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec, controlChartStats?.specAttribute?.cdtUpperSpec))?? 0.0,
+            y: (_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec,
+             controlChartStats?.specAttribute?.cdtUpperSpec,
+             controlChartStats?.specAttribute?.compoundLayerUpperSpec))?? 0.0,
             color: Colors.red.shade400,
             strokeWidth: 2,
           ),
         
         HorizontalLine(
-          y: _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart?.ucl, controlChartStats?.cdtControlLimitIChart?.ucl),
+          y: _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart?.ucl,
+           controlChartStats?.cdtControlLimitIChart?.ucl,
+           controlChartStats?.compoundLayerControlLimitIChart?.ucl,),
           color: Colors.amberAccent,
           strokeWidth: 1.5,
         ),
         
         // Average Line
         HorizontalLine(
-          y: _chooseCdeOrCdt(controlChartStats?.cdeAverage, controlChartStats?.cdtAverage),
+          y: _chooseCdeOrCdt(controlChartStats?.cdeAverage,
+           controlChartStats?.cdtAverage,
+           controlChartStats?.compoundLayerAverage),
           color: AppColors.colorSuccess1,
           strokeWidth: 2,
         ),
 
         HorizontalLine(
-          y: _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart?.lcl, controlChartStats?.cdtControlLimitIChart?.lcl),
+          y: _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart?.lcl,
+           controlChartStats?.cdtControlLimitIChart?.lcl,
+           controlChartStats?.compoundLayerControlLimitIChart?.lcl),
           color: Colors.amberAccent,
           strokeWidth: 1.5,
         ),
         
         // LSL (Lower Specification Limit)
-        if ((_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec, controlChartStats?.specAttribute?.cdtLowerSpec)) > 0.0)
+        if ((_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec,
+         controlChartStats?.specAttribute?.cdtLowerSpec,
+         controlChartStats?.specAttribute?.compoundLayerLowerSpec,
+         )) > 0.0)
         HorizontalLine(
-          y: _chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec, controlChartStats?.specAttribute?.cdtLowerSpec) ?? 0.0,
+          y: _chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec,
+           controlChartStats?.specAttribute?.cdtLowerSpec,
+           controlChartStats?.specAttribute?.compoundLayerLowerSpec,
+           ) ?? 0.0,
           color: Colors.red.shade400,
           strokeWidth: 2,
         ),
@@ -233,17 +250,22 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
             // RULE 1 # OVER CONTROL
             dotColor = (
               (_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec,
-                              controlChartStats?.specAttribute?.cdtUpperSpec))
+                              controlChartStats?.specAttribute?.cdtUpperSpec,
+                              controlChartStats?.specAttribute?.compoundLayerUpperSpec))
                                > 0.0 &&
               (value > _chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec ?? 0.0,
-                                      controlChartStats?.specAttribute?.cdtUpperSpec ?? 0.0) ||
+                                      controlChartStats?.specAttribute?.cdtUpperSpec ?? 0.0,
+                                      controlChartStats?.specAttribute?.compoundLayerUpperSpec ?? 0.0) ||
               value < _chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec ?? 0.0,
-                                      controlChartStats?.specAttribute?.cdtLowerSpec ?? 0.0)))
+                                      controlChartStats?.specAttribute?.cdtLowerSpec ?? 0.0,
+                                      controlChartStats?.specAttribute?.compoundLayerLowerSpec ?? 0.0)))
               ? Colors.red // Out of spec
               : (value >= _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart?.ucl,
-                                          controlChartStats?.cdtControlLimitIChart?.ucl) ||
+                                          controlChartStats?.cdtControlLimitIChart?.ucl,
+                                          controlChartStats?.compoundLayerControlLimitIChart?.ucl) ||
                 value <= _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart?.lcl,
-                                          controlChartStats?.cdtControlLimitIChart?.lcl))
+                                          controlChartStats?.cdtControlLimitIChart?.lcl,
+                                          controlChartStats?.compoundLayerControlLimitIChart?.lcl))
                 ? Colors.orange // Warning zone
                 : dotColor; // unchanged (safe zone)
 
@@ -303,55 +325,67 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
       children: [
 
   if (formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec,
-      controlChartStats?.specAttribute?.cdtUpperSpec)) != 'N/A')
+      controlChartStats?.specAttribute?.cdtUpperSpec,
+      controlChartStats?.specAttribute?.compoundLayerUpperSpec)) != 'N/A')
     buildLegendItem('Spec', Colors.red, false,
         formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec,
-      controlChartStats?.specAttribute?.cdtUpperSpec))),
+      controlChartStats?.specAttribute?.cdtUpperSpec,
+      controlChartStats?.specAttribute?.compoundLayerUpperSpec))),
 
   // UCL (choose CDE/CDT I-Chart)
   if (formatValue(_chooseCdeOrCdt(
         controlChartStats?.cdeControlLimitIChart?.ucl,
         controlChartStats?.cdtControlLimitIChart?.ucl,
+        controlChartStats?.compoundLayerControlLimitIChart?.ucl
       )) != 'N/A')
     buildLegendItem('UCL', Colors.orange, false,
         formatValue(_chooseCdeOrCdt(
           controlChartStats?.cdeControlLimitIChart?.ucl,
           controlChartStats?.cdtControlLimitIChart?.ucl,
+          controlChartStats?.compoundLayerControlLimitIChart?.ucl
         ))),
 
   if (formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeTarget,
-      controlChartStats?.specAttribute?.cdtTarget)) != 'N/A')
+      controlChartStats?.specAttribute?.cdtTarget,
+      controlChartStats?.specAttribute?.compoundLayerTarget)) != 'N/A')
     buildLegendItem('Spec', Colors.deepPurple.shade300, false,
         formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeTarget,
-      controlChartStats?.specAttribute?.cdtTarget))),
+      controlChartStats?.specAttribute?.cdtTarget,
+      controlChartStats?.specAttribute?.compoundLayerTarget))),
 
   // AVG (choose CDE/CDT MR-Chart CL)
   if (formatValue(_chooseCdeOrCdt(
         controlChartStats?.cdeControlLimitMRChart?.cl,
         controlChartStats?.cdtControlLimitMRChart?.cl,
+        controlChartStats?.compoundLayerControlLimitMRChart?.cl
       )) != 'N/A')
     buildLegendItem('AVG', Colors.green, false,
         formatValue(_chooseCdeOrCdt(
           controlChartStats?.cdeControlLimitMRChart?.cl,
           controlChartStats?.cdtControlLimitMRChart?.cl,
+          controlChartStats?.compoundLayerControlLimitMRChart?.cl
         ))),
 
   // LCL (choose CDE/CDT I-Chart)
   if (formatValue(_chooseCdeOrCdt(
         controlChartStats?.cdeControlLimitIChart?.lcl,
         controlChartStats?.cdtControlLimitIChart?.lcl,
+        controlChartStats?.compoundLayerControlLimitIChart?.lcl
       )) != 'N/A')
     buildLegendItem('LCL', Colors.orange, false,
         formatValue(_chooseCdeOrCdt(
           controlChartStats?.cdeControlLimitIChart?.lcl,
           controlChartStats?.cdtControlLimitIChart?.lcl,
+          controlChartStats?.compoundLayerControlLimitIChart?.lcl
         ))),
 
   if (formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec,
-      controlChartStats?.specAttribute?.cdtLowerSpec)) != 'N/A')
+      controlChartStats?.specAttribute?.cdtLowerSpec,
+      controlChartStats?.specAttribute?.compoundLayerLowerSpec)) != 'N/A')
     buildLegendItem('Spec', Colors.red, false,
         formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec,
-      controlChartStats?.specAttribute?.cdtLowerSpec))),
+      controlChartStats?.specAttribute?.cdtLowerSpec,
+      controlChartStats?.specAttribute?.compoundLayerLowerSpec))),
 ]
 
     );
@@ -420,10 +454,12 @@ double _getInterval() {
   const divisions = 5; // => 6 ticks
   final spotMin =
       _chooseCdeOrCdt(controlChartStats?.yAxisRange?.minYcdeControlChart, 
-      controlChartStats?.yAxisRange?.minYcdtControlChart);
+      controlChartStats?.yAxisRange?.minYcdtControlChart,
+      controlChartStats?.yAxisRange?.minYcompoundLayerControlChart);
   final spotMax =
       _chooseCdeOrCdt(controlChartStats?.yAxisRange?.maxYcdeControlChart, 
-      controlChartStats?.yAxisRange?.maxYcdtControlChart);
+      controlChartStats?.yAxisRange?.maxYcdtControlChart,
+      controlChartStats?.yAxisRange?.maxYcompoundLayerControlChart);
 
   if (spotMax <= spotMin) {
     _cachedMinY = spotMin;
@@ -497,11 +533,22 @@ double _roundUpToPowerOf10(double x) {
   }
 
 
-  double _chooseCdeOrCdt(double? cde, double? cdt, {double fallback = 0}) {
-    if (cde == null) return cdt ?? fallback;
-    if (cdt == null) return cde;
-    return cde > cdt ? cde : cdt;
-  }
+double _chooseCdeOrCdt(
+  double? cde,
+  double? cdt,
+  double? compoundLayer, {
+  double fallback = 0,
+}) {
+  final a = cde ?? 0;
+  final b = cdt ?? 0;
+  final c = compoundLayer ?? 0;
+
+  // หา max จากทั้งสามค่า
+  final maxValue = [a, b, c].reduce((curr, next) => curr > next ? curr : next);
+
+  // ถ้าทุกค่าคือ 0 → คืน fallback
+  return maxValue == 0 ? fallback : maxValue;
+}
 
   double _calculateXInterval() {
     int pointCount = dataPoints!.length;

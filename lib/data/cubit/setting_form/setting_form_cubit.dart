@@ -2,6 +2,7 @@ import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/cubit/setting_form/extension/setting_form_state_to_request.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
 import 'package:control_chart/domain/models/setting.dart';
+import 'package:control_chart/domain/models/setting_dynamic_dropdown.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -106,25 +107,26 @@ class SettingFormCubit extends Cubit<SettingFormState> {
   }
 
   /// Update start date for a specific setting
-  void updateStartDate(int index, DateTime startDate) {
-    if (index >= 0 && index < state.specifics.length) {
-      final currentSetting = state.specifics[index];
-      final updatedSetting = currentSetting.copyWith(startDate: startDate);
-      updateSpecificSetting(index, updatedSetting);
-    }
+  void updateStartDate(int index, DateTime date, {bool setCustom = false}) {
+    final s = state.specifics[index];
+    updateSpecificSetting(index, s.copyWith(
+      startDate: date,
+      periodType: setCustom ? PeriodType.CUSTOM : s.periodType,
+    ));
   }
 
+
   /// Update end date for a specific setting
-  void updateEndDate(int index, DateTime endDate) {
-    if (index >= 0 && index < state.specifics.length) {
-      final currentSetting = state.specifics[index];
-      final updatedSetting = currentSetting.copyWith(endDate: endDate);
-      updateSpecificSetting(index, updatedSetting);
-    }
+  void updateEndDate(int index, DateTime endDate, {bool setCustom = false}) {
+    final s = state.specifics[index];
+    updateSpecificSetting(index, s.copyWith(
+      endDate: endDate,
+      periodType: setCustom ? PeriodType.CUSTOM : s.periodType,
+    ));
   }
 
   /// Update furnace number for a specific setting
-  void updateFurnaceNo(int index, int furnaceNo) {
+  void updateFurnaceNo(int index, int? furnaceNo) {
     if (index >= 0 && index < state.specifics.length) {
       final currentSetting = state.specifics[index];
       final updatedSetting = currentSetting.copyWith(furnaceNo: furnaceNo);
@@ -158,6 +160,25 @@ class SettingFormCubit extends Cubit<SettingFormState> {
     emit(existingState.copyWith(status: SubmitStatus.idle, error: null));
   }
 
+Future<SettingDynamicDropdownResponse> getDynamicFurnaceDropdown({
+  String? furnaceNo,
+  String? cpNo,
+}) async {
+  try {
+    // เรียก API
+    final result = await _settingApis.getSettingFormDropdown(
+      furnaceNo: furnaceNo,
+      cpNo: cpNo,
+    );
+
+    // แปลงเป็น Model
+    return SettingDynamicDropdownResponse.fromJson(result);
+  } catch (e) {
+    rethrow; // หรือ emit error state ตามต้องการ
+  }
+}
+
+
 Future<bool> saveForm({String? id}) async {
   // กันยิงซ้ำระหว่างกำลัง submit หรือ cubit ถูกปิดไปแล้ว
   if (state.status == SubmitStatus.submitting || isClosed) return false;
@@ -189,42 +210,23 @@ Future<bool> saveForm({String? id}) async {
       (id == null || id.trim().isEmpty) ? null : id.trim();
 
   try {
-    // เรียก API และเก็บ Response ไว้ตรวจ status/payload
-    Response<dynamic> res;
-    if (safeId == null) {
-      debugPrint('[saveForm] Creating profile...');
-      res = await _settingApis.addNewSettingProfile(
-        state,
-        ruleNameById: ruleNameById,
-      );
-    } else {
-      debugPrint('[saveForm] Updating id=$safeId');
-      res = await _settingApis.updateSettingProfile(
-        safeId,
-        state,
-        ruleNameById: ruleNameById,
-      );
-    }
+    // เรียก API → ได้ JSON (Map) กลับมา
+    final Map<String, dynamic> res = safeId == null
+        ? await _settingApis.addNewSettingProfile(state, ruleNameById: ruleNameById)
+        : await _settingApis.updateSettingProfile(safeId, state, ruleNameById: ruleNameById);
 
-    // --- ตรวจผลลัพธ์ฝั่ง HTTP ---
-    final code = res.statusCode ?? 0;
-    final okHttp = code >= 200 && code < 300;
+    // อ่านคีย์มาตรฐาน ถ้ามี
+    final bool? okPayload = res['success'] as bool?;
+    final String? serverMsg = (res['message'] ?? res['error'])?.toString();
 
-    // บางแบ็กเอนด์ตอบ 200 แต่ { success:false }
-    bool? okPayload;
-    String? serverMsg;
-    final body = res.data;
-    if (body is Map<String, dynamic>) {
-      okPayload = body['success'] as bool?;
-      serverMsg = (body['message'] ?? body['error'])?.toString();
-    }
+    // ถ้า backend ไม่มีฟิลด์ success เลย ให้ถือว่า success ตามปกติ
+    final bool isSuccess = okPayload == null || okPayload == true;
 
-    if (okHttp && (okPayload == null || okPayload == true)) {
+    if (isSuccess) {
       emit(state.copyWith(status: SubmitStatus.success));
       return true;
     } else {
-      final msg = serverMsg ??
-          'Unexpected response (HTTP $code) ${body is Map ? body : body?.toString() ?? ''}';
+      final msg = serverMsg ?? 'Unexpected response: ${res.toString()}';
       debugPrint('[saveForm] Fail: $msg');
       emit(state.copyWith(status: SubmitStatus.failure, error: msg));
       return false;
@@ -261,24 +263,20 @@ Future<bool> saveForm({String? id}) async {
   }
 }
 
-
-
-
-
   /// Validate form and return validation errors
   List<String> validateForm() {
     final errors = <String>[];
     
     if (state.settingProfileName.trim().isEmpty) {
-      errors.add('Setting profile name is required');
+      errors.add('โปรดตั้งชื่อโปรไฟล์ตั้งคา');
     }
     
-    if (state.chartChangeInterval <= 10) {
-      errors.add('Chart change interval must be greater than 10');
+    if (state.chartChangeInterval >= 10 && state.chartChangeInterval <= 3600) {
+      errors.add('ระยะเวลาเปลี่ยนหน้าจอต้องอยู่ระหว่าง 10 - 3,600 วินาที');
     }
     
     if (state.specifics.isEmpty) {
-      errors.add('At least one specific setting is required');
+      errors.add('โปรดกรอกข้อมูลอย่างน้อย 1 ชุด');
     }
 
     for (int i = 0; i < state.specifics.length; i++) {
@@ -286,32 +284,66 @@ Future<bool> saveForm({String? id}) async {
       final blockNum = i + 1;
       
       if (sp.periodType == null) {
-        errors.add('Period type is required for block $blockNum');
+        errors.add('โปรดกรอกรูปแบบระยะเวลาของ ชุดข้อมูลที่ $blockNum');
       }
       
       if (sp.startDate == null) {
-        errors.add('Start date is required for block $blockNum');
+        errors.add('โปรดกรอกรูปแบบวันที่เริ่มต้นของ ชุดข้อมูลที่  $blockNum');
       }
       
       if (sp.endDate == null) {
-        errors.add('End date is required for block $blockNum');
+        errors.add('โปรดกรอกรูปแบบวันที่สิ้นสุดของ ชุดข้อมูลที่ $blockNum');
       }
 
       if (state.displayType == DisplayType.FURNACE ||
           state.displayType == DisplayType.FURNACE_CP) {
         if (sp.furnaceNo == null) {
-          errors.add('Furnace number is required for block $blockNum');
+          errors.add('โปรดกรอก Furnace No. ชุดข้อมูลที่ $blockNum');
         }
       }
       
       if (state.displayType == DisplayType.CP ||
           state.displayType == DisplayType.FURNACE_CP) {
         if ((sp.cpNo ?? '').trim().isEmpty) {
-          errors.add('CP number is required for block $blockNum');
+          errors.add('โปรดกรอก Material No. ชุดข้อมูลที่ $blockNum');
         }
       }
     }
     
     return errors;
   }
+
+  Future<void> loadDropdownOptions({String? furnaceNo, String? cpNo}) async {
+    emit(state.copyWith(dropdownLoading: true));
+    try {
+      final json = await _settingApis.getSettingFormDropdown(
+        furnaceNo: furnaceNo,
+        cpNo: cpNo,
+      );
+
+      // บางแบ็กเอนด์ห่อใน data, บางทีก็ไม่ห่อ → รองรับทั้งคู่
+      final payload = (json['data'] is Map<String, dynamic>)
+          ? json['data'] as Map<String, dynamic>
+          : json;
+
+      List<String> _toStringList(dynamic v) {
+        if (v == null) return <String>[];
+        if (v is List) return v.map((e) => e?.toString()).whereType<String>().toList();
+        // สเกลาร์ (num/string/อื่น ๆ) → เป็นลิสต์ 1 ตัว
+        return <String>[v.toString()];
+      }
+
+      final furnaces = _toStringList(payload['furnaceNo']);
+      final cps      = _toStringList(payload['cpNo']);
+
+      emit(state.copyWith(
+        dropdownLoading: false,
+        furnaceOptions: furnaces, // <- ควรเป็น List<String> ใน state
+        cpOptions: cps,           // <- ควรเป็น List<String> ใน state
+      ));
+    } catch (_) {
+      emit(state.copyWith(dropdownLoading: false));
+    }
+  }
+
 }

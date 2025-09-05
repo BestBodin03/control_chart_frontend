@@ -3,6 +3,7 @@
 import 'dart:math';
 import 'dart:math' as math;
 
+import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
@@ -177,7 +178,8 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
         
         HorizontalLine(
           y: _chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.ucl ?? 0.0,
-          controlChartStats?.cdtControlLimitMRChart?.ucl ?? 0.0),
+          controlChartStats?.cdtControlLimitMRChart?.ucl ?? 0.0,
+          controlChartStats?.compoundLayerControlLimitMRChart?.ucl ?? 0.0,),
           color: Colors.amberAccent,
           strokeWidth: 1.5,
         ),
@@ -185,7 +187,8 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
         // Average Line
         HorizontalLine(
           y: _chooseCdeOrCdt(controlChartStats?.cdeMrAverage ?? 0.0, 
-          controlChartStats?.cdtMrAverage ?? 0.0),
+          controlChartStats?.cdtMrAverage ?? 0.0,
+          controlChartStats?.compoundLayerMrAverage ?? 0.0),
           // y: controlChartStats?.mrAverage ?? 0.0,
           color: AppColors.colorSuccess1,
           strokeWidth: 2,
@@ -235,6 +238,7 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
             dotColor = (value < _chooseCdeOrCdt(
               controlChartStats?.cdeControlLimitMRChart?.lcl ?? 0.0,
               controlChartStats?.cdtControlLimitMRChart?.lcl ?? 0.0,
+              controlChartStats?.compoundLayerControlLimitMRChart?.lcl ?? 0.0,
             )) ? Colors.orange : AppColors.colorBrand;
 
 
@@ -294,17 +298,27 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
       //   buildLegendItem('Spec', Colors.red, false,
       //       formatValue(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec)),
 
-      if (formatValue(_chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.ucl, controlChartStats?.cdtControlLimitMRChart?.ucl)) != 'N/A')
+      if (formatValue(_chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.ucl,
+       controlChartStats?.cdtControlLimitMRChart?.ucl,
+        controlChartStats?.compoundLayerControlLimitMRChart?.ucl)) != 'N/A')
         buildLegendItem('UCL', Colors.orange, false,
-            formatValue(_chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.ucl, controlChartStats?.cdtControlLimitMRChart?.ucl))),
+            formatValue(_chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.ucl,
+             controlChartStats?.cdtControlLimitMRChart?.ucl,
+             controlChartStats?.compoundLayerControlLimitMRChart?.ucl))),
 
       // if (formatValue(controlChartStats?.specAttribute?.surfaceHardnessTarget) != 'N/A')
       //   buildLegendItem('Target', Colors.deepPurple.shade300, false,
       //       formatValue(controlChartStats?.specAttribute?.surfaceHardnessTarget)),
 
-      if (formatValue(_chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.cl, controlChartStats?.cdtControlLimitMRChart?.cl)) != 'N/A')
+      if (formatValue(_chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.cl,
+       controlChartStats?.cdtControlLimitMRChart?.cl,
+       controlChartStats?.compoundLayerControlLimitMRChart?.cl
+       )) != 'N/A')
         buildLegendItem('AVG', Colors.green, false,
-            formatValue(_chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.cl, controlChartStats?.cdtControlLimitMRChart?.cl))),
+            formatValue(_chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.cl,
+             controlChartStats?.cdtControlLimitMRChart?.cl,
+             controlChartStats?.compoundLayerControlLimitMRChart?.cl
+             ))),
 
       // if (formatValue(controlChartStats?.controlLimitIChart?.lcl) != 'N/A')
       //   buildLegendItem('LCL', Colors.orange, false,
@@ -381,7 +395,8 @@ double _getInterval() {
   final spotMin = 0.0;
   final spotMax =
         _chooseCdeOrCdt(controlChartStats?.yAxisRange?.maxYcdeMrChart, 
-        controlChartStats?.yAxisRange?.maxYcdtMrChart);
+        controlChartStats?.yAxisRange?.maxYcdtMrChart,
+        controlChartStats?.yAxisRange?.maxYcompoundLayerMrChart);
 
   if (spotMax <= spotMin) {
     _cachedMinY = spotMin;
@@ -481,11 +496,24 @@ double _getInterval() {
     return (pointCount / 10).ceilToDouble();
   }
 
-  double _chooseCdeOrCdt(double? cde, double? cdt, {double fallback = 0}) {
-    if (cde == null) return cdt ?? fallback;
-    if (cdt == null) return cde;
-    return cde > cdt ? cde : cdt;
+  double _chooseCdeOrCdt(
+    double? cde,
+    double? cdt,
+    double? compoundLayer, {
+    double fallback = 0,
+  }) {
+    final a = cde ?? 0;
+    final b = cdt ?? 0;
+    final c = compoundLayer ?? 0;
+
+    // หา max จากทั้งสามค่า
+    final maxValue = [a, b, c].reduce((curr, next) => curr > next ? curr : next);
+
+    // ถ้าทุกค่าคือ 0 → คืน fallback
+    return maxValue == 0 ? fallback : maxValue;
   }
+
+
   
   String formatValue(double? value) {
     if (value == null || value <= 0) return 'N/A';

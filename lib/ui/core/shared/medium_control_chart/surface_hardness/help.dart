@@ -3,13 +3,17 @@ import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_template.dart';
+import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/material.dart';
 
 Widget buildChartsSectionSurfaceHardness(SearchState searchState) {
   return SizedBox.expand( // ← กินพื้นที่ที่ _ChartFillBox จัดให้แบบเต็ม ๆ
     child: _buildChartContainer(
-      title: 'Surface Hardness',
-      searchState: searchState,
+        title:
+          "Furnace ${searchState.currentQuery.furnaceNo ?? "-"} "
+          " | Material ${searchState.currentQuery.materialNo ?? '-'}"
+          " | Date ${fmtDate(searchState.currentQuery.startDate)} - ${fmtDate(searchState.currentQuery.endDate)}",
+        searchState: searchState,
     ),
   );
 }

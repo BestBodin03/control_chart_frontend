@@ -89,8 +89,6 @@ class _ProfileCardState extends State<ProfileCard> {
                       ),
                       GestureDetector(
                         onTap: widget.onEdit ?? () {
-                          // ✅ Default edit behavior or use provided callback
-                          print('Edit tapped for ${widget.profile.name}');
                         },
                         child: MouseRegion(
                           cursor: SystemMouseCursors.click,
@@ -156,6 +154,14 @@ class _ProfileCardState extends State<ProfileCard> {
                             final success = await cubit.saveForm(id: widget.profile.id);
 
                             if (!mounted) return;
+
+                            if (success) {
+                                  context
+                                  .read<SettingProfileBloc>()
+                                  .add(const RefreshSettingProfiles());
+                            }
+
+                
 
                             if (!success) {
                               // ❌ ล้มเหลว → revert กลับ

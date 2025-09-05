@@ -12,10 +12,11 @@ class ProfileDetailSheet extends StatelessWidget {
   const ProfileDetailSheet({
     super.key,
     required this.profile,
+    this.onEdit
   });
 
   final Profile profile;
-
+  final VoidCallback? onEdit;
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -72,18 +73,6 @@ class ProfileDetailSheet extends StatelessWidget {
           // Action buttons
           Row(
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    _showEditFromDetail(context, profile);
-                  },
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.colorBrand),
-                    foregroundColor: AppColors.colorBrand,
-                  ),
-                  child: const Text('แก้ไข'),
-                ),
-              ),
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(

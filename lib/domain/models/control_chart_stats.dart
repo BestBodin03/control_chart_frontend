@@ -6,82 +6,112 @@ part 'control_chart_stats.g.dart';
 @JsonSerializable()
 class ControlChartStats {
   final int? numberOfSpots;
+
   final double? average;
+  final double? compoundLayerAverage;
   final double? cdeAverage;
   final double? cdtAverage;
+
   @JsonKey(name: 'MRAverage')
   final double? mrAverage;
+  @JsonKey(name: 'compoundLayerMRAverage')
+  final double? compoundLayerMrAverage;
   @JsonKey(name: 'cdeMRAverage')
   final double? cdeMrAverage;
   @JsonKey(name: 'cdtMRAverage')
   final double? cdtMrAverage;
+
   final ControlLimitIChart? controlLimitIChart;
+  final ControlLimitIChart? compoundLayerControlLimitIChart;
   final ControlLimitIChart? cdeControlLimitIChart;
   final ControlLimitIChart? cdtControlLimitIChart;
+
   final SigmaIChart? sigmaIChart;
+  final SigmaIChart? compoundLayerSigmaIChart;
   final SigmaIChart? cdeSigmaIChart;
   final SigmaIChart? cdtSigmaIChart;
+
   final ControlLimitMRChart? controlLimitMRChart;
+  final ControlLimitMRChart? compoundLayerControlLimitMRChart;
   final ControlLimitMRChart? cdeControlLimitMRChart;
   final ControlLimitMRChart? cdtControlLimitMRChart;
+
   final List<double>? surfaceHardnessChartSpots;
+  final List<double>? compoundLayerChartSpots;
   final List<double>? cdeChartSpots;
   final List<double>? cdtChartSpots;
+  
   final List<double>? mrChartSpots;
+  final List<double>? compoundLayerMrChartSpots;
   final List<double>? cdeMrChartSpots;
   final List<double>? cdtMrChartSpots;
+
   final SpecAttribute? specAttribute;
   final YAxisRange? yAxisRange;
 
-  const ControlChartStats({
+const ControlChartStats({
     this.numberOfSpots,
     this.average,
+    this.compoundLayerAverage,
     this.cdeAverage,
     this.cdtAverage,
     this.mrAverage,
+    this.compoundLayerMrAverage,
     this.cdeMrAverage,
     this.cdtMrAverage,
     this.controlLimitIChart,
+    this.compoundLayerControlLimitIChart,
     this.cdeControlLimitIChart,
     this.cdtControlLimitIChart,
     this.sigmaIChart,
+    this.compoundLayerSigmaIChart,
     this.cdeSigmaIChart,
     this.cdtSigmaIChart,
     this.controlLimitMRChart,
+    this.compoundLayerControlLimitMRChart,
     this.cdeControlLimitMRChart,
     this.cdtControlLimitMRChart,
-    this.surfaceHardnessChartSpots,      
+    this.surfaceHardnessChartSpots,
+    this.compoundLayerChartSpots,
     this.cdeChartSpots,
     this.cdtChartSpots,
-    this.mrChartSpots,      
+    this.mrChartSpots,
+    this.compoundLayerMrChartSpots,
     this.cdeMrChartSpots,
     this.cdtMrChartSpots,
-    this.specAttribute,   
-    this.yAxisRange  
+    this.specAttribute,
+    this.yAxisRange,
   });
 
   // Add empty constructor for error handling
   const ControlChartStats.empty(this.yAxisRange)
       : numberOfSpots = 0,
         average = 0.0,
+        compoundLayerAverage = 0.0,
         cdeAverage = 0.0,
         cdtAverage = 0.0,
         mrAverage = 0.0,
+        compoundLayerMrAverage = 0.0,
         cdeMrAverage = 0.0,
         cdtMrAverage = 0.0,
         controlLimitIChart = null,
+        compoundLayerControlLimitIChart = null,
         cdeControlLimitIChart = null,
         cdtControlLimitIChart = null,
         sigmaIChart = null,
+        compoundLayerSigmaIChart = null,
         cdeSigmaIChart = null,
         cdtSigmaIChart = null,
         controlLimitMRChart = null,
+        compoundLayerControlLimitMRChart = null,
         cdeControlLimitMRChart = null,
         cdtControlLimitMRChart = null,
         surfaceHardnessChartSpots = const [],
+        compoundLayerChartSpots = const [],
         cdeChartSpots = const [],
         cdtChartSpots = const [],
         mrChartSpots = const [],
+        compoundLayerMrChartSpots = const [],
         cdeMrChartSpots = const [],
         cdtMrChartSpots = const [],
         specAttribute = null;
@@ -164,6 +194,9 @@ class SpecAttribute {
   final double? surfaceHardnessUpperSpec;
   final double? surfaceHardnessLowerSpec;
   final double? surfaceHardnessTarget;
+  final double? compoundLayerUpperSpec;
+  final double? compoundLayerLowerSpec;
+  final double? compoundLayerTarget;
   final double? cdeUpperSpec;
   final double? cdeLowerSpec;
   final double? cdeTarget;
@@ -176,6 +209,9 @@ class SpecAttribute {
     this.surfaceHardnessUpperSpec,
     this.surfaceHardnessLowerSpec,
     this.surfaceHardnessTarget,
+    this.compoundLayerUpperSpec,
+    this.compoundLayerLowerSpec,
+    this.compoundLayerTarget,
     this.cdeUpperSpec,
     this.cdeLowerSpec,
     this.cdeTarget,

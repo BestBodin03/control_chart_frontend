@@ -98,6 +98,29 @@ class SettingApis {
     }
   }
 
+Future<Map<String, dynamic>> getSettingFormDropdown({
+  String? furnaceNo,
+  String? cpNo,
+}) async {
+  final query = <String, dynamic>{
+    if (furnaceNo != null && furnaceNo.isNotEmpty) 'furnaceNo': furnaceNo,
+    if (cpNo != null && cpNo.isNotEmpty) 'cpNo': null,
+  };
+
+  debugPrint('[API] GET /furnace-cache/search query=$query');
+
+  final res = await ApiConfig().getQueryParam<Map<String, dynamic>>(
+    '/furnace-cache/search',
+    queryParameters: query,
+  );
+
+    debugPrint('The query = $query');
+    debugPrint('the response = $res');
+
+  return res;
+}
+
+
   // Future<Response<dynamic>> getOneProfileSettingsById() async {
   //   try {
   //     final Response res = await ApiConfig().get('/setting/one-profile/$id', body);
@@ -111,22 +134,25 @@ class SettingApis {
   //   }
   // }
 
-  Future<Response<dynamic>> addNewSettingProfile(
+  Future<Map<String, dynamic>> addNewSettingProfile(
     SettingFormState form, {
     Map<int, String>? ruleNameById,
   }) async {
     final req = form.toRequest(ruleNameById: ruleNameById);
     final body = req.toJson();
-    return await ApiConfig().post('/setting/create', body);
+    return await ApiConfig().post<Map<String, dynamic>>('/setting/create', body);
   }
 
-  Future<Response<dynamic>> updateSettingProfile(
+  Future<Map<String, dynamic>> updateSettingProfile(
     String id,
     SettingFormState form, {
     Map<int, String>? ruleNameById,
   }) async {
     final req = form.toRequest(ruleNameById: ruleNameById);
     final body = req.toJson();
-    return await ApiConfig().patch('/setting/update/$id', data: body);
+    return await ApiConfig().patch<Map<String, dynamic>>(
+      '/setting/update/$id',
+      data: body,
+    );
   }
 }

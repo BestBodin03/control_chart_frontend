@@ -41,6 +41,7 @@ final class SettingState extends Equatable {
   bool get isLoading => status == SettingStatus.loading;
   bool get isLoaded => status == SettingStatus.loaded;
   bool get isSaved => status == SettingStatus.saved;  
+  bool get isFailed => status == SettingStatus.error;
 
   SettingState copyWith({
     SettingStatus Function()? status,

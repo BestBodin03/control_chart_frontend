@@ -1,3 +1,4 @@
+import 'package:control_chart/data/bloc/setting_profile/setting_profile_bloc.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_cubit.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/pill_button.dart';
@@ -64,12 +65,14 @@ Widget build(BuildContext context) {
               leading: Icons.add,
               selected: true,
               solid: true,
-              onTap: () {
-                final formCubit = context.read<SettingFormCubit>(); // from ancestor
-                showDialog(
+              onTap: () async {
+                final formCubit = context.read<SettingFormCubit>();
+                formCubit.resetForm();
+
+                final saved = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => BlocProvider.value(
-                    value: formCubit, // pass SAME instance down to dialog
+                    value: formCubit,
                     child: Dialog(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       child: DecoratedBox(
@@ -77,17 +80,26 @@ Widget build(BuildContext context) {
                           color: AppColors.colorBgGrey,
                           borderRadius: BorderRadius.circular(10),
                           boxShadow: [
-                            BoxShadow(color: AppColors.colorBrandTp.withValues(alpha: 0.4), blurRadius: 15, offset: const Offset(5, 5)),
+                            BoxShadow(
+                              color: AppColors.colorBrandTp.withValues(alpha: 0.4),
+                              blurRadius: 15,
+                              offset: const Offset(5, 5),
+                            ),
                           ],
                         ),
                         child: const Padding(
                           padding: EdgeInsets.all(8),
-                          child: SettingForm(), // now under provider
+                          child: SettingForm(),
                         ),
                       ),
                     ),
                   ),
                 );
+
+                if (saved == true) {
+                  // ✅ trigger refresh profiles
+                  context.read<SettingProfileBloc>().add(const RefreshSettingProfiles());
+                }
               },
 
             ),
