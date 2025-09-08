@@ -10,6 +10,7 @@ final class SearchState extends Equatable {
     this.searchTable = const [],
     this.controlChartStats,
     this.currentQuery = const ChartFilterQuery(),
+    this.tvQuery = const TvQuery(),
     this.errorMessage,
   });
 
@@ -18,6 +19,7 @@ final class SearchState extends Equatable {
   final List<SearchTable>? searchTable;
   final ControlChartStats? controlChartStats;
   final ChartFilterQuery currentQuery;
+  final TvQuery tvQuery;
   final String? errorMessage;
 
   // Computed properties for convenience
@@ -33,6 +35,7 @@ final class SearchState extends Equatable {
     List<SearchTable> Function()? searchTable,
     ControlChartStats Function()? controlChartStats,
     ChartFilterQuery Function()? currentQuery,
+    TvQuery Function()? tvQuery,
     String? Function()? errorMessage,
   }) {
     return SearchState(
@@ -41,6 +44,7 @@ final class SearchState extends Equatable {
       searchTable: searchTable != null ? searchTable() : this.searchTable,
       controlChartStats: controlChartStats != null ? controlChartStats() : this.controlChartStats,
       currentQuery: currentQuery != null ? currentQuery() : this.currentQuery,
+      tvQuery: tvQuery != null ? tvQuery() : this.tvQuery,
       errorMessage: errorMessage != null ? errorMessage() : this.errorMessage,
     );
   }
@@ -52,6 +56,7 @@ final class SearchState extends Equatable {
     searchTable,
     controlChartStats,
     currentQuery,
+    tvQuery,
     errorMessage,
   ];
 }

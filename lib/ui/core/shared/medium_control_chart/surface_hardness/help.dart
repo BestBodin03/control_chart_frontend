@@ -1,18 +1,20 @@
 import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
+import 'package:control_chart/domain/types/chart_filter_query.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_template.dart';
+import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/material.dart';
 
-Widget buildChartsSectionSurfaceHardness(SearchState searchState) {
+Widget buildChartsSectionSurfaceHardness(HomeContentVar settingProfile, SearchState searchState) {
   return SizedBox.expand( // ← กินพื้นที่ที่ _ChartFillBox จัดให้แบบเต็ม ๆ
     child: _buildChartContainer(
         title:
-          "Furnace ${searchState.currentQuery.furnaceNo ?? "-"} "
-          " | Material ${searchState.currentQuery.materialNo ?? '-'}"
-          " | Date ${fmtDate(searchState.currentQuery.startDate)} - ${fmtDate(searchState.currentQuery.endDate)}",
+          "Furnace ${settingProfile.furnaceNo ?? "-"} "
+          " | Material ${settingProfile.materialNo ?? '-'}"
+          " | Date ${fmtDate(settingProfile.startDate)} - ${fmtDate(settingProfile.endDate)}",
         searchState: searchState,
     ),
   );

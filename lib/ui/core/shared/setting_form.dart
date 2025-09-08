@@ -403,12 +403,12 @@ class _SettingFormState extends State<SettingForm> {
                                             const SizedBox(height: 8),
                                             buildDropdownField(
                                               context: context,
-                                              value: sp.furnaceNo?.toString() ?? "0",
+                                              value: sp.furnaceNo?.toString(),
                                               items: _getFurnaceNumbers(state.furnaceOptions),
                                               hint: "All Furnaces",
                                               onChanged: (selected) {
                                                 cubit.loadDropdownOptions(furnaceNo: selected?.toString(), cpNo: null);
-                                                final val = (selected == 0 ? null : int.tryParse(selected ?? ""));
+                                                final val = (selected == "All Furnaces" ? null : int.tryParse(selected ?? ""));
                                                 if (val != null) cubit.updateFurnaceNo(i, val);
                                                 
                                                 
@@ -425,7 +425,7 @@ class _SettingFormState extends State<SettingForm> {
                                               context: context,
                                               value: sp.cpNo ?? "เลือกเลขแมต",
                                               items: _getMatNumbers(state.cpOptions),
-                                              hint: "เลือกเลขแมต",
+                                              hint: "All Material Nos.",
                                               onChanged: (selected) {
                                                 // cubit.loadDropdownOptions(furnaceNo: null, cpNo: sp.cpNo);
                                                 final val = selected == "เลือกเลขแมต" ? "" : (selected ?? "");
@@ -498,18 +498,18 @@ class _SettingFormState extends State<SettingForm> {
   }
 
   // ============== Helpers ==============
-                                          // helper: แปลง enum -> label ที่ dropdown ใช้
-                                          String _periodTypeToLabel(PeriodType? p) {
-                                            switch (p) {
-                                              case PeriodType.ONE_MONTH:    return '1 เดือน';
-                                              case PeriodType.THREE_MONTHS: return '3 เดือน';
-                                              case PeriodType.SIX_MONTHS:   return '6 เดือน';
-                                              case PeriodType.ONE_YEAR:     return '1 ปี';
-                                              case PeriodType.LIFETIME:     return 'ตลอดเวลา';
-                                              case PeriodType.CUSTOM:
-                                              default:                      return 'กำหนดเอง';
-                                            }
-                                          }
+  // helper: แปลง enum -> label ที่ dropdown ใช้
+  String _periodTypeToLabel(PeriodType? p) {
+    switch (p) {
+      case PeriodType.ONE_MONTH:    return '1 เดือน';
+      case PeriodType.THREE_MONTHS: return '3 เดือน';
+      case PeriodType.SIX_MONTHS:   return '6 เดือน';
+      case PeriodType.ONE_YEAR:     return '1 ปี';
+      case PeriodType.LIFETIME:     return 'ตลอดเวลา';
+      case PeriodType.CUSTOM:
+      default:                      return 'กำหนดเอง';
+    }
+  }
   static DateTime? _toDateTime(dynamic v) {
     if (v == null) return null;
     if (v is DateTime) return v;
@@ -561,13 +561,14 @@ class _SettingFormState extends State<SettingForm> {
   // }
 
   List<String> _getFurnaceNumbers(List<String> furnaces) {
-    final sorted = (furnaces.map((f) => f).toList()..sort());
-    return ["0", ...sorted.map((n) => n.toString())];
+    final sorted = (furnaces.map((f) => int.parse(f)).toList()..sort());
+    return ["All Furnaces", ...sorted.map((n) => n.toString())];
   }
+
 
   List<String> _getMatNumbers(List<String> mats) {
     final sorted = (mats.map((m) => m).toList()..sort());
-    return ["All Material No.", ...sorted.map((n) => n.toString())];
+    return ["All Material Nos.", ...sorted.map((n) => n.toString())];
   }
 
 

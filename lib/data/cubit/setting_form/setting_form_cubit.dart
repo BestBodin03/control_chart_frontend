@@ -1,6 +1,8 @@
 import 'package:control_chart/apis/settings/setting_apis.dart';
+import 'package:control_chart/bootstrap.dart';
 import 'package:control_chart/data/cubit/setting_form/extension/setting_form_state_to_request.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
+import 'package:control_chart/data/shared_preference/tv_setting_profile_pref.dart';
 import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/domain/models/setting_dynamic_dropdown.dart';
 import 'package:dio/dio.dart';
@@ -10,6 +12,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 class SettingFormCubit extends Cubit<SettingFormState> {
   // Inject your repository/service here
   final SettingApis _settingApis;
+  final prefs = TvSettingProfilePref();
 
   SettingFormCubit(
     this._settingApis,
@@ -224,6 +227,11 @@ Future<bool> saveForm({String? id}) async {
 
     if (isSuccess) {
       emit(state.copyWith(status: SubmitStatus.success));
+      await TvSettingProfilePref().clear();
+      final newState = await bootstrap(
+        prefs: TvSettingProfilePref(),
+        api: SettingApis(),
+      );
       return true;
     } else {
       final msg = serverMsg ?? 'Unexpected response: ${res.toString()}';

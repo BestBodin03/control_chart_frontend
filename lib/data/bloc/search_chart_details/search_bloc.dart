@@ -6,6 +6,7 @@ import 'package:control_chart/domain/models/chart_detail.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_filter_query.dart';
 import 'package:control_chart/domain/types/search_table.dart';
+import 'package:control_chart/domain/types/tv_query.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
@@ -22,6 +23,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
        super(const SearchState()) {
     
     on<LoadFilteredChartData>(_onLoadFilteredChartData);
+    on<LoadTvChartData>(_onLoadTvChartData);
     // on<UpdateFurnaceNo>(_onUpdateFurnaceNo);
     // on<UpdatePeriodStartDate>(_onUpdatePeriodStartDate);
     // on<UpdatePeriodEndDate>(_onUpdatePeriodEndDate);
@@ -29,6 +31,49 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     on<ClearFilters>(_onClearFilters);
     on<UpdateDateRange>(_onUpdateDateRange);
 
+  }
+
+  Future<void> _onLoadTvChartData(
+    LoadTvChartData event,
+    Emitter<SearchState> emit,
+  ) async {
+    try {
+      final newQuery = TvQuery(
+        startDate: event.startDate,
+        endDate: event.endDate,
+        furnaceNo: event.furnaceNo,
+        materialNo: event.materialNo,
+      );
+
+      final results = await Future.wait([
+        _searchApiService.getTvChartDetails(newQuery),
+        _searchApiService.getTvControlChartStat(newQuery),
+      ]);
+
+      final (chartDetails, searchTables) = results[0] as (List<ChartDetail>, List<SearchTable>); // แก้การ cast
+      final chartStatistics = results[1] as ControlChartStats;
+
+      emit(state.copyWith(
+        status: () => SearchStatus.success,
+        chartDetails: () => chartDetails,
+        searchTable: () => searchTables,
+        controlChartStats: () => chartStatistics,
+        tvQuery: () => newQuery,
+        errorMessage: () => null,
+      ));
+    } catch (e) {
+      final newQuery = TvQuery(
+        startDate: event.startDate,
+        endDate: event.endDate,
+        furnaceNo: event.furnaceNo,
+        materialNo: event.materialNo,
+      );
+      emit(state.copyWith(
+        status: () => SearchStatus.failure,
+        tvQuery: () => newQuery,
+        errorMessage: () => e.toString(),
+      ));
+    }
   }
 
   Future<void> _onLoadFilteredChartData(

@@ -42,7 +42,6 @@ class SettingApis {
       final Map<String, dynamic> responseData = response.data;
       final List<dynamic> data = responseData['data'];
       final result = data.map((item) => CustomerProduct.fromJson(item)).toList();
-      
       return result;
     } catch (e) {
       throw Exception('Failed to get material number: $e');
@@ -98,6 +97,21 @@ class SettingApis {
     }
   }
 
+  Future<ApiResponse<Setting>> getTvProfileSettings() async {
+    try {
+      final Response res = await ApiConfig().get('/setting/setting-profile-for-tv');
+      final result = ApiResponse.fromResponse<Setting>(res, Setting.fromJson);
+      debugPrint('In API: $result');
+      return result;
+    } catch (e) {
+      return ApiResponse<Setting>(
+        success: false,
+        data: const [],
+        error: 'Failed to get TV setting profile: $e',
+      );
+    }
+  }
+
 Future<Map<String, dynamic>> getSettingFormDropdown({
   String? furnaceNo,
   String? cpNo,
@@ -113,10 +127,6 @@ Future<Map<String, dynamic>> getSettingFormDropdown({
     '/furnace-cache/search',
     queryParameters: query,
   );
-
-    debugPrint('The query = $query');
-    debugPrint('the response = $res');
-
   return res;
 }
 
@@ -140,6 +150,7 @@ Future<Map<String, dynamic>> getSettingFormDropdown({
   }) async {
     final req = form.toRequest(ruleNameById: ruleNameById);
     final body = req.toJson();
+    print(body);
     return await ApiConfig().post<Map<String, dynamic>>('/setting/create', body);
   }
 
@@ -150,6 +161,8 @@ Future<Map<String, dynamic>> getSettingFormDropdown({
   }) async {
     final req = form.toRequest(ruleNameById: ruleNameById);
     final body = req.toJson();
+    print(body);
+    print('/setting/update/$id');
     return await ApiConfig().patch<Map<String, dynamic>>(
       '/setting/update/$id',
       data: body,

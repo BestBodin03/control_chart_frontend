@@ -49,6 +49,10 @@ class ApiResponse<T> {
       return ApiResponse<T>.fromJson(body, fromJsonT);
     }
 
+    if (body is Response<dynamic>) {
+
+    }
+
     if (body is List) {
       // Fallback: raw list → treat as success (no status/statusCode checks)
       final items =

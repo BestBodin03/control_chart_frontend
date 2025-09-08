@@ -3,12 +3,16 @@ import 'package:control_chart/ui/core/layout/app_drawer/collapsed_app_drawer.dar
 import 'package:control_chart/ui/core/shared/date_time_component.dart';
 import 'package:control_chart/ui/screen/chart_detail_screen.dart';
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content.dart';
+import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
 import 'package:control_chart/ui/screen/searching_screen.dart';
 import 'package:control_chart/ui/screen/setting_screen.dart';
 import 'package:flutter/material.dart';
 
 class MyHomeScreen extends StatefulWidget {
-  const MyHomeScreen({super.key});
+  final HomeContentVar initialParams;
+  const MyHomeScreen({
+    super.key,
+    required this.initialParams});
 
   @override
   State<MyHomeScreen> createState() => _MyHomeScreenState();
@@ -16,7 +20,6 @@ class MyHomeScreen extends StatefulWidget {
 
 class _MyHomeScreenState extends State<MyHomeScreen> {
   int _selectedIndex = 0;
-
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -29,7 +32,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
     SettingScreen(),
     ChartDetailScreen(),
   ];
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
