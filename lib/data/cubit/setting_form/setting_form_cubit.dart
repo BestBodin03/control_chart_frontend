@@ -1,10 +1,17 @@
+import 'dart:convert';
+
 import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/bootstrap.dart';
 import 'package:control_chart/data/cubit/setting_form/extension/setting_form_state_to_request.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
 import 'package:control_chart/data/shared_preference/tv_setting_profile_pref.dart';
+import 'package:control_chart/data/shared_preference/tv_setting_profile_state.dart';
 import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/domain/models/setting_dynamic_dropdown.dart';
+import 'package:control_chart/ui/screen/home_screen.dart';
+import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
+import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile.dart';
+import 'package:control_chart/utils/app_store.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -71,16 +78,35 @@ class SettingFormCubit extends Cubit<SettingFormState> {
   }
 
   /// Add a new specific setting block
-  void addSpecificSetting() {
+  int addSpecificSetting() {
     final now = DateTime.now();
-    final updatedSpecifics = List<SpecificSettingState>.from(state.specifics)
+
+    // 1) เพิ่ม specific ใหม่
+    final list = List<SpecificSettingState>.from(state.specifics)
       ..add(SpecificSettingState(
         periodType: PeriodType.ONE_MONTH,
         startDate: DateTime(now.year, now.month - 1, now.day),
         endDate: now,
       ));
-    emit(state.copyWith(specifics: updatedSpecifics));
+    final newIndex = list.length - 1;
+
+    // 2) เตรียม dropdown ต่อ index ให้ว่าง (กัน dropdown โชว์ All อย่างเดียวเพราะ map ไม่มี key)
+    final fBy = Map<int, List<String>>.from(state.furnaceOptionsByIndex);
+    final cBy = Map<int, List<String>>.from(state.cpOptionsByIndex);
+    fBy[newIndex] = <String>[];
+    cBy[newIndex] = <String>[];
+
+    // 3) emit state ใหม่
+    emit(state.copyWith(
+      specifics: list,
+      furnaceOptionsByIndex: fBy,
+      cpOptionsByIndex: cBy,
+    ));
+
+    // 4) บอก index ที่เพิ่ม เพื่อให้ผู้เรียกไปโหลด options ต่อ
+    return newIndex;
   }
+
 
   /// Remove a specific setting block by index
   void removeSpecificSetting(int index) {
@@ -138,7 +164,7 @@ class SettingFormCubit extends Cubit<SettingFormState> {
   }
 
   /// Update CP number for a specific setting
-  void updateCpNo(int index, String cpNo) {
+  void updateCpNo(int index, String? cpNo) {
     if (index >= 0 && index < state.specifics.length) {
       final currentSetting = state.specifics[index];
       final updatedSetting = currentSetting.copyWith(cpNo: cpNo);
@@ -163,113 +189,140 @@ class SettingFormCubit extends Cubit<SettingFormState> {
     emit(existingState.copyWith(status: SubmitStatus.idle, error: null));
   }
 
-Future<SettingDynamicDropdownResponse> getDynamicFurnaceDropdown({
-  String? furnaceNo,
-  String? cpNo,
-}) async {
-  try {
-    // เรียก API
-    final result = await _settingApis.getSettingFormDropdown(
-      furnaceNo: furnaceNo,
-      cpNo: cpNo,
-    );
+  Future<SettingDynamicDropdownResponse> getDynamicFurnaceDropdown({
+    String? furnaceNo,
+    String? cpNo,
+  }) async {
+    try {
+      // เรียก API
+      final result = await _settingApis.getSettingFormDropdown(
+        furnaceNo: furnaceNo,
+        cpNo: cpNo,
+      );
 
-    // แปลงเป็น Model
-    return SettingDynamicDropdownResponse.fromJson(result);
-  } catch (e) {
-    rethrow; // หรือ emit error state ตามต้องการ
-  }
-}
-
-
-Future<bool> saveForm({String? id}) async {
-  // กันยิงซ้ำระหว่างกำลัง submit หรือ cubit ถูกปิดไปแล้ว
-  if (state.status == SubmitStatus.submitting || isClosed) return false;
-
-  // ตรวจความถูกต้องก่อนส่ง
-  if (!state.isValid) {
-    emit(state.copyWith(
-      status: SubmitStatus.failure,
-      error: 'Please fill all required fields correctly',
-    ));
-    return false;
-  }
-
-  // สถานะกำลังส่ง
-  emit(state.copyWith(status: SubmitStatus.submitting, error: null));
-
-  // สร้างแมพ ruleNameById แบบปลอดภัยต่อ null/ค่าว่าง
-  final Map<int, String> ruleNameById = {};
-  for (final r in state.ruleSelected) {
-    final rid = r.ruleId;
-    final name = r.ruleName?.trim();
-    if (rid != null && name != null && name.isNotEmpty) {
-      ruleNameById[rid] = name;
+      // แปลงเป็น Model
+      return SettingDynamicDropdownResponse.fromJson(result);
+    } catch (e) {
+      rethrow; // หรือ emit error state ตามต้องการ
     }
   }
 
-  // กัน path ผิดกรณี id เป็น "" หรือ "   "
-  final String? safeId =
-      (id == null || id.trim().isEmpty) ? null : id.trim();
+  void startEdit(Profile p) {
+      final specs = (p.specifics ?? const <dynamic>[])
+      .cast<SpecificSetting>()                           // 👈 บังคับเป็น SpecificSetting
+      .map<SpecificSettingState>(SpecificSettingState.fromModel)
+      .toList(growable: false);
 
-  try {
-    // เรียก API → ได้ JSON (Map) กลับมา
-    final Map<String, dynamic> res = safeId == null
-        ? await _settingApis.addNewSettingProfile(state, ruleNameById: ruleNameById)
-        : await _settingApis.updateSettingProfile(safeId, state, ruleNameById: ruleNameById);
+    emit(state.copyWith(
+      id: p.id,                       // <- เก็บ id ที่กำลังแก้
+      settingProfileName: p.name,
+      displayType: p.profileDisplayType!,
+      chartChangeInterval: p.chartChangeInterval!,
+      ruleSelected: p.ruleSelected!,
+      specifics: specs,
+      isUsed: p.active,
+    ));
+  }
 
-    // อ่านคีย์มาตรฐาน ถ้ามี
-    final bool? okPayload = res['success'] as bool?;
-    final String? serverMsg = (res['message'] ?? res['error'])?.toString();
+  Future<bool> saveForm({String? id}) async {
+    // กันยิงซ้ำระหว่างกำลัง submit หรือ cubit ถูกปิดไปแล้ว
+    if (state.status == SubmitStatus.submitting || isClosed) return false;
 
-    // ถ้า backend ไม่มีฟิลด์ success เลย ให้ถือว่า success ตามปกติ
-    final bool isSuccess = okPayload == null || okPayload == true;
-
-    if (isSuccess) {
-      emit(state.copyWith(status: SubmitStatus.success));
-      await TvSettingProfilePref().clear();
-      final newState = await bootstrap(
-        prefs: TvSettingProfilePref(),
-        api: SettingApis(),
-      );
-      return true;
-    } else {
-      final msg = serverMsg ?? 'Unexpected response: ${res.toString()}';
-      debugPrint('[saveForm] Fail: $msg');
-      emit(state.copyWith(status: SubmitStatus.failure, error: msg));
+    // ตรวจความถูกต้องก่อนส่ง
+    if (!state.isValid) {
+      emit(state.copyWith(
+        status: SubmitStatus.failure,
+        error: 'Please fill all required fields correctly',
+      ));
       return false;
     }
-  } on DioException catch (e, st) {
-    // ดึงข้อความจากฝั่งเซิร์ฟเวอร์ให้มากที่สุด
-    String msg = e.message ?? 'Network error';
-    final status = e.response?.statusCode;
-    final data = e.response?.data;
 
-    // พยายามอ่าน message/error จาก payload
-    if (data is Map<String, dynamic>) {
-      msg = (data['message'] ?? data['error'] ?? msg).toString();
-    } else if (data != null) {
-      msg = data.toString();
+    // สถานะกำลังส่ง
+    emit(state.copyWith(status: SubmitStatus.submitting, error: null));
+
+    // สร้างแมพ ruleNameById แบบปลอดภัยต่อ null/ค่าว่าง
+    final Map<int, String> ruleNameById = {};
+    for (final r in state.ruleSelected) {
+      final rid = r.ruleId;
+      final name = r.ruleName?.trim();
+      if (rid != null && name != null && name.isNotEmpty) {
+        ruleNameById[rid] = name;
+      }
     }
 
-    // จับเคสต่อเซิร์ฟเวอร์ไม่ได้ให้ข้อความอ่านง่าย
-    if (e.type == DioExceptionType.connectionError &&
-        (msg.contains('ECONNREFUSED') || msg.contains('Connection refused'))) {
-      msg = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ (connection refused)';
+    // กัน path ผิดกรณี id เป็น "" หรือ "   "
+    final String? safeId =
+        (id == null || id.trim().isEmpty) ? null : id.trim();
+
+    try {
+      // เรียก API → ได้ JSON (Map) กลับมา
+      final Map<String, dynamic> res = safeId == null
+          ? await _settingApis.addNewSettingProfile(state, ruleNameById: ruleNameById)
+          : await _settingApis.updateSettingProfile(safeId, state, ruleNameById: ruleNameById);
+
+      // อ่านคีย์มาตรฐาน ถ้ามี
+      final bool? okPayload = res['success'] as bool?;
+      final String? serverMsg = (res['message'] ?? res['error'])?.toString();
+
+      // ถ้า backend ไม่มีฟิลด์ success เลย ให้ถือว่า success ตามปกติ
+      final bool isSuccess = okPayload == null || okPayload == true;
+
+      if (isSuccess) {
+        emit(state.copyWith(status: SubmitStatus.success));
+
+        final prefs = TvSettingProfilePref();
+        final api = SettingApis();
+        final newTvProfile = await bootstrap(prefs: prefs, api: api);
+        prefs.clear();
+
+        // map prefs -> List<HomeContentVar> (ให้แน่ใจว่า listFromPrefs คืน "ลิสต์")
+        final List<HomeContentVar> newProfiles =
+            (newTvProfile is TvSettingProfileLoaded)
+                ? HomeContentVar.listFromPrefs(newTvProfile.data)
+                : <HomeContentVar>[];
+
+        // ✅ อัปเดตตัวกลาง → MyHomeScreen จะรีบิลด์เอง
+        AppStore.instance.homeProfiles.value = newProfiles;
+        return true;
+      } else {
+        final msg = serverMsg ?? 'Unexpected response: ${res.toString()}';
+        debugPrint('[saveForm] Fail: $msg');
+        emit(state.copyWith(status: SubmitStatus.failure, error: msg));
+        return false;
+      }
+
+
+    } on DioException catch (e, st) {
+      // ดึงข้อความจากฝั่งเซิร์ฟเวอร์ให้มากที่สุด
+      String msg = e.message ?? 'Network error';
+      final status = e.response?.statusCode;
+      final data = e.response?.data;
+
+      // พยายามอ่าน message/error จาก payload
+      if (data is Map<String, dynamic>) {
+        msg = (data['message'] ?? data['error'] ?? msg).toString();
+      } else if (data != null) {
+        msg = data.toString();
+      }
+
+      // จับเคสต่อเซิร์ฟเวอร์ไม่ได้ให้ข้อความอ่านง่าย
+      if (e.type == DioExceptionType.connectionError &&
+          (msg.contains('ECONNREFUSED') || msg.contains('Connection refused'))) {
+        msg = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ (connection refused)';
+      }
+
+      debugPrint('[saveForm] DioException HTTP $status : $msg');
+      debugPrint('[saveForm] Stack: $st');
+
+      emit(state.copyWith(status: SubmitStatus.failure, error: msg));
+      return false;
+    } catch (e, st) {
+      debugPrint('[saveForm] Unexpected error: $e');
+      debugPrint('[saveForm] Stack: $st');
+      emit(state.copyWith(status: SubmitStatus.failure, error: e.toString()));
+      return false;
     }
-
-    debugPrint('[saveForm] DioException HTTP $status : $msg');
-    debugPrint('[saveForm] Stack: $st');
-
-    emit(state.copyWith(status: SubmitStatus.failure, error: msg));
-    return false;
-  } catch (e, st) {
-    debugPrint('[saveForm] Unexpected error: $e');
-    debugPrint('[saveForm] Stack: $st');
-    emit(state.copyWith(status: SubmitStatus.failure, error: e.toString()));
-    return false;
   }
-}
 
   /// Validate form and return validation errors
   List<String> validateForm() {
@@ -321,37 +374,51 @@ Future<bool> saveForm({String? id}) async {
     return errors;
   }
 
-  Future<void> loadDropdownOptions({String? furnaceNo, String? cpNo}) async {
-    emit(state.copyWith(dropdownLoading: true));
-    try {
-      final json = await _settingApis.getSettingFormDropdown(
-        furnaceNo: furnaceNo,
-        cpNo: cpNo,
-      );
+Future<void> loadDropdownOptions({
+  required int index,
+  String? furnaceNo,
+  String? cpNo,
+}) async {
+  emit(state.copyWith(dropdownLoading: true));
+  try {
+    final json = await _settingApis.getSettingFormDropdown(
+      furnaceNo: furnaceNo,
+      cpNo: cpNo,
+    );
 
-      // บางแบ็กเอนด์ห่อใน data, บางทีก็ไม่ห่อ → รองรับทั้งคู่
-      final payload = (json['data'] is Map<String, dynamic>)
-          ? json['data'] as Map<String, dynamic>
-          : json;
+    final payload = (json['data'] is Map<String, dynamic>)
+        ? json['data'] as Map<String, dynamic>
+        : json as Map<String, dynamic>;
 
-      List<String> _toStringList(dynamic v) {
-        if (v == null) return <String>[];
-        if (v is List) return v.map((e) => e?.toString()).whereType<String>().toList();
-        // สเกลาร์ (num/string/อื่น ๆ) → เป็นลิสต์ 1 ตัว
-        return <String>[v.toString()];
+    List<String> _toStringList(dynamic v) {
+      if (v == null) return <String>[];
+      if (v is List) {
+        return v.map((e) => e?.toString()).whereType<String>().toList();
       }
-
-      final furnaces = _toStringList(payload['furnaceNo']);
-      final cps      = _toStringList(payload['cpNo']);
-
-      emit(state.copyWith(
-        dropdownLoading: false,
-        furnaceOptions: furnaces, // <- ควรเป็น List<String> ใน state
-        cpOptions: cps,           // <- ควรเป็น List<String> ใน state
-      ));
-    } catch (_) {
-      emit(state.copyWith(dropdownLoading: false));
+      return <String>[v.toString()];
     }
+
+    final furnaces = _toStringList(payload['furnaceNo']);
+    final cps      = _toStringList(payload['cpNo']);
+
+    // ✅ update ตาม index
+    final fBy = Map<int, List<String>>.from(state.furnaceOptionsByIndex);
+    final cBy = Map<int, List<String>>.from(state.cpOptionsByIndex);
+    fBy[index] = furnaces;
+    cBy[index] = cps;
+
+    emit(state.copyWith(
+      dropdownLoading: false,
+      furnaceOptionsByIndex: fBy,
+      cpOptionsByIndex: cBy,
+    ));
+  } catch (e) {
+    emit(state.copyWith(dropdownLoading: false));
   }
+}
+
+
+
+
 
 }

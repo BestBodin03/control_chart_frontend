@@ -57,8 +57,6 @@ Map<String, dynamic> _$GeneralSettingToJson(GeneralSetting instance) =>
 NelsonRule _$NelsonRuleFromJson(Map<String, dynamic> json) => NelsonRule(
   ruleId: (json['ruleId'] as num).toInt(),
   ruleName: json['ruleName'] as String,
-  ruleDescription: json['ruleDescription'] as String?,
-  ruleIndicated: json['ruleIndicated'] as String?,
   isUsed: json['isUsed'] as bool,
 );
 
@@ -66,8 +64,6 @@ Map<String, dynamic> _$NelsonRuleToJson(NelsonRule instance) =>
     <String, dynamic>{
       'ruleId': instance.ruleId,
       'ruleName': instance.ruleName,
-      'ruleDescription': instance.ruleDescription,
-      'ruleIndicated': instance.ruleIndicated,
       'isUsed': instance.isUsed,
     };
 

@@ -283,7 +283,7 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
       children: [
         // buildLegendItem('USL', Colors.red, false, formatValue(controlChartStats?.specAttribute?.)),
         buildLegendItem('UCL', Colors.orange, false, formatValue(controlChartStats?.controlLimitMRChart?.ucl)),
-        buildLegendItem('AVG', Colors.green, false, formatValue(controlChartStats?.average)),
+        buildLegendItem('AVG', Colors.green, false, formatValue(controlChartStats?.mrAverage)),
         // buildLegendItem('LCL', Colors.orange, false, formatValue(controlChartStats?.controlLimitIChart?.lcl)),
         // buildLegendItem('LSL', Colors.red, false, formatValue(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec)),
       ],

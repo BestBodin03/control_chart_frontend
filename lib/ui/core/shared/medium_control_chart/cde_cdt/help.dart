@@ -1,5 +1,16 @@
 import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
+import 'package:control_chart/domain/types/chart_filter_query.dart';
+import 'package:control_chart/ui/core/design_system/app_color.dart';
+import 'package:control_chart/ui/core/design_system/app_typography.dart';
+import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_template.dart';
+import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
+import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
+import 'package:flutter/material.dart';
+
+// file: cde_cdt_section.dart
+import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
+import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/control_chart_template.dart';
@@ -7,79 +18,85 @@ import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/material.dart';
 
-Widget buildChartsSectionCdeCdt(HomeContentVar settingProfile,SearchState searchState) {
-
-return Row(
-  children: [
-    Expanded(
-      child: _buildChartContainerCdeCdt(
-        title:
+/// ==============================
+/// Public builder
+/// ==============================
+Widget buildChartsSectionCdeCdt(
+  HomeContentVar settingProfile,
+  SearchState searchState,
+) {
+  return SizedBox.expand(
+    child: _buildChartContainerCdeCdt(
+      title:
           "Furnace ${settingProfile.furnaceNo ?? "-"} "
           " | Material ${settingProfile.materialNo ?? '-'}"
           " | Date ${fmtDate(settingProfile.startDate)} - ${fmtDate(settingProfile.endDate)}",
-        searchState: searchState,
-      ),
+      settingProfile: settingProfile,
+      searchState: searchState,
     ),
-  ],
-);
-
+  );
 }
 
+/// ==============================
+/// Container (title + 2 charts)
+/// ==============================
 Widget _buildChartContainerCdeCdt({
   required String title,
+  required HomeContentVar settingProfile,
   required SearchState searchState,
-
-
 }) {
   return LayoutBuilder(
     builder: (context, constraints) {
       final totalH = constraints.maxHeight;
       const outerPadTop = 8.0;
       const outerPadBottom = 16.0;
-      const titleH = 24.0;              // ความสูงข้อความหัวข้อด้านบน
-      const sectionLabelH = 20.0;       // ความสูง label "Individual"/"Moving Range"
-      const gapV = 8.0;                 // ช่องว่างระหว่างส่วนต่าง ๆ
-      // ความสูงที่เหลือสำหรับกราฟจริง (สองใบ)
+      const titleH = 24.0;
+      const sectionLabelH = 20.0;
+      const gapV = 8.0;
+
       final chartsAreaH = (totalH
-          - outerPadTop - outerPadBottom
-          - titleH
-          - gapV // ระหว่าง title กับการ์ด
-          - 8.0 // padding ในการ์ดเหนือ "Individual"
-          - sectionLabelH
-          - gapV
-          - sectionLabelH
-          - 8.0 // padding ใต้การ์ด
-      ).clamp(0.0, double.infinity);
+              - outerPadTop - outerPadBottom
+              - titleH
+              - gapV
+              - 8.0 // padding top inside card
+              - sectionLabelH
+              - gapV
+              - sectionLabelH
+              - 8.0 // padding bottom inside card
+          ).clamp(0.0, double.infinity);
 
       final eachChartH = (chartsAreaH / 2).clamp(0.0, double.infinity);
 
-  String cdeOrCdtLabel(num? cde, num? cdt, num? compoundLayer) {
-    final a = (cde ?? 0).toDouble();
-    final b = (cdt ?? 0).toDouble();
-    final c = (compoundLayer ?? 0).toDouble();
+      String cdeOrCdtLabel(num? cde, num? cdt, num? compoundLayer) {
+        final a = (cde ?? 0).toDouble();
+        final b = (cdt ?? 0).toDouble();
+        final c = (compoundLayer ?? 0).toDouble();
+        int nonZero = 0;
+        if (a != 0) nonZero++;
+        if (b != 0) nonZero++;
+        if (c != 0) nonZero++;
+        if (nonZero > 1) return 'N/A';
+        if (a != 0) return 'CDE';
+        if (b != 0) return 'CDT';
+        if (c != 0) return 'Compound Layer';
+        return 'N/A';
+      }
 
-    int nonZeroCount = 0;
-    if (a != 0) nonZeroCount++;
-    if (b != 0) nonZeroCount++;
-    if (c != 0) nonZeroCount++;
-
-    if (nonZeroCount > 1) return 'N/A';
-    if (a != 0) return 'CDE';
-    if (b != 0) return 'CDT';
-    if (c != 0) return 'Compound Layer';
-
-    return 'N/A';
-  }
+      final label = cdeOrCdtLabel(
+        searchState.controlChartStats?.cdeAverage,
+        searchState.controlChartStats?.cdtAverage,
+        searchState.controlChartStats?.compoundLayerAverage,
+      );
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Title
           Padding(
-            padding: const EdgeInsets.fromLTRB(0,0,0,8),
+            padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [ Text(title, style: AppTypography.textBody2BBold) ],
+              children: [Text(title, style: AppTypography.textBody2BBold)],
             ),
           ),
 
@@ -98,17 +115,16 @@ Widget _buildChartContainerCdeCdt({
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: Column(
                   children: [
-                    // Label
+                    // Label บน: Control Chart
                     Padding(
-                      padding: EdgeInsets.symmetric(vertical: 4.0),
-                      child: Text("Control Chart | ${cdeOrCdtLabel(
-                          searchState.controlChartStats?.cdeAverage,
-                          searchState.controlChartStats?.cdtAverage,
-                          searchState.controlChartStats?.compoundLayerAverage,
-                        )}", style: AppTypography.textBody3BBold),
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Text(
+                        "$label | Control Chart",
+                        style: AppTypography.textBody3BBold,
+                      ),
                     ),
-                    // ✅ กราฟบน: ล็อกความสูง
                     _buildSingleChart(
+                      settingProfile: settingProfile,
                       searchState: searchState,
                       isMovingRange: false,
                       height: eachChartH,
@@ -116,20 +132,16 @@ Widget _buildChartContainerCdeCdt({
 
                     const SizedBox(height: 8),
 
+                    // Label ล่าง: Moving Range
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4.0),
                       child: Text(
-                        "Moving Range | ${cdeOrCdtLabel(
-                          searchState.controlChartStats?.cdeAverage,
-                          searchState.controlChartStats?.cdtAverage,
-                          searchState.controlChartStats?.compoundLayerAverage,
-                        )}",
+                        "$label | Moving Range",
                         style: AppTypography.textBody3BBold,
                       ),
                     ),
-
-                    // ✅ กราฟล่าง: ล็อกความสูง
                     _buildMrChart(
+                      settingProfile: settingProfile,
                       searchState: searchState,
                       isMovingRange: true,
                       height: eachChartH,
@@ -145,182 +157,132 @@ Widget _buildChartContainerCdeCdt({
   );
 }
 
-
+/// ==============================
+/// Upper chart (Control Chart)
+/// ==============================
 Widget _buildSingleChart({
+  required HomeContentVar settingProfile,
   required SearchState searchState,
   required bool isMovingRange,
-  required double height,        // ← เพิ่ม
+  required double height,
 }) {
+  if (searchState.status == SearchStatus.loading) {
+    return const Center(
+      child: SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+    );
+  }
+  if (searchState.status == SearchStatus.failure) {
+    return const _SmallError();
+  }
+  if (searchState.controlChartStats == null ||
+      searchState.chartDetails.isEmpty) {
+    return const _SmallNoData();
+  }
+
+  final uniqueKey = '${settingProfile.startDate?.millisecondsSinceEpoch ?? 0}-'
+      '${settingProfile.endDate?.millisecondsSinceEpoch ?? 0}-'
+      '${settingProfile.furnaceNo ?? ''}-'
+      '${settingProfile.materialNo ?? ''}-';
+
   return SizedBox(
     width: double.infinity,
-    height: height,              // ← ล็อกความสูงจริง
+    height: height,
     child: DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: _buildChartContent(
-        searchState: searchState,
-        isMovingRange: isMovingRange,
-        forcedHeight: height,     // ← ส่ง Height ลงไปถึง Template
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: ControlChartTemplateCdeCdt(
+          key: ValueKey(uniqueKey.hashCode.toString()),
+          isMovingRange: false,
+          height: height,
+        ),
       ),
     ),
   );
 }
 
+/// ==============================
+/// Lower chart (Moving Range)
+/// ==============================
 Widget _buildMrChart({
+  required HomeContentVar settingProfile,
   required SearchState searchState,
   required bool isMovingRange,
-  required double height,        // ← เพิ่ม
+  required double height,
 }) {
+  if (searchState.status == SearchStatus.loading) {
+    return const Center(
+      child: SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+    );
+  }
+  if (searchState.status == SearchStatus.failure) {
+    return const _SmallError();
+  }
+  if (searchState.controlChartStats == null ||
+      searchState.chartDetails.isEmpty) {
+    return const _SmallNoData();
+  }
+
+  final uniqueKey = '${settingProfile.startDate?.millisecondsSinceEpoch ?? 0}-'
+      '${settingProfile.endDate?.millisecondsSinceEpoch ?? 0}-'
+      '${settingProfile.furnaceNo ?? ''}-'
+      '${settingProfile.materialNo ?? ''}-';
+
   return SizedBox(
     width: double.infinity,
-    height: height,              // ← ล็อกความสูงจริง
+    height: height,
     child: DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: _buildMrChartContent(
-        searchState: searchState,
-        isMovingRange: true,
-        forcedHeight: height,     // ← ส่ง Height ลงไปถึง Template
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: ControlChartTemplateCdeCdt(
+          key: ValueKey(uniqueKey.hashCode.toString()),
+          isMovingRange: true,
+          height: height,
+        ),
       ),
     ),
   );
 }
 
-
-Widget _buildChartContent({
-  required SearchState searchState,
-  // required ChartType chartType,
-  required bool isMovingRange,
-  double? forcedHeight, 
-}) {
-  // Handle loading state
-  if (searchState.status == SearchStatus.loading) {
-    return const Center(
-      child: SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      ),
-    );
-  }
-  
-  // Handle error state
-  if (searchState.status == SearchStatus.failure) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 16, color: Colors.red),
-          SizedBox(height: 4),
-          Text(
-            'จำนวนข้อมูลไม่เพียงพอ',
-            style: TextStyle(fontSize: 10, color: Colors.red),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  // Handle empty data
-  if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
-    return Center(
-      child: Text(
-        'No Data',
-        style: TextStyle(fontSize: 12, color: Colors.grey),
-      ),
-    );
-  }
-
-  // Generate unique key for chart
-  final query = searchState.currentQuery;
-  final uniqueKey = '${query.startDate?.day}-'
-      '${query.endDate?.millisecondsSinceEpoch}-'
-      '${query.furnaceNo}-'
-      '${query.materialNo}-';
-  final dataPoints = searchState.chartDataPointsCdeCdt;
-
-  return ClipRRect(
-    borderRadius: BorderRadius.circular(4),
-    child: ControlChartTemplateCdeCdt(
-      key: ValueKey(uniqueKey.hashCode.toString()),
-      dataPoints: dataPoints,
-      controlChartStats: searchState.controlChartStats!,
-      dataLineColor: AppColors.colorBrand,
-      width: double.infinity,
-      // width: 100.0,
-      height: forcedHeight, 
-      isMovingRange: false,
-    ),
-  );
+/// ==============================
+/// Small states
+/// ==============================
+class _SmallError extends StatelessWidget {
+  const _SmallError({super.key});
+  @override
+  Widget build(BuildContext context) => const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 16, color: Colors.red),
+            SizedBox(height: 4),
+            Text('จำนวนข้อมูลไม่เพียงพอ',
+                style: TextStyle(fontSize: 10, color: Colors.red)),
+          ],
+        ),
+      );
 }
 
-Widget _buildMrChartContent({
-  required SearchState searchState,
-  // required ChartType chartType,
-  required bool isMovingRange,
-  double? forcedHeight, 
-}) {
-  // Handle loading state
-  if (searchState.status == SearchStatus.loading) {
-    return const Center(
-      child: SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      ),
-    );
-  }
-  
-  // Handle error state
-  if (searchState.status == SearchStatus.failure) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 16, color: Colors.red),
-          SizedBox(height: 4),
-          Text(
-            'จำนวนข้อมูลไม่เพียงพอ',
-            style: TextStyle(fontSize: 10, color: Colors.red),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  // Handle empty data
-  if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
-    return Center(
-      child: Text(
-        'No Data',
-        style: TextStyle(fontSize: 12, color: Colors.grey),
-      ),
-    );
-  }
-
-  // Generate unique key for chart
-  final query = searchState.currentQuery;
-  final uniqueKey = '${query.startDate?.day}-'
-      '${query.endDate?.millisecondsSinceEpoch}-'
-      '${query.furnaceNo}-'
-      '${query.materialNo}-';
-  final dataPoints = searchState.chartDataPointsCdeCdt;
-
-  return ClipRRect(
-    borderRadius: BorderRadius.circular(4),
-    child: ControlChartTemplateCdeCdt(
-      key: ValueKey(uniqueKey.hashCode.toString()),
-      dataPoints: dataPoints,
-      controlChartStats: searchState.controlChartStats!,
-      dataLineColor: AppColors.colorBrand,
-      width: double.infinity,
-      // width: 100.0,
-      height: forcedHeight, 
-      isMovingRange: true,
-    ),
-  );
+class _SmallNoData extends StatelessWidget {
+  const _SmallNoData({super.key});
+  @override
+  Widget build(BuildContext context) => const Center(
+        child: Text('No Data',
+            style: TextStyle(fontSize: 12, color: Colors.grey)),
+      );
 }

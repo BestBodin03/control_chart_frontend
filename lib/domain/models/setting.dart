@@ -55,8 +55,6 @@ class NelsonRule {
   const NelsonRule({
     required this.ruleId,
     required this.ruleName,
-    this.ruleDescription,
-    this.ruleIndicated,
     required this.isUsed,
   });
 
@@ -65,8 +63,6 @@ class NelsonRule {
 
   final int ruleId;
   final String ruleName;
-  final String? ruleDescription;
-  final String? ruleIndicated;
   final bool isUsed;
 
   Map<String, dynamic> toJson() => _$NelsonRuleToJson(this);

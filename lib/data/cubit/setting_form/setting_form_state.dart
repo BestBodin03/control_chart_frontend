@@ -1,30 +1,24 @@
 import 'package:control_chart/domain/models/setting.dart';
-import 'package:control_chart/domain/models/setting_request.dart';
+// import 'package:control_chart/domain/models/setting_request.dart'; // ถ้าไม่ใช้ลบออกได้
 import 'package:flutter/material.dart';
 
-import 'package:control_chart/domain/models/setting.dart';
-import 'package:control_chart/domain/models/setting_request.dart';
-import 'package:flutter/material.dart';
+// ลบ import ซ้ำ
+// import 'package:control_chart/domain/models/setting.dart';
+// import 'package:control_chart/domain/models/setting_request.dart';
+// import 'package:flutter/material.dart';
 
 enum SubmitStatus { idle, submitting, success, failure }
-enum PeriodTypeReq { ONE_MONTH, THREE_MONTHS, SIX_MONTHS, ONE_YEAR, CUSTOM, LIFETIME }
+// ถ้าไม่ได้ใช้ PeriodTypeReq ในที่อื่น แนะนำลบออกเพื่อลดสับสน
+// enum PeriodTypeReq { ONE_MONTH, THREE_MONTHS, SIX_MONTHS, ONE_YEAR, CUSTOM, LIFETIME }
 
 class RuleSelected {
   final int? ruleId;
   final String? ruleName;
   final bool? isUsed;
 
-  const RuleSelected({
-    this.ruleId,
-    this.ruleName,
-    this.isUsed,
-  });
+  const RuleSelected({this.ruleId, this.ruleName, this.isUsed});
 
-  RuleSelected copyWith({
-    int? ruleId,
-    String? ruleName,
-    bool? isUsed,
-  }) {
+  RuleSelected copyWith({int? ruleId, String? ruleName, bool? isUsed}) {
     return RuleSelected(
       ruleId: ruleId ?? this.ruleId,
       ruleName: ruleName ?? this.ruleName,
@@ -32,7 +26,6 @@ class RuleSelected {
     );
   }
 
-  /// factory สำหรับแปลงจาก NelsonRule → RuleSelected
   factory RuleSelected.fromNelson(NelsonRule n) {
     return RuleSelected(
       ruleId: n.ruleId,
@@ -42,8 +35,7 @@ class RuleSelected {
   }
 
   @override
-  String toString() =>
-      'RuleSelected(ruleId: $ruleId, ruleName: $ruleName, isUsed: $isUsed)';
+  String toString() => 'RuleSelected(ruleId: $ruleId, ruleName: $ruleName, isUsed: $isUsed)';
 }
 
 class SpecificSettingState {
@@ -77,7 +69,6 @@ class SpecificSettingState {
     );
   }
 
-  /// ✅ แปลงจาก Domain Model → State
   factory SpecificSettingState.fromModel(SpecificSetting model) {
     return SpecificSettingState(
       periodType: model.period?.type,
@@ -88,11 +79,10 @@ class SpecificSettingState {
     );
   }
 
-  /// ✅ แปลงจาก State → Domain Model
   SpecificSetting toModel() {
     return SpecificSetting(
       period: Period(
-        type: periodType ?? PeriodType.ONE_MONTH, // default fallback
+        type: periodType ?? PeriodType.ONE_MONTH,
         startDate: startDate,
         endDate: endDate,
       ),
@@ -103,13 +93,11 @@ class SpecificSettingState {
 
   @override
   String toString() {
-    return 'SpecificSettingState(periodType: $periodType, '
-        'startDate: $startDate, endDate: $endDate, '
-        'furnaceNo: $furnaceNo, cpNo: $cpNo)';
+    return 'SpecificSettingState(periodType: $periodType, startDate: $startDate, '
+        'endDate: $endDate, furnaceNo: $furnaceNo, cpNo: $cpNo)';
   }
 }
 
-/// Single state object with a status enum
 class SettingFormState {
   final String settingProfileName;
   final bool isUsed;
@@ -120,10 +108,10 @@ class SettingFormState {
   final SubmitStatus status;
   final String? error;
 
-  // 🔹 Step 1: ฟิลด์สำหรับ dropdown แบบไดนามิก
+  // ✅ dynamic dropdown (ต่อ index)
   final bool dropdownLoading;
-  final List<String> furnaceOptions;     // จาก API -> data.furnaceNo
-  final List<String> cpOptions;       // จาก API -> data.cpNo
+  final Map<int, List<String>> furnaceOptionsByIndex; // index -> [furnaceNo...]
+  final Map<int, List<String>> cpOptionsByIndex;       // index -> [cpNo...]
 
   const SettingFormState({
     this.settingProfileName = '',
@@ -134,11 +122,9 @@ class SettingFormState {
     this.specifics = const [],
     this.status = SubmitStatus.idle,
     this.error,
-
-    // 🔹 ค่าเริ่มต้นของ Step 1
     this.dropdownLoading = false,
-    this.furnaceOptions = const [],
-    this.cpOptions = const [],
+    this.furnaceOptionsByIndex = const {},
+    this.cpOptionsByIndex = const {},
   });
 
   bool get isValid {
@@ -147,18 +133,12 @@ class SettingFormState {
     if (specifics.isEmpty) return false;
 
     for (final sp in specifics) {
-      if (sp.periodType == null ||
-          sp.startDate == null ||
-          sp.endDate == null) {
-        return false;
-      }
+      if (sp.periodType == null || sp.startDate == null || sp.endDate == null) return false;
 
-      if (displayType == DisplayType.FURNACE ||
-          displayType == DisplayType.FURNACE_CP) {
+      if (displayType == DisplayType.FURNACE || displayType == DisplayType.FURNACE_CP) {
         if (sp.furnaceNo == null) return false;
       }
-      if (displayType == DisplayType.CP ||
-          displayType == DisplayType.FURNACE_CP) {
+      if (displayType == DisplayType.CP || displayType == DisplayType.FURNACE_CP) {
         if ((sp.cpNo ?? '').trim().isEmpty) return false;
       }
     }
@@ -166,6 +146,7 @@ class SettingFormState {
   }
 
   SettingFormState copyWith({
+    String? id,
     String? settingProfileName,
     bool? isUsed,
     DisplayType? displayType,
@@ -174,11 +155,9 @@ class SettingFormState {
     List<SpecificSettingState>? specifics,
     SubmitStatus? status,
     String? error,
-
-    // 🔹 รองรับฟิลด์ใหม่ใน copyWith
     bool? dropdownLoading,
-    List<String>? furnaceOptions,
-    List<String>? cpOptions,
+    Map<int, List<String>>? furnaceOptionsByIndex,
+    Map<int, List<String>>? cpOptionsByIndex,
   }) {
     return SettingFormState(
       settingProfileName: settingProfileName ?? this.settingProfileName,
@@ -188,27 +167,18 @@ class SettingFormState {
       ruleSelected: ruleSelected ?? this.ruleSelected,
       specifics: specifics ?? this.specifics,
       status: status ?? this.status,
-      error: error,
-
+      error: error ?? this.error,
       dropdownLoading: dropdownLoading ?? this.dropdownLoading,
-      furnaceOptions: furnaceOptions ?? this.furnaceOptions,
-      cpOptions: cpOptions ?? this.cpOptions,
+      furnaceOptionsByIndex: furnaceOptionsByIndex ?? this.furnaceOptionsByIndex,
+      cpOptionsByIndex: cpOptionsByIndex ?? this.cpOptionsByIndex,
     );
   }
 
   @override
   String toString() => 'SettingFormState('
-      'settingProfileName: $settingProfileName, '
-      'isUsed: $isUsed, '
-      'displayType: $displayType, '
-      'chartChangeInterval: $chartChangeInterval, '
-      'ruleSelected: $ruleSelected, '
-      'specifics: $specifics, '
-      'status: $status, '
-      'error: $error, '
-      'dropdownLoading: $dropdownLoading, '
-      'furnaceOptions: $furnaceOptions, '
-      'cpOptions: $cpOptions'
+      'settingProfileName: $settingProfileName, isUsed: $isUsed, displayType: $displayType, '
+      'chartChangeInterval: $chartChangeInterval, ruleSelected: $ruleSelected, specifics: $specifics, '
+      'status: $status, error: $error, dropdownLoading: $dropdownLoading, '
+      'furnaceOptionsByIndex: $furnaceOptionsByIndex, cpOptionsByIndex: $cpOptionsByIndex'
       ')';
 }
-

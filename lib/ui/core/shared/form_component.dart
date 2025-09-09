@@ -109,6 +109,7 @@ Widget buildTextField({
 
 
   Widget buildDropdownField({
+    ValueKey? key,
     String? value, // เปลี่ยนเป็น nullable
     required List<String> items,
     required Function(String?) onChanged,
@@ -248,6 +249,7 @@ Widget buildTextField({
   }
 
   Widget buildDateField({
+    ValueKey? key,
     required String label,
     required DateTime date,
     required VoidCallback onTap,

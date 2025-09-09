@@ -2,6 +2,7 @@ import 'package:control_chart/data/bloc/setting_profile/setting_profile_bloc.dar
 import 'package:control_chart/data/cubit/setting_form/setting_form_cubit.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
+import 'package:control_chart/ui/core/shared/setting_form.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/foundation.dart';
@@ -88,8 +89,31 @@ class _ProfileCardState extends State<ProfileCard> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: widget.onEdit ?? () {
-                        },
+                      onTap: widget.onEdit ?? () {
+                        final cubit = context.read<SettingFormCubit>();
+
+                        // 1) log สิ่งที่จะส่งเข้า startEdit
+                        debugPrint('[edit] incoming profile: id=${widget.profile.id}'
+                                  ', name=${widget.profile.name}'
+                                  ', specificsType=${widget.profile.specifics.runtimeType}');
+
+                        // 2) ส่งทั้ง profile (อย่าส่ง id) และอย่าเรียกซ้ำ
+                        cubit.startEdit(widget.profile);
+
+                        // // 3) log state หลัง startEdit เพื่อยืนยันว่า id เข้าแล้ว
+                        // debugPrint('[edit] cubit.state.id=${cubit.state.}'
+                        //           ', specificsCount=${cubit.state.specifics.length}');
+
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => BlocProvider.value(
+                              value: cubit,
+                              child: const SettingForm(),
+                            ),
+                          ),
+                        );
+                      },
+
                         child: MouseRegion(
                           cursor: SystemMouseCursors.click,
                           child: Container(
@@ -156,9 +180,16 @@ class _ProfileCardState extends State<ProfileCard> {
                             if (!mounted) return;
 
                             if (success) {
-                                  context
-                                  .read<SettingProfileBloc>()
-                                  .add(const RefreshSettingProfiles());
+                              context
+                              .read<SettingProfileBloc>()
+                              .add(const RefreshSettingProfiles());
+                              
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('บันทึกข้อมูลเรียบร้อยแล้ว'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
                             }
 
                 

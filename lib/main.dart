@@ -32,15 +32,18 @@ Future<void> main() async {
 
   // แปลง prefs -> POJO สำหรับจอแรก
   final initialParams = (state is TvSettingProfileLoaded)
-      ? HomeContentVar.fromPrefs(state.data)
+      ? HomeContentVar.listFromPrefs(state.data)
       : const HomeContentVar();
 
   runApp(MyApp(initialParams: initialParams)); // <-- ส่งค่าเข้า MyApp
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key, required this.initialParams}); // <- รับค่าไว้
-  final HomeContentVar initialParams;
+  const MyApp({
+    super.key,
+    this.initialParams, 
+    }); // <- รับค่าไว้
+  final dynamic initialParams;
 
   @override
   Widget build(BuildContext context) {

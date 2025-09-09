@@ -101,7 +101,7 @@ class SettingApis {
     try {
       final Response res = await ApiConfig().get('/setting/setting-profile-for-tv');
       final result = ApiResponse.fromResponse<Setting>(res, Setting.fromJson);
-      debugPrint('In API: $result');
+      // debugPrint('In API: $result');
       return result;
     } catch (e) {
       return ApiResponse<Setting>(
@@ -116,9 +116,10 @@ Future<Map<String, dynamic>> getSettingFormDropdown({
   String? furnaceNo,
   String? cpNo,
 }) async {
+  // ถ้าส่งทั้งคู่ → ไม่ส่ง query เลย
   final query = <String, dynamic>{
-    if (furnaceNo != null && furnaceNo.isNotEmpty) 'furnaceNo': furnaceNo,
-    if (cpNo != null && cpNo.isNotEmpty) 'cpNo': null,
+    if (furnaceNo?.isNotEmpty ?? false) 'furnaceNo': furnaceNo,
+    if (cpNo?.isNotEmpty ?? false) 'cpNo': cpNo,
   };
 
   debugPrint('[API] GET /furnace-cache/search query=$query');
@@ -129,6 +130,7 @@ Future<Map<String, dynamic>> getSettingFormDropdown({
   );
   return res;
 }
+
 
 
   // Future<Response<dynamic>> getOneProfileSettingsById() async {
