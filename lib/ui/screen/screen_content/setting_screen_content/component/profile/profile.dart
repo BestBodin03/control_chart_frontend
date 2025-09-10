@@ -2,7 +2,7 @@ import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
 import 'package:control_chart/domain/models/setting.dart';
 
 class Profile {
-  final String id;
+  final String profileId;
   final String name;
   final String displayType;
   final DateTime createdAt;
@@ -15,7 +15,7 @@ class Profile {
   final String? error;
 
   const Profile({
-    required this.id,
+    required this.profileId,
     required this.name,
     required this.displayType,
     required this.createdAt,
@@ -31,7 +31,7 @@ class Profile {
   @override
   String toString() {
     return 'Profile('
-        'id: $id, '
+        'id: $profileId, '
         'name: $name, '
         'displayType: $displayType, '
         'createdAt: $createdAt, '

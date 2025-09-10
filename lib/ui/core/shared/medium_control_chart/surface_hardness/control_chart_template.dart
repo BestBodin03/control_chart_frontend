@@ -45,7 +45,7 @@ class ControlChartTemplate extends StatelessWidget {
               return const Center(child: CircularProgressIndicator(strokeWidth: 2));
             }
             if (state.status == SearchStatus.failure) {
-              return const Center(child: Text('จำนวนข้อมูลไม่เพียงพอ'));
+              return const Center(child: Text('จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ'));
             }
             if (state.controlChartStats == null || state.chartDataPoints.isEmpty) {
               return const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล'));

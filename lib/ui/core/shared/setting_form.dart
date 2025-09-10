@@ -16,9 +16,11 @@ import 'package:intl/intl.dart';
 class SettingForm extends StatefulWidget {
   const SettingForm({
     super.key,
-    this.profile});
+    this.profile,
+     this.onAddProfile});
 
     final Profile? profile;
+    final VoidCallback? onAddProfile;
 
   @override
   State<SettingForm> createState() => _SettingFormState();
@@ -26,10 +28,83 @@ class SettingForm extends StatefulWidget {
 
 class _SettingFormState extends State<SettingForm> {
   late final SettingBloc _settingBloc;
-  late final SettingFormCubit _settingCubit;
-  static const _periodItems = ['1 เดือน', '3 เดือน', '6 เดือน', '1 ปี', 'ตลอดเวลา', 'กำหนดเอง'];
   String selectedDisplayType = '';
   final double backgroundOpacity = 0.2;
+  final GlobalKey _saveBtnKey = GlobalKey();
+  OverlayEntry? _toastEntry;
+
+  Future<void> _showToastOnSaveButton(
+    String text, {
+    Duration duration = const Duration(milliseconds: 1500),
+  }) async {
+    // หา widget ปุ่มจาก GlobalKey
+    final renderBox = _saveBtnKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final size = renderBox.size;
+    final topLeft = renderBox.localToGlobal(Offset.zero);
+
+    // ลบของเดิมถ้ามี
+    _toastEntry?.remove();
+
+    _toastEntry = OverlayEntry(
+      builder: (context) {
+        return Positioned(
+          left: topLeft.dx,
+          top: topLeft.dy,
+          width: size.width,
+          height: size.height,
+          child: IgnorePointer(
+            ignoring: true, // ไม่บังการกด
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.colorBrand,
+                  // borderRadius: BorderRadius.circular(8),
+                ),
+                child: const DefaultTextStyle(
+                  style: TextStyle(color: Colors.white, fontSize: 18),
+                  child: Text(''), // จะใส่ข้อความจริงด้านล่าง
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    // แทรก overlay และใส่ข้อความ (ทำง่าย ๆ ด้วยการสร้างใหม่พร้อมข้อความ)
+    _toastEntry = OverlayEntry(
+      builder: (context) {
+        return Positioned(
+          left: topLeft.dx,
+          top: topLeft.dy,
+          width: size.width,
+          height: size.height,
+          child: IgnorePointer(
+            ignoring: true,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.colorBrand,
+                  // borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 18)),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    Overlay.of(context).insert(_toastEntry!);
+
+    await Future.delayed(duration);
+    _toastEntry?.remove();
+    _toastEntry = null;
+  }
 
 @override
 void initState() {
@@ -46,9 +121,19 @@ void initState() {
     }
 
     // โหลดรายการของ “ทุกแถว” ตาม index
-    for (var i = 0; i < formCubit.state.specifics.length; i++) {
-      formCubit.loadDropdownOptions(index: i); // ↩️ ให้ Cubit ดึง period/start/end เองจาก state
-    }
+for (var i = 0; i < formCubit.state.specifics.length; i++) {
+  final sp = formCubit.state.specifics[i];
+  formCubit.loadDropdownOptions(
+    index: i,
+    furnaceNo: (sp.furnaceNo == null || sp.furnaceNo == 0)
+        ? null
+        : sp.furnaceNo!.toString(),
+    cpNo: (sp.cpNo == null || sp.cpNo!.trim().isEmpty)
+        ? null
+        : sp.cpNo,
+  );
+}
+
   });
 }
 
@@ -56,6 +141,7 @@ void initState() {
   @override
   void dispose() {
     _settingBloc.close();
+    _toastEntry?.remove();
     super.dispose();
   }
 
@@ -103,10 +189,6 @@ void initState() {
               return const Center(child: Text('Error: ${'เกิดข้อผิดผลาด'}'));
             }
 
-            final form = state.formState;
-            final furnaces = state.furnaces;
-            final matNumbers = state.matNumbers;
-
             return SingleChildScrollView(
               child: SizedBox(
                 width: 332,
@@ -124,6 +206,7 @@ void initState() {
                         BlocBuilder<SettingFormCubit, SettingFormState>(
                           builder: (context, s) {
                             final cubit = context.read<SettingFormCubit>();
+                            debugPrint('The ID of this profile card: $s.profileId');
 
                             if (selectedDisplayType.isEmpty) {
                               switch (s.displayType) {
@@ -276,37 +359,42 @@ void initState() {
                                           const SizedBox(height: 8),
 
                                           // ===== ใน BlocBuilder<SettingFormCubit, SettingFormState> ด้านใน loop ของ specifics (มี index i) =====
-buildDropdownField(
-  key: ValueKey('period_$i'),
-  context: context,
-  value: _periodTypeToLabel(sp.periodType),
-  items: const ['1 เดือน','3 เดือน','6 เดือน','1 ปี','ตลอดเวลา','กำหนดเอง'],
-  onChanged: (value) {
-    if (value == null) return;
-    final now = DateTime.now();
-    DateTime? startAuto;
-    PeriodType period;
+                                          buildDropdownField(
+                                            key: ValueKey('period_$i'),
+                                            context: context,
+                                            value: _periodTypeToLabel(sp.periodType),
+                                            items: const ['1 เดือน','3 เดือน','6 เดือน','1 ปี','ตลอดเวลา','กำหนดเอง'],
+                                            onChanged: (value) {
+                                              if (value == null) return;
+                                              final now = DateTime.now();
+                                              DateTime? startAuto;
+                                              PeriodType period;
 
-    switch (value) {
-      case '1 เดือน': period = PeriodType.ONE_MONTH;   startAuto = DateTime(now.year, now.month - 1, now.day); break;
-      case '3 เดือน': period = PeriodType.THREE_MONTHS; startAuto = DateTime(now.year, now.month - 3, now.day); break;
-      case '6 เดือน': period = PeriodType.SIX_MONTHS;   startAuto = DateTime(now.year, now.month - 6, now.day); break;
-      case '1 ปี':    period = PeriodType.ONE_YEAR;     startAuto = DateTime(now.year - 1, now.month, now.day); break;
-      case 'ตลอดเวลา': period = PeriodType.LIFETIME;    startAuto = DateTime(2024, 1, 1); break;
-      default:         period = PeriodType.CUSTOM;       startAuto = null;
-    }
+                                              switch (value) {
+                                                case '1 เดือน': period = PeriodType.ONE_MONTH;   
+                                                  startAuto = DateTime(now.year, now.month - 1, now.day); break;
+                                                case '3 เดือน': period = PeriodType.THREE_MONTHS; 
+                                                  startAuto = DateTime(now.year, now.month - 3, now.day); break;
+                                                case '6 เดือน': period = PeriodType.SIX_MONTHS;   
+                                                  startAuto = DateTime(now.year, now.month - 6, now.day); break;
+                                                case '1 ปี':    period = PeriodType.ONE_YEAR;     
+                                                  startAuto = DateTime(now.year - 1, now.month, now.day); break;
+                                                case 'ตลอดเวลา': period = PeriodType.LIFETIME;    
+                                                  startAuto = DateTime(2024, 1, 1); break;
+                                                default: period = PeriodType.CUSTOM;       
+                                                  startAuto = null;
+                                              }
 
-    cubit.updatePeriodType(i, period);
-    if (period != PeriodType.CUSTOM) {
-      cubit
-        ..updateStartDate(i, startAuto!)
-        ..updateEndDate(i, now);
-    }
+                                              cubit.updatePeriodType(i, period);
+                                              if (period != PeriodType.CUSTOM) {
+                                                cubit
+                                                  ..updateStartDate(i, startAuto!)
+                                                  ..updateEndDate(i, now);
+                                              }
 
-    // ✅ รีโหลดรายการของ “แถวนี้” ให้ตรงกับ period ใหม่
-    cubit.loadDropdownOptions(index: i);
-  },
-),
+                                              cubit.loadDropdownOptions(index: i);
+                                            },
+                                          ),
 
 
                                             const SizedBox(height: 16),
@@ -421,66 +509,55 @@ buildDropdownField(
                           ),
                         ),
 
-                        SizedBox(
-                          width: double.infinity,
-                          height: 42,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.colorBrand,
-                              foregroundColor: AppColors.colorBg,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              elevation: 0,
-                            ),
-                            onPressed: () async {
-                              final cubit = context.read<SettingFormCubit>();
+                      Builder(
+                        builder: (context) {
+                          final cubit = context.read<SettingFormCubit>();
+                          final profileId  = context.select((SettingFormCubit c) => c.state.profileId);
+                          final isEditing  = (profileId?.isNotEmpty ?? false);
+                          final status     = context.select((SettingFormCubit c) => c.state.status);
+                          final error      = context.select((SettingFormCubit c) => c.state.error);
+                          final isSubmitting = status == SubmitStatus.submitting;
 
-                              final bool isUpdate = widget.profile!.id.isNotEmpty;
-                              print('the value of update or create: $isUpdate');
-                              print(widget.profile!.id);
+                          return SizedBox(
+                            width: double.infinity,
+                            height: 42,
+                            child: ElevatedButton(
+                              key: _saveBtnKey, // 👈 สำคัญ! ไว้หาตำแหน่ง/ขนาดปุ่ม
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.colorBrand,
+                                foregroundColor: AppColors.colorBg,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                elevation: 0,
+                              ),
+                              onPressed: isSubmitting ? null : () async {
+                                debugPrint('The ID Value To save $profileId');
 
-                              // ถ้าเป็นโหมด update → เซ็ตค่าเริ่มจาก profile เดิมก่อน
-                              if (isUpdate) {
-                                cubit
-                                  ..updateSettingProfileName(widget.profile!.name)
-                                  ..updateDisplayType(widget.profile!.profileDisplayType!)
-                                  ..updateChartChangeInterval(widget.profile!.chartChangeInterval!)
-                                  ..updateRuleSelected(widget.profile!.ruleSelected!)
-                                  ..updateSpecifics(widget.profile!.specifics!)
-                                  ..updateIsUsed(false);
-                              }
+                                var savedSuccess = await cubit.saveForm(
+                                  id: isEditing ? profileId : null,
+                                );
 
-                              // ✅ save โดยมีหรือไม่มี id
-                              final success = await cubit.saveForm(
-                                id: isUpdate ? widget.profile!.id : null,
-                              );
+                                // if (!context.mounted) return;
 
-                              if (success) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(isUpdate ? 'อัปเดตข้อมูลเรียบร้อยแล้ว' : 'บันทึกข้อมูลเรียบร้อยแล้ว'),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                  Navigator.pop(context, true);
-                                }
-                              } else {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(cubit.state.error ?? (isUpdate ? 'อัปเดตไม่สำเร็จ' : 'บันทึกไม่สำเร็จ')),
-                                      backgroundColor: Colors.red,
-                                    ),
+                                if (savedSuccess) {
+                                  await _showToastOnSaveButton('บันทึกข้อมูลเรียบร้อยแล้ว');
+                                  if (!context.mounted) return;
+                                  Navigator.pop(context, true); // parent will refresh
+                                } else {
+                                  // ❌ โชว์ error กลางปุ่มเช่นกัน (อยู่นานขึ้นหน่อย)
+                                  await _showToastOnSaveButton(
+                                    error ?? (isEditing ? 'อัปเดตไม่สำเร็จ' : 'บันทึกไม่สำเร็จ'),
+                                    duration: const Duration(milliseconds: 2000),
                                   );
                                 }
-                              }
-                            },
-                            child: Text(
-                              (widget.profile?.id.isNotEmpty ?? false) ? 'อัปเดต' : 'บันทึก',
-                              style: AppTypography.textBody2WBold,
+                              },
+                              child: isSubmitting
+                                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                  : Text(isEditing ? 'อัปเดต' : 'บันทึก', style: AppTypography.textBody2WBold),
                             ),
-                          ),
-                        ),
+                          );
+                        },
+                      ),
+
                       ],
                     ),
                   ),
@@ -506,55 +583,8 @@ buildDropdownField(
       default:                      return 'กำหนดเอง';
     }
   }
-  static DateTime? _toDateTime(dynamic v) {
-    if (v == null) return null;
-    if (v is DateTime) return v;
-    if (v is String)  return DateTime.tryParse(v);
-    return null;
-  }
 
   static String? _dateLabel(DateTime? d) => d == null ? null : DateFormat('MM/dd/yy').format(d);
-
-  void _dispatchSearchWith(
-    BuildContext context, {
-    required dynamic start,
-    required dynamic end,
-    String? furnace,
-    String? material,
-  }) {
-    final startDT = start is DateTime ? start : _toDateTime(start);
-    final endDT   = end   is DateTime ? end   : _toDateTime(end);
-    if (startDT == null || endDT == null) return;
-
-    final q = context.read<SearchBloc>().state.currentQuery;
-    context.read<SearchBloc>().add(LoadFilteredChartData(
-      startDate: startDT,
-      endDate: endDT,
-      furnaceNo: furnace ?? q.furnaceNo,
-      materialNo: material ?? q.materialNo,
-    ));
-  }
-
-  // // Update by period (เดิม)
-  // void _updateDateRangeByPeriod(BuildContext context, String period) {
-  //   final now = DateTime.now();
-  //   final cubit = context.read<SettingFormCubit>();
-  //   DateTime startDate;
-  //   switch (period) {
-  //     case '1 เดือน':   startDate = DateTime(now.year, now.month - 1, now.day); break;
-  //     case '3 เดือน':   startDate = DateTime(now.year, now.month - 3, now.day); break;
-  //     case '6 เดือน':   startDate = DateTime(now.year, now.month - 6, now.day); break;
-  //     case '1 ปี':      startDate = DateTime(now.year - 1, now.month, now.day); break;
-  //     case 'ตลอดเวลา':  startDate = DateTime(2020, 1, 1); break;
-  //     default: // 'กำหนดเอง'
-  //       return; // ไม่ auto-update
-  //   }
-
-  //   cubit
-  //   ..updateStartDate(index, date),
-  //   ..updateEndDate(index, endDate);
-  //   // SearchBloc จะถูกอัปเดตผ่าน BlocListener อยู่แล้ว
-  // }
 
   List<String> _getFurnaceNumbersByIndex(SettingFormState s, int i) {
     final list = s.furnaceOptionsByIndex[i] ?? const <String>[];
@@ -577,33 +607,4 @@ buildDropdownField(
     return ['All Material Nos.', ...sorted];
   }
 
-  Future<void> _selectDate(BuildContext context, bool isStartDate) async {
-    final settingState = _settingBloc.state;
-    final searchState = context.read<SearchBloc>().state;
-
-    final initial = isStartDate
-        ? (searchState.currentQuery.startDate ?? 
-        _toDateTime(settingState.formState.startDate) ?? DateTime.now())
-        : (searchState.currentQuery.endDate   ?? 
-        _toDateTime(settingState.formState.endDate)   ?? DateTime.now());
-
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2050),
-    );
-
-    if (picked == null) return;
-
-    // Rule 1: เมื่อผู้ใช้เลือกวันเอง -> บังคับ period = "กำหนดเอง" + อัปเดตทั้งสอง Bloc
-    final q = searchState.currentQuery;
-    final newStart = isStartDate ? picked : (q.startDate ?? picked);
-    final newEnd   = isStartDate ? (q.endDate ?? picked) : picked;
-
-    context.read<SettingBloc>().add(UpdatePeriodS('กำหนดเอง'));
-    context.read<SettingBloc>()
-      ..add(UpdateStartDate(startDate: newStart))
-      ..add(UpdateEndDate(endDate: newEnd));
-  }
 }

@@ -1,12 +1,4 @@
 import 'package:control_chart/domain/models/setting.dart';
-// import 'package:control_chart/domain/models/setting_request.dart'; // ถ้าไม่ใช้ลบออกได้
-import 'package:flutter/material.dart';
-
-// ลบ import ซ้ำ
-// import 'package:control_chart/domain/models/setting.dart';
-// import 'package:control_chart/domain/models/setting_request.dart';
-// import 'package:flutter/material.dart';
-
 enum SubmitStatus { idle, submitting, success, failure }
 // ถ้าไม่ได้ใช้ PeriodTypeReq ในที่อื่น แนะนำลบออกเพื่อลดสับสน
 // enum PeriodTypeReq { ONE_MONTH, THREE_MONTHS, SIX_MONTHS, ONE_YEAR, CUSTOM, LIFETIME }
@@ -99,6 +91,7 @@ class SpecificSettingState {
 }
 
 class SettingFormState {
+  final String profileId;
   final String settingProfileName;
   final bool isUsed;
   final DisplayType displayType;
@@ -114,6 +107,7 @@ class SettingFormState {
   final Map<int, List<String>> cpOptionsByIndex;       // index -> [cpNo...]
 
   const SettingFormState({
+    this.profileId = '',
     this.settingProfileName = '',
     this.isUsed = true,
     this.displayType = DisplayType.FURNACE_CP,
@@ -146,7 +140,7 @@ class SettingFormState {
   }
 
   SettingFormState copyWith({
-    String? id,
+    String? profileId,
     String? settingProfileName,
     bool? isUsed,
     DisplayType? displayType,
@@ -160,6 +154,7 @@ class SettingFormState {
     Map<int, List<String>>? cpOptionsByIndex,
   }) {
     return SettingFormState(
+      profileId: profileId ?? this.profileId,
       settingProfileName: settingProfileName ?? this.settingProfileName,
       isUsed: isUsed ?? this.isUsed,
       displayType: displayType ?? this.displayType,
@@ -176,7 +171,7 @@ class SettingFormState {
 
   @override
   String toString() => 'SettingFormState('
-      'settingProfileName: $settingProfileName, isUsed: $isUsed, displayType: $displayType, '
+      'profileId: $profileId, settingProfileName: $settingProfileName, isUsed: $isUsed, displayType: $displayType, '
       'chartChangeInterval: $chartChangeInterval, ruleSelected: $ruleSelected, specifics: $specifics, '
       'status: $status, error: $error, dropdownLoading: $dropdownLoading, '
       'furnaceOptionsByIndex: $furnaceOptionsByIndex, cpOptionsByIndex: $cpOptionsByIndex'

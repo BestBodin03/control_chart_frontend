@@ -1,6 +1,7 @@
 // Modified to accept SearchState parameter
 import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
+import 'package:control_chart/domain/extension/map.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/control_chart_template_small_cde_cdt.dart';
@@ -19,8 +20,7 @@ Widget buildChartsSectionCdeCdt(SearchState searchState) {
     children: [
       Expanded(
         child: _buildChartContainerCdeCdt(
-          title: cdeOrCdtLabel(searchState.controlChartStats?.cdeAverage, searchState.controlChartStats?.cdtAverage),
-          searchState: searchState,
+          title: searchState.controlChartStats?.secondChartSelected?.label ??
         ),
       ),
     ],
@@ -171,7 +171,7 @@ Widget _buildChartContentCdeCdt({
           Icon(Icons.error_outline, size: 16, color: Colors.red),
           SizedBox(height: 4),
           Text(
-            'จำนวนข้อมูลไม่เพียงพอ',
+            'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
             style: TextStyle(fontSize: 10, color: Colors.red),
           ),
         ],
@@ -183,8 +183,8 @@ Widget _buildChartContentCdeCdt({
   if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
     return Center(
       child: Text(
-        'No Data',
-        style: TextStyle(fontSize: 12, color: Colors.grey),
+        'ไม่มีข้อมูล',
+        style: TextStyle(fontSize: 12, color: Colors.red),
       ),
     );
   }
@@ -237,8 +237,8 @@ Widget _buildMrChartContentCdeCdt({
           Icon(Icons.error_outline, size: 16, color: Colors.red),
           SizedBox(height: 4),
           Text(
-            'จำนวนข้อมูลไม่เพียงพอ',
-            style: TextStyle(fontSize: 10, color: Colors.red),
+            'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
+            style: TextStyle(fontSize: 12, color: Colors.red),
           ),
         ],
       ),
@@ -249,8 +249,8 @@ Widget _buildMrChartContentCdeCdt({
   if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
     return Center(
       child: Text(
-        'No Data',
-        style: TextStyle(fontSize: 12, color: Colors.grey),
+        'ไม่มีข้อมูล',
+        style: TextStyle(fontSize: 12, color: Colors.red),
       ),
     );
   }

@@ -47,8 +47,8 @@ class FurnaceReportLayout extends StatelessWidget {
                   
                   // Use shared searchState
                   Text(
-                    'Furnace No. ${searchState.currentQuery.furnaceNo?.isNotEmpty == true ? searchState.currentQuery.furnaceNo : 'N/A'}, '
-                    'Material No. ${searchState.currentQuery.materialNo?.isNotEmpty == true ? searchState.currentQuery.materialNo : 'N/A'}',
+                    'Furnace No. ${searchState.currentQuery.furnaceNo?.isNotEmpty == true ? searchState.currentQuery.furnaceNo : '-'}, '
+                    'Material No. ${searchState.currentQuery.materialNo?.isNotEmpty == true ? searchState.currentQuery.materialNo : '-'}',
                     style: AppTypography.textBody1BBold
                   ),
                   
@@ -90,13 +90,13 @@ class FurnaceReportLayout extends StatelessWidget {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            Text('Error: ${searchState.errorMessage ?? 'Something went wrong'}'),
+            Text('Error: ${searchState.errorMessage ?? 'เกิดข้อผิดผลาด'}'),
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: () {
                 context.read<SearchBloc>().add(LoadFilteredChartData());
               },
-              child: const Text('Retry'),
+              child: const Text('ลองอีกครั้ง'),
             ),
           ],
         ),

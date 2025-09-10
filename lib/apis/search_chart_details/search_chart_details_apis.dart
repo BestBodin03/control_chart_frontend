@@ -96,7 +96,7 @@ class SearchChartDetailsApis {
       return stats;
     } catch (e) {
       print('Error in getControlChartStat: $e');
-      throw Exception('ต้องการข้อมูลอย่างน้อย 2 รายการเพื่อคำนวณแสดงแผนภูมิควบคุม');
+      throw Exception('ต้องการข้อมูลอย่างน้อย 5 รายการ เพื่อแสดงแผนภูมิควบคุม');
     }
   }
 
@@ -120,7 +120,7 @@ class SearchChartDetailsApis {
       return stats;
     } catch (e) {
       print('Error in getControlChartStat: $e');
-      throw Exception('ต้องการข้อมูลอย่างน้อย 2 รายการเพื่อคำนวณแสดงแผนภูมิควบคุม');
+      throw Exception('ต้องการข้อมูลอย่างน้อย 5 รายการ เพื่อแสดงแผนภูมิควบคุม');
     }
   }
 }

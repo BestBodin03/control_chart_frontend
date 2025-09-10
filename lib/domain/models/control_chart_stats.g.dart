@@ -130,42 +130,63 @@ ControlChartStats _$ControlChartStatsFromJson(
       json['yAxisRange'] == null
           ? null
           : YAxisRange.fromJson(json['yAxisRange'] as Map<String, dynamic>),
+  controlChartSpots:
+      json['controlChartSpots'] == null
+          ? null
+          : ChartPoints.fromJson(
+            json['controlChartSpots'] as Map<String, dynamic>,
+          ),
+  secondChartSelected: $enumDecodeNullable(
+    _$SecondChartSelectedEnumMap,
+    json['secondChartSelected'],
+  ),
 );
 
-Map<String, dynamic> _$ControlChartStatsToJson(
-  ControlChartStats instance,
-) => <String, dynamic>{
-  'numberOfSpots': instance.numberOfSpots,
-  'average': instance.average,
-  'compoundLayerAverage': instance.compoundLayerAverage,
-  'cdeAverage': instance.cdeAverage,
-  'cdtAverage': instance.cdtAverage,
-  'MRAverage': instance.mrAverage,
-  'compoundLayerMRAverage': instance.compoundLayerMrAverage,
-  'cdeMRAverage': instance.cdeMrAverage,
-  'cdtMRAverage': instance.cdtMrAverage,
-  'controlLimitIChart': instance.controlLimitIChart,
-  'compoundLayerControlLimitIChart': instance.compoundLayerControlLimitIChart,
-  'cdeControlLimitIChart': instance.cdeControlLimitIChart,
-  'cdtControlLimitIChart': instance.cdtControlLimitIChart,
-  'sigmaIChart': instance.sigmaIChart,
-  'compoundLayerSigmaIChart': instance.compoundLayerSigmaIChart,
-  'cdeSigmaIChart': instance.cdeSigmaIChart,
-  'cdtSigmaIChart': instance.cdtSigmaIChart,
-  'controlLimitMRChart': instance.controlLimitMRChart,
-  'compoundLayerControlLimitMRChart': instance.compoundLayerControlLimitMRChart,
-  'cdeControlLimitMRChart': instance.cdeControlLimitMRChart,
-  'cdtControlLimitMRChart': instance.cdtControlLimitMRChart,
-  'surfaceHardnessChartSpots': instance.surfaceHardnessChartSpots,
-  'compoundLayerChartSpots': instance.compoundLayerChartSpots,
-  'cdeChartSpots': instance.cdeChartSpots,
-  'cdtChartSpots': instance.cdtChartSpots,
-  'mrChartSpots': instance.mrChartSpots,
-  'compoundLayerMrChartSpots': instance.compoundLayerMrChartSpots,
-  'cdeMrChartSpots': instance.cdeMrChartSpots,
-  'cdtMrChartSpots': instance.cdtMrChartSpots,
-  'specAttribute': instance.specAttribute,
-  'yAxisRange': instance.yAxisRange,
+Map<String, dynamic> _$ControlChartStatsToJson(ControlChartStats instance) =>
+    <String, dynamic>{
+      'numberOfSpots': instance.numberOfSpots,
+      'average': instance.average,
+      'compoundLayerAverage': instance.compoundLayerAverage,
+      'cdeAverage': instance.cdeAverage,
+      'cdtAverage': instance.cdtAverage,
+      'MRAverage': instance.mrAverage,
+      'compoundLayerMRAverage': instance.compoundLayerMrAverage,
+      'cdeMRAverage': instance.cdeMrAverage,
+      'cdtMRAverage': instance.cdtMrAverage,
+      'controlLimitIChart': instance.controlLimitIChart?.toJson(),
+      'compoundLayerControlLimitIChart':
+          instance.compoundLayerControlLimitIChart?.toJson(),
+      'cdeControlLimitIChart': instance.cdeControlLimitIChart?.toJson(),
+      'cdtControlLimitIChart': instance.cdtControlLimitIChart?.toJson(),
+      'sigmaIChart': instance.sigmaIChart?.toJson(),
+      'compoundLayerSigmaIChart': instance.compoundLayerSigmaIChart?.toJson(),
+      'cdeSigmaIChart': instance.cdeSigmaIChart?.toJson(),
+      'cdtSigmaIChart': instance.cdtSigmaIChart?.toJson(),
+      'controlLimitMRChart': instance.controlLimitMRChart?.toJson(),
+      'compoundLayerControlLimitMRChart':
+          instance.compoundLayerControlLimitMRChart?.toJson(),
+      'cdeControlLimitMRChart': instance.cdeControlLimitMRChart?.toJson(),
+      'cdtControlLimitMRChart': instance.cdtControlLimitMRChart?.toJson(),
+      'surfaceHardnessChartSpots': instance.surfaceHardnessChartSpots,
+      'compoundLayerChartSpots': instance.compoundLayerChartSpots,
+      'cdeChartSpots': instance.cdeChartSpots,
+      'cdtChartSpots': instance.cdtChartSpots,
+      'mrChartSpots': instance.mrChartSpots,
+      'compoundLayerMrChartSpots': instance.compoundLayerMrChartSpots,
+      'cdeMrChartSpots': instance.cdeMrChartSpots,
+      'cdtMrChartSpots': instance.cdtMrChartSpots,
+      'specAttribute': instance.specAttribute?.toJson(),
+      'yAxisRange': instance.yAxisRange?.toJson(),
+      'controlChartSpots': instance.controlChartSpots?.toJson(),
+      'secondChartSelected':
+          _$SecondChartSelectedEnumMap[instance.secondChartSelected],
+    };
+
+const _$SecondChartSelectedEnumMap = {
+  SecondChartSelected.cde: 'CDE',
+  SecondChartSelected.cdt: 'CDT',
+  SecondChartSelected.compoundLayer: 'COMPOUND LAYER',
+  SecondChartSelected.na: 'NA',
 };
 
 ControlLimitIChart _$ControlLimitIChartFromJson(Map<String, dynamic> json) =>
@@ -252,3 +273,53 @@ Map<String, dynamic> _$SpecAttributeToJson(SpecAttribute instance) =>
       'cdtLowerSpec': instance.cdtLowerSpec,
       'cdtTarget': instance.cdtTarget,
     };
+
+DataPoint _$DataPointFromJson(Map<String, dynamic> json) => DataPoint(
+  value: (json['value'] as num).toDouble(),
+  isViolatedR1BeyondLCL: json['isViolatedR1BeyondLCL'] as bool? ?? false,
+  isViolatedR1BeyondUCL: json['isViolatedR1BeyondUCL'] as bool? ?? false,
+  isViolatedR1BeyondLSL: json['isViolatedR1BeyondLSL'] as bool? ?? false,
+  isViolatedR1BeyondUSL: json['isViolatedR1BeyondUSL'] as bool? ?? false,
+  isViolatedR3: json['isViolatedR3'] as bool? ?? false,
+);
+
+Map<String, dynamic> _$DataPointToJson(DataPoint instance) => <String, dynamic>{
+  'value': instance.value,
+  'isViolatedR1BeyondLCL': instance.isViolatedR1BeyondLCL,
+  'isViolatedR1BeyondUCL': instance.isViolatedR1BeyondUCL,
+  'isViolatedR1BeyondLSL': instance.isViolatedR1BeyondLSL,
+  'isViolatedR1BeyondUSL': instance.isViolatedR1BeyondUSL,
+  'isViolatedR3': instance.isViolatedR3,
+};
+
+ChartPoints _$ChartPointsFromJson(Map<String, dynamic> json) => ChartPoints(
+  surfaceHardness:
+      (json['surfaceHardness'] as List<dynamic>?)
+          ?.map((e) => DataPoint.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+  compoundLayer:
+      (json['compoundLayer'] as List<dynamic>?)
+          ?.map((e) => DataPoint.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+  cde:
+      (json['cde'] as List<dynamic>?)
+          ?.map((e) => DataPoint.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+  cdt:
+      (json['cdt'] as List<dynamic>?)
+          ?.map((e) => DataPoint.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+);
+
+Map<String, dynamic> _$ChartPointsToJson(
+  ChartPoints instance,
+) => <String, dynamic>{
+  'surfaceHardness': instance.surfaceHardness.map((e) => e.toJson()).toList(),
+  'compoundLayer': instance.compoundLayer.map((e) => e.toJson()).toList(),
+  'cde': instance.cde.map((e) => e.toJson()).toList(),
+  'cdt': instance.cdt.map((e) => e.toJson()).toList(),
+};

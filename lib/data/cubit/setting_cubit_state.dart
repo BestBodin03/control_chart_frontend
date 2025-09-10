@@ -1,15 +1,35 @@
-abstract class SettingCubitState {}
+// delete_profiles_state.dart
+import 'package:equatable/equatable.dart';
 
-class SettingCubitInitial extends SettingCubitState {}
+enum SubmitStatus { idle, submitting, success, failure }
 
-class SettingCubitLoading extends SettingCubitState {}
+class DeleteProfilesState extends Equatable {
+  final bool deleteMode;        // อยู่ในโหมดลบไหม
+  final Set<String> selected;   // id ที่ถูกเลือก
+  final SubmitStatus status;    // สถานะส่งคำสั่งลบ
+  final String? error;
 
-class SettingCubitLoaded extends SettingCubitState {
-  final int count;
-  SettingCubitLoaded({required this.count});
-}
+  const DeleteProfilesState({
+    this.deleteMode = false,
+    this.selected = const {},
+    this.status = SubmitStatus.idle,
+    this.error,
+  });
 
-class SettingCubitError extends SettingCubitState {
-  final String message;
-  SettingCubitError({required this.message});
+  DeleteProfilesState copyWith({
+    bool? deleteMode,
+    Set<String>? selected,
+    SubmitStatus? status,
+    String? error,
+  }) {
+    return DeleteProfilesState(
+      deleteMode: deleteMode ?? this.deleteMode,
+      selected: selected ?? this.selected,
+      status: status ?? this.status,
+      error: error,
+    );
+  }
+
+  @override
+  List<Object?> get props => [deleteMode, selected, status, error];
 }

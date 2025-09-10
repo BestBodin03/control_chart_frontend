@@ -30,6 +30,10 @@ class SettingFormCubit extends Cubit<SettingFormState> {
     emit(state.copyWith(settingProfileName: name));
   }
 
+  void updateSettingProfileId(String? id) {
+    emit(state.copyWith(profileId: id));
+  }
+
   /// Update isUsed flag
   void updateIsUsed(bool isUsed) {
     emit(state.copyWith(isUsed: isUsed));
@@ -213,8 +217,9 @@ class SettingFormCubit extends Cubit<SettingFormState> {
       .map<SpecificSettingState>(SpecificSettingState.fromModel)
       .toList(growable: false);
 
+
     emit(state.copyWith(
-      id: p.id,                       // <- เก็บ id ที่กำลังแก้
+      profileId: p.profileId,                       // <- เก็บ id ที่กำลังแก้
       settingProfileName: p.name,
       displayType: p.profileDisplayType!,
       chartChangeInterval: p.chartChangeInterval!,
@@ -417,8 +422,48 @@ Future<void> loadDropdownOptions({
   }
 }
 
+Future<bool> removeSettingProfile({
+  required List<String> profileIds,
+}) async {
+  // กันเคสกดซ้ำตอนกำลัง process
+  if (state.status == SubmitStatus.submitting || isClosed) return false;
 
+  if (profileIds.isEmpty) {
+    emit(state.copyWith(
+      status: SubmitStatus.failure,
+      error: 'โปรดเลือกโปรไฟล์อย่างน้อย 1 รายการ',
+    ));
+    return false;
+  }
 
+  emit(state.copyWith(status: SubmitStatus.submitting, error: null));
 
+  try {
+    // เรียก API ลบหลายรายการ
+    final res = await _settingApis.removeSettingProfiles(ids: profileIds);
 
+    // รองรับ 204 / ไม่มี body -> ถือว่าสำเร็จ
+    final ok = (res == null) ? true : ((res['success'] as bool?) ?? true);
+    final msg = res == null ? null : (res['message'] ?? res['error'])?.toString();
+
+    if (ok) {
+      emit(state.copyWith(status: SubmitStatus.success));
+      return true;
+    } else {
+      emit(state.copyWith(status: SubmitStatus.failure, error: msg ?? 'ลบโปรไฟล์ไม่สำเร็จ'));
+      return false;
+    }
+  } on DioException catch (e) {
+    String err = e.message ?? 'Network error';
+    final data = e.response?.data;
+    if (data is Map<String, dynamic>) {
+      err = (data['message'] ?? data['error'] ?? err).toString();
+    }
+    emit(state.copyWith(status: SubmitStatus.failure, error: err));
+    return false;
+  } catch (e) {
+    emit(state.copyWith(status: SubmitStatus.failure, error: e.toString()));
+    return false;
+  }
+}
 }

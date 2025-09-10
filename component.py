@@ -83,8 +83,40 @@ class ApiConfig {
     return response.data as T;
   }
 
-  Future<T> delete<T>(String endpoint) async {
-    final response = await _dio.delete(endpoint);
-    return response.data as T;
+// ApiConfig.dart
+Future<T> delete<T>(
+  String endpoint, {
+  Map<String, dynamic>? queryParameters,
+  dynamic data,                 // 👈 รองรับ body ใน DELETE
+  Options? options,
+}) async {
+  try {
+    final res = await _dio.delete(
+      endpoint,
+      queryParameters: queryParameters,
+      data: data,
+      options: options ??
+          Options(
+            headers: const {
+              'Content-Type': 'application/json', // สำหรับ JSON body
+            },
+          ),
+    );
+
+    return res.data as T;
+  } on DioException catch (e) {
+    // ส่งข้อความจาก server ออกไปให้ชัดเจน
+    final data = e.response?.data;
+    final msg = (data is Map && (data['message'] ?? data['error']) != null)
+        ? (data['message'] ?? data['error']).toString()
+        : (e.message ?? 'Network error');
+    throw DioException(
+      requestOptions: e.requestOptions,
+      response: e.response,
+      type: e.type,
+      error: msg,
+    );
   }
+}
+
 } 

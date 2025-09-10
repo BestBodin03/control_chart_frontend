@@ -1,22 +1,15 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
 import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/bootstrap.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/data/shared_preference/tv_setting_profile_pref.dart';
 import 'package:control_chart/data/shared_preference/tv_setting_profile_state.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
-
-// POJO ของคุณ
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
-// หน้าหลักที่มี HomeContent อยู่ข้างใน
 import 'package:control_chart/ui/screen/home_screen.dart';
-// หรือถ้าคุณจะเรียก HomeContent ตรง ๆ:
-// import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

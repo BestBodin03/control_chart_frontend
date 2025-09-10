@@ -208,7 +208,7 @@ class _SmallError extends StatelessWidget {
           children: [
             Icon(Icons.error_outline, size: 16, color: Colors.red),
             SizedBox(height: 4),
-            Text('จำนวนข้อมูลไม่เพียงพอ', style: TextStyle(fontSize: 10, color: Colors.red)),
+            Text('จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ', style: TextStyle(fontSize: 10, color: Colors.red)),
           ],
         ),
       );

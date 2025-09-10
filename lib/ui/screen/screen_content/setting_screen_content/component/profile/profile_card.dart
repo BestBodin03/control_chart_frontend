@@ -9,21 +9,31 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+// profile_card.dart (เฉพาะจุดสำคัญ)
 class ProfileCard extends StatefulWidget {
   const ProfileCard({
     super.key,
     required this.profile,
     required this.onToggle,
     required this.hasAnotherActive,
-    this.onTap, // ✅ Added callback for card tap
-    this.onEdit, // ✅ Added callback for edit tap
+    this.onTap,
+    this.onEdit,
+    // 👇 เพิ่ม
+    required this.deleteMode,
+    required this.selected,
+    required this.onSelectedChanged,
   });
 
   final Profile profile;
   final ValueChanged<bool> onToggle;
   final bool Function() hasAnotherActive;
-  final VoidCallback? onTap; // ✅ Optional callback when card is tapped
-  final VoidCallback? onEdit; // ✅ Optional callback when edit is tapped
+  final VoidCallback? onTap;
+  final VoidCallback? onEdit;
+
+  // 👇 ใหม่
+  final bool deleteMode;
+  final bool selected;
+  final ValueChanged<bool> onSelectedChanged;
 
   @override
   State<ProfileCard> createState() => _ProfileCardState();
@@ -35,129 +45,116 @@ class _ProfileCardState extends State<ProfileCard> {
   @override
   void initState() {
     super.initState();
-    _isOn = widget.profile.active; // ค่าเริ่มจาก backend
+    _isOn = widget.profile.active;
   }
 
   @override
   void didUpdateWidget(covariant ProfileCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.profile.active != widget.profile.active) {
-      _isOn = widget.profile.active; // sync ถ้า parent อัปเดต
+      _isOn = widget.profile.active;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<SettingFormCubit>();
-    
+
     return GestureDetector(
-      onTap: widget.onTap, // ✅ Handle card tap
+      onTap: widget.deleteMode
+          ? () => widget.onSelectedChanged(!widget.selected) // โหมดลบ → toggle เลือก
+          : widget.onTap,                                      // ปกติ → เปิดรายละเอียด
       child: MouseRegion(
-        cursor: widget.onTap != null 
-            ? SystemMouseCursors.click 
-            : SystemMouseCursors.basic, // ✅ Change cursor when clickable
-        child: SizedBox(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.all(Radius.circular(16)),
-              color: AppColors.colorBgGrey,
-              boxShadow: [
-                BoxShadow(color: Colors.white.withValues(alpha: 0.6),
-                 blurRadius: 2, offset: const Offset(-5, -5)),
-                BoxShadow(color: AppColors.colorBrandTp.withValues(alpha: 0.4),
-                 blurRadius: 4, offset: const Offset(5, 5)),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ---------- Header: ชื่อ + pill ไอคอน ----------
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded( // ✅ Allow text to take available space
-                        child: Text(
-                          widget.profile.name,
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF0F172A),
-                              ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      GestureDetector(
-                      onTap: widget.onEdit ?? () {
-                        final cubit = context.read<SettingFormCubit>();
-
-                        // 1) log สิ่งที่จะส่งเข้า startEdit
-                        debugPrint('[edit] incoming profile: id=${widget.profile.id}'
-                                  ', name=${widget.profile.name}'
-                                  ', specificsType=${widget.profile.specifics.runtimeType}');
-
-                        // 2) ส่งทั้ง profile (อย่าส่ง id) และอย่าเรียกซ้ำ
-                        cubit.startEdit(widget.profile);
-
-                        // // 3) log state หลัง startEdit เพื่อยืนยันว่า id เข้าแล้ว
-                        // debugPrint('[edit] cubit.state.id=${cubit.state.}'
-                        //           ', specificsCount=${cubit.state.specifics.length}');
-
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => BlocProvider.value(
-                              value: cubit,
-                              child: const SettingForm(),
+        cursor: widget.deleteMode ? SystemMouseCursors.click
+                                  : (widget.onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.all(Radius.circular(16)),
+            color: widget.selected ? AppColors.colorAlert1.withValues(alpha: 0.15) : AppColors.colorBgGrey,
+            boxShadow: widget.selected ? 
+            [
+              BoxShadow(color: Colors.white.withValues(alpha: 0.6), blurRadius: 2, offset: const Offset(-5, -5)),
+              BoxShadow(color: AppColors.colorAlert2.withValues(alpha: 0.4), blurRadius: 4, offset: const Offset(5, 5)),
+            ]:
+            [
+              BoxShadow(color: Colors.white.withValues(alpha: 0.6), blurRadius: 2, offset: const Offset(-5, -5)),
+              BoxShadow(color: AppColors.colorBrandTp.withValues(alpha: 0.4), blurRadius: 4, offset: const Offset(5, 5)),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ---------- Header: ชื่อ + icon/checkbox ----------
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.profile.name,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF0F172A),
                             ),
-                          ),
-                        );
-                      },
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
 
+                    if (widget.deleteMode)
+                      // ✅ โหมดลบ: แสดง Checkbox
+                      InkWell(
+                        onTap: () => widget.onSelectedChanged(!widget.selected),
+                        child: Checkbox(
+                          value: widget.selected,
+                          onChanged: (v) => widget.onSelectedChanged(v ?? false),
+                        ),
+                      )
+                    else
+                      // ✅ โหมดปกติ: แสดงปุ่มแก้ไขเหมือนเดิม
+                      GestureDetector(
+                        onTap: widget.onEdit,
                         child: MouseRegion(
                           cursor: SystemMouseCursors.click,
-                          child: Container(
-                            padding: const EdgeInsets.all(4), // ✅ Increase tap area
-                            child: const Icon(
-                              Icons.edit,
-                              color: AppColors.colorBrand,
-                              size: 20,
-                            ),
+                          child: const Padding(
+                            padding: EdgeInsets.all(4),
+                            child: Icon(Icons.edit, color: AppColors.colorBrand, size: 20),
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                  ],
+                ),
 
-                  const SizedBox(height: 8),
+                const SizedBox(height: 8),
 
-                  // ---------- Summary ----------
-                  Text(
-                    widget.profile.displayType,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF475569),
-                          height: 1.45,
-                        ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Row(
-                    children: [
-                      Text(
-                        'สร้างเมื่อ ${fmtDate(widget.profile.createdAt)}',
-                        style: Theme.of(context)
-                            .textTheme
-                            .labelSmall
-                            ?.copyWith(color: const Color(0xFF64748B)),
+                Text(
+                  widget.profile.displayType,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF475569),
+                        height: 1.45,
                       ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () {}, // ✅ Prevent parent tap when tapping switch area
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                const SizedBox(height: 8),
+
+                Row(
+                  children: [
+                    Text(
+                      'สร้างเมื่อ ${fmtDate(widget.profile.createdAt)}',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(color: const Color(0xFF64748B)),
+                    ),
+                    const Spacer(),
+
+                    // ✅ ปิด switch ขณะอยู่ในโหมดลบ
+                    IgnorePointer(
+                      ignoring: widget.deleteMode,
+                      child: Opacity(
+                        opacity: widget.deleteMode ? 0.4 : 1,
                         child: Switch(
-                          value: _isOn, // ✅ คุมด้วย local state
+                          value: _isOn,
                           activeColor: AppColors.colorBg,
                           activeTrackColor: AppColors.colorSuccess1,
                           inactiveThumbColor: AppColors.colorBg,
@@ -166,7 +163,8 @@ class _ProfileCardState extends State<ProfileCard> {
                             final prev = _isOn;
                             setState(() => _isOn = v);
 
-                            cubit
+                            final formCubit = context.read<SettingFormCubit>();
+                            formCubit
                               ..updateSettingProfileName(widget.profile.name)
                               ..updateDisplayType(widget.profile.profileDisplayType!)
                               ..updateChartChangeInterval(widget.profile.chartChangeInterval!)
@@ -174,30 +172,16 @@ class _ProfileCardState extends State<ProfileCard> {
                               ..updateSpecifics(widget.profile.specifics!)
                               ..updateIsUsed(v);
 
-                            // ✅ รอผลลัพธ์จาก saveForm
-                            final success = await cubit.saveForm(id: widget.profile.id);
-
+                            final success = await formCubit.saveForm(id: widget.profile.profileId);
                             if (!mounted) return;
 
                             if (success) {
-                              context
-                              .read<SettingProfileBloc>()
-                              .add(const RefreshSettingProfiles());
-                              
+                              context.read<SettingProfileBloc>().add(const RefreshSettingProfiles());
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('บันทึกข้อมูลเรียบร้อยแล้ว'),
-                                  backgroundColor: Colors.green,
-                                ),
+                                const SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว'), backgroundColor: Colors.green),
                               );
-                            }
-
-                
-
-                            if (!success) {
-                              // ❌ ล้มเหลว → revert กลับ
+                            } else {
                               setState(() => _isOn = prev);
-
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   duration: Duration(seconds: 1),
@@ -205,16 +189,15 @@ class _ProfileCardState extends State<ProfileCard> {
                                   backgroundColor: Colors.orange,
                                 ),
                               );
-                              return;
                             }
                             widget.onToggle(v);
                           },
                         ),
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),

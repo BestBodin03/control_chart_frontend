@@ -3,7 +3,8 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'control_chart_stats.g.dart';
 
-@JsonSerializable()
+/// ==================== Root Model ====================
+@JsonSerializable(explicitToJson: true)
 class ControlChartStats {
   final int? numberOfSpots;
 
@@ -36,11 +37,12 @@ class ControlChartStats {
   final ControlLimitMRChart? cdeControlLimitMRChart;
   final ControlLimitMRChart? cdtControlLimitMRChart;
 
+  /// Spots (raw) for I/MR (ยังคงรับเป็นตัวเลข list)
   final List<double>? surfaceHardnessChartSpots;
   final List<double>? compoundLayerChartSpots;
   final List<double>? cdeChartSpots;
   final List<double>? cdtChartSpots;
-  
+
   final List<double>? mrChartSpots;
   final List<double>? compoundLayerMrChartSpots;
   final List<double>? cdeMrChartSpots;
@@ -49,7 +51,13 @@ class ControlChartStats {
   final SpecAttribute? specAttribute;
   final YAxisRange? yAxisRange;
 
-const ControlChartStats({
+  /// NEW: จุดของ Control Chart ที่ผ่านการตรวจ Nelson Rule (R1, R3)
+  final ChartPoints? controlChartSpots;
+
+  /// NEW: ตัวเลือกกราฟที่สองจาก backend ("CDE","CDT","COMPOUND LAYER","NA")
+  final SecondChartSelected? secondChartSelected;
+
+  const ControlChartStats({
     this.numberOfSpots,
     this.average,
     this.compoundLayerAverage,
@@ -81,9 +89,11 @@ const ControlChartStats({
     this.cdtMrChartSpots,
     this.specAttribute,
     this.yAxisRange,
+    this.controlChartSpots,
+    this.secondChartSelected,
   });
 
-  // Add empty constructor for error handling
+  /// Empty-safe
   const ControlChartStats.empty(this.yAxisRange)
       : numberOfSpots = 0,
         average = 0.0,
@@ -114,7 +124,9 @@ const ControlChartStats({
         compoundLayerMrChartSpots = const [],
         cdeMrChartSpots = const [],
         cdtMrChartSpots = const [],
-        specAttribute = null;
+        specAttribute = null,
+        controlChartSpots = null,
+        secondChartSelected = null;
 
   factory ControlChartStats.fromJson(Map<String, dynamic> json) =>
       _$ControlChartStatsFromJson(json);
@@ -122,24 +134,17 @@ const ControlChartStats({
   Map<String, dynamic> toJson() => _$ControlChartStatsToJson(this);
 }
 
+/// ==================== Control Limits / Sigma ====================
 @JsonSerializable()
 class ControlLimitIChart {
-  @JsonKey(name: 'CL')
-  final double? cl;
-  @JsonKey(name: 'UCL')
-  final double? ucl;
-  @JsonKey(name: 'LCL')
-  final double? lcl;
+  @JsonKey(name: 'CL') final double? cl;
+  @JsonKey(name: 'UCL') final double? ucl;
+  @JsonKey(name: 'LCL') final double? lcl;
 
-  const ControlLimitIChart({
-    this.cl,
-    this.ucl,
-    this.lcl,
-  });
+  const ControlLimitIChart({this.cl, this.ucl, this.lcl});
 
   factory ControlLimitIChart.fromJson(Map<String, dynamic> json) =>
       _$ControlLimitIChartFromJson(json);
-
   Map<String, dynamic> toJson() => _$ControlLimitIChartToJson(this);
 }
 
@@ -163,31 +168,23 @@ class SigmaIChart {
 
   factory SigmaIChart.fromJson(Map<String, dynamic> json) =>
       _$SigmaIChartFromJson(json);
-
   Map<String, dynamic> toJson() => _$SigmaIChartToJson(this);
 }
 
 @JsonSerializable()
 class ControlLimitMRChart {
-  @JsonKey(name: 'CL')
-  final double? cl;
-  @JsonKey(name: 'UCL')
-  final double? ucl;
-  @JsonKey(name: 'LCL')
-  final double? lcl;
+  @JsonKey(name: 'CL') final double? cl;
+  @JsonKey(name: 'UCL') final double? ucl;
+  @JsonKey(name: 'LCL') final double? lcl;
 
-  const ControlLimitMRChart({
-    this.cl,
-    this.ucl,
-    this.lcl,
-  });
+  const ControlLimitMRChart({this.cl, this.ucl, this.lcl});
 
   factory ControlLimitMRChart.fromJson(Map<String, dynamic> json) =>
       _$ControlLimitMRChartFromJson(json);
-
   Map<String, dynamic> toJson() => _$ControlLimitMRChartToJson(this);
 }
 
+/// ==================== Spec Attribute ====================
 @JsonSerializable()
 class SpecAttribute {
   final String? materialNo;
@@ -222,6 +219,69 @@ class SpecAttribute {
 
   factory SpecAttribute.fromJson(Map<String, dynamic> json) =>
       _$SpecAttributeFromJson(json);
-
   Map<String, dynamic> toJson() => _$SpecAttributeToJson(this);
+}
+
+/// ==================== NEW: DataPoint / ChartPoints ====================
+@JsonSerializable()
+class DataPoint {
+  /// ค่าจุดบน I-Chart
+  final double value;
+
+  /// Nelson Rule 1 (เกิน LCL/UCL/LSL/USL)
+  @JsonKey(defaultValue: false) final bool isViolatedR1BeyondLCL;
+  @JsonKey(defaultValue: false) final bool isViolatedR1BeyondUCL;
+  @JsonKey(defaultValue: false) final bool isViolatedR1BeyondLSL;
+  @JsonKey(defaultValue: false) final bool isViolatedR1BeyondUSL;
+
+  /// Nelson Rule 3 (8 จุดติดต่อกันด้านเดียวของเส้นกลาง)
+  @JsonKey(defaultValue: false) final bool isViolatedR3;
+
+  const DataPoint({
+    required this.value,
+    this.isViolatedR1BeyondLCL = false,
+    this.isViolatedR1BeyondUCL = false,
+    this.isViolatedR1BeyondLSL = false,
+    this.isViolatedR1BeyondUSL = false,
+    this.isViolatedR3 = false,
+  });
+
+  factory DataPoint.fromJson(Map<String, dynamic> json) =>
+      _$DataPointFromJson(json);
+  Map<String, dynamic> toJson() => _$DataPointToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class ChartPoints {
+  final List<DataPoint> surfaceHardness;
+  final List<DataPoint> compoundLayer;
+  final List<DataPoint> cde;
+  final List<DataPoint> cdt;
+
+  const ChartPoints({
+    this.surfaceHardness = const [],
+    this.compoundLayer = const [],
+    this.cde = const [],
+    this.cdt = const [],
+  });
+
+  factory ChartPoints.fromJson(Map<String, dynamic> json) =>
+      _$ChartPointsFromJson(json);
+  Map<String, dynamic> toJson() => _$ChartPointsToJson(this);
+}
+
+/// ==================== NEW: Second Chart Selected Enum ====================
+@JsonEnum(alwaysCreate: true)
+enum SecondChartSelected {
+  @JsonValue('CDE')
+  cde,
+
+  @JsonValue('CDT')
+  cdt,
+
+  @JsonValue('COMPOUND LAYER')
+  compoundLayer,
+
+  @JsonValue('NA')
+  na,
 }

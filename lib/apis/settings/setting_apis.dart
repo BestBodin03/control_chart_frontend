@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:core';
 import 'package:control_chart/apis/api_response.dart';
 import 'package:control_chart/config/api_config.dart';
@@ -8,7 +7,6 @@ import 'package:control_chart/domain/models/chart_detail.dart';
 import 'package:control_chart/domain/models/customer_product.dart';
 import 'package:control_chart/domain/models/furnace.dart';
 import 'package:control_chart/domain/models/setting.dart';
-import 'package:control_chart/domain/models/setting_request.dart';
 import 'package:control_chart/utils/count_extractor.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -133,6 +131,8 @@ Future<Map<String, dynamic>> getSettingFormDropdown({
 
 
 
+
+
   // Future<Response<dynamic>> getOneProfileSettingsById() async {
   //   try {
   //     final Response res = await ApiConfig().get('/setting/one-profile/$id', body);
@@ -168,6 +168,15 @@ Future<Map<String, dynamic>> getSettingFormDropdown({
     return await ApiConfig().patch<Map<String, dynamic>>(
       '/setting/update/$id',
       data: body,
+    );
+  }
+
+  Future<Map<String, dynamic>?> removeSettingProfiles({
+    required List<String> ids,
+  }) {
+    return ApiConfig().delete<Map<String, dynamic>>(
+      '/setting/delete/',                     // 👈 ใช้ DELETE จริง (RESTful)
+      data: {'ids': ids},             // 👈 body ที่ต้องการ
     );
   }
 }

@@ -59,7 +59,7 @@ Widget _buildChartContainer({
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8.0),
                   child: Text(
-                    "Individual", 
+                    "Surface Hardness | Control Chart", 
                     style: AppTypography.textBody3BBold,
                     textAlign: TextAlign.center,
                   ),
@@ -76,7 +76,7 @@ Widget _buildChartContainer({
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8.0),
                   child: Text(
-                    "Moving Range", 
+                    "Surface Hardness | Moving Range", 
                     style: AppTypography.textBody3BBold,
                     textAlign: TextAlign.center,
                   ),
@@ -168,8 +168,8 @@ Widget _buildChartContent({
           Icon(Icons.error_outline, size: 16, color: Colors.red),
           SizedBox(height: 4),
           Text(
-            'จำนวนข้อมูลไม่เพียงพอ',
-            style: TextStyle(fontSize: 10, color: Colors.red),
+            'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
+            style: TextStyle(fontSize: 12, color: Colors.red),
           ),
         ],
       ),
@@ -180,8 +180,8 @@ Widget _buildChartContent({
   if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
     return Center(
       child: Text(
-        'No Data',
-        style: TextStyle(fontSize: 12, color: Colors.grey),
+        'ไม่มีข้อมูล',
+        style: TextStyle(fontSize: 12, color: Colors.red),
       ),
     );
   }
@@ -234,7 +234,7 @@ Widget _buildMrChartContent({
           Icon(Icons.error_outline, size: 16, color: Colors.red),
           SizedBox(height: 4),
           Text(
-            'จำนวนข้อมูลไม่เพียงพอ',
+            'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
             style: TextStyle(fontSize: 10, color: Colors.red),
           ),
         ],
