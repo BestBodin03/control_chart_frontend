@@ -1,16 +1,5 @@
-import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
-import 'package:control_chart/domain/types/chart_filter_query.dart';
-import 'package:control_chart/ui/core/design_system/app_color.dart';
-import 'package:control_chart/ui/core/design_system/app_typography.dart';
-import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_template.dart';
-import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
-import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
-import 'package:flutter/material.dart';
-
-// file: cde_cdt_section.dart
-import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
-import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
+import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/control_chart_template.dart';
@@ -25,14 +14,37 @@ Widget buildChartsSectionCdeCdt(
   HomeContentVar settingProfile,
   SearchState searchState,
 ) {
+  // ถ้าไม่ได้เลือกอะไรหรือเลือก NA -> ไม่แสดง
+  final sel = searchState.controlChartStats?.secondChartSelected;
+  if (sel == null || sel == SecondChartSelected.na) {
+    return const SizedBox.shrink();
+  }
+
+  final isReady = searchState.status == SearchStatus.success &&
+                  searchState.chartDetails.isNotEmpty;
+
+  final label = switch (sel) {
+    SecondChartSelected.cde           => 'CDE',
+    SecondChartSelected.cdt           => 'CDT',
+    SecondChartSelected.compoundLayer => 'Compound Layer',
+    _                                 => '-', // กันกรณีอื่น ๆ
+  };
+
+  final partName = isReady
+      ? (searchState.chartDetails.first.chartGeneralDetail.partName ?? '-')
+      : '-';
+
+  final title =
+      "Furnace ${settingProfile.furnaceNo ?? "-"} "
+      " | $partName - ${settingProfile.materialNo ?? '-'}"
+      " | Date ${fmtDate(settingProfile.startDate)} - ${fmtDate(settingProfile.endDate)}";
+
   return SizedBox.expand(
     child: _buildChartContainerCdeCdt(
-      title:
-          "Furnace ${settingProfile.furnaceNo ?? "-"} "
-          " | Material ${settingProfile.materialNo ?? '-'}"
-          " | Date ${fmtDate(settingProfile.startDate)} - ${fmtDate(settingProfile.endDate)}",
+      title: title,
       settingProfile: settingProfile,
       searchState: searchState,
+      selectedLabel: label,
     ),
   );
 }
@@ -42,6 +54,7 @@ Widget buildChartsSectionCdeCdt(
 /// ==============================
 Widget _buildChartContainerCdeCdt({
   required String title,
+  required String selectedLabel,
   required HomeContentVar settingProfile,
   required SearchState searchState,
 }) {
@@ -49,11 +62,12 @@ Widget _buildChartContainerCdeCdt({
     builder: (context, constraints) {
       final totalH = constraints.maxHeight;
       const outerPadTop = 8.0;
-      const outerPadBottom = 16.0;
+      const outerPadBottom = 16.0; // <- fixed from 'outerPom'
       const titleH = 24.0;
       const sectionLabelH = 20.0;
       const gapV = 8.0;
 
+      // คำนวณพื้นที่กราฟ
       final chartsAreaH = (totalH
               - outerPadTop - outerPadBottom
               - titleH
@@ -67,36 +81,40 @@ Widget _buildChartContainerCdeCdt({
 
       final eachChartH = (chartsAreaH / 2).clamp(0.0, double.infinity);
 
-      String cdeOrCdtLabel(num? cde, num? cdt, num? compoundLayer) {
-        final a = (cde ?? 0).toDouble();
-        final b = (cdt ?? 0).toDouble();
-        final c = (compoundLayer ?? 0).toDouble();
-        int nonZero = 0;
-        if (a != 0) nonZero++;
-        if (b != 0) nonZero++;
-        if (c != 0) nonZero++;
-        if (nonZero > 1) return 'N/A';
-        if (a != 0) return 'CDE';
-        if (b != 0) return 'CDT';
-        if (c != 0) return 'Compound Layer';
-        return 'N/A';
+      // guard state
+      if (searchState.status == SearchStatus.loading) {
+        return const Center(
+          child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+        );
+      }
+      if (searchState.status == SearchStatus.failure) {
+        return const _SmallError();
+      }
+      if (searchState.controlChartStats == null ||
+          searchState.chartDetails.isEmpty) {
+        return const _SmallNoData();
       }
 
-      final label = cdeOrCdtLabel(
-        searchState.controlChartStats?.cdeAverage,
-        searchState.controlChartStats?.cdtAverage,
-        searchState.controlChartStats?.compoundLayerAverage,
-      );
+      final uniqueKey = '${settingProfile.startDate?.millisecondsSinceEpoch ?? 0}-'
+          '${settingProfile.endDate?.millisecondsSinceEpoch ?? 0}-'
+          '${settingProfile.furnaceNo ?? ''}-'
+          '${settingProfile.materialNo ?? ''}-';
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
+          // Title (ให้สอดคล้องกับ Surface Hardness ส่วนบน)
           Padding(
-            padding: const EdgeInsets.fromLTRB(0, 0, 0, 8),
+            padding: const EdgeInsets.only(bottom: 8),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [Text(title, style: AppTypography.textBody2BBold)],
+              children: [
+                Expanded(
+                  child: Center(
+                    child: Text(title, style: AppTypography.textBody3BBold),
+                  ),
+                ),
+                // ตำแหน่ง actions เพิ่มเติม (เช่น Zoom builder) ถ้าต้องการภายหลัง
+              ],
             ),
           ),
 
@@ -115,36 +133,92 @@ Widget _buildChartContainerCdeCdt({
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: Column(
                   children: [
-                    // Label บน: Control Chart
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: Text(
-                        "$label | Control Chart",
-                        style: AppTypography.textBody3BBold,
-                      ),
+                    // Header บนของกราฟ (Control Chart) + ปุ่ม Zoom
+                    Row(
+                      children: [
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              "$selectedLabel | Control Chart",
+                              style: AppTypography.textBody3BBold,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                        MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title: const Text("Zoom"),
+                                  content: const Text("ใส่ widget ขยายที่คุณมีอยู่แล้วในที่นี้"),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(),
+                                      child: const Text("Close"),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: const Icon(Icons.zoom_out_map_rounded, size: 16),
+                          ),
+                        ),
+                      ],
                     ),
-                    _buildSingleChart(
-                      settingProfile: settingProfile,
-                      searchState: searchState,
-                      isMovingRange: false,
+
+                    // กราฟบน (Control Chart)
+                    SizedBox(
+                      width: double.infinity,
                       height: eachChartH,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: ControlChartTemplateCdeCdt(
+                            key: ValueKey('${uniqueKey}_top'.hashCode.toString()),
+                            isMovingRange: false,
+                            height: eachChartH,
+                          ),
+                        ),
+                      ),
                     ),
 
                     const SizedBox(height: 8),
 
-                    // Label ล่าง: Moving Range
+                    // Header ล่าง (Moving Range)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4.0),
                       child: Text(
-                        "$label | Moving Range",
+                        "$selectedLabel | Moving Range",
                         style: AppTypography.textBody3BBold,
                       ),
                     ),
-                    _buildMrChart(
-                      settingProfile: settingProfile,
-                      searchState: searchState,
-                      isMovingRange: true,
+
+                    // กราฟล่าง (MR Chart)
+                    SizedBox(
+                      width: double.infinity,
                       height: eachChartH,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: ControlChartTemplateCdeCdt(
+                            key: ValueKey('${uniqueKey}_mr'.hashCode.toString()),
+                            isMovingRange: true,
+                            height: eachChartH,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -154,108 +228,6 @@ Widget _buildChartContainerCdeCdt({
         ],
       );
     },
-  );
-}
-
-/// ==============================
-/// Upper chart (Control Chart)
-/// ==============================
-Widget _buildSingleChart({
-  required HomeContentVar settingProfile,
-  required SearchState searchState,
-  required bool isMovingRange,
-  required double height,
-}) {
-  if (searchState.status == SearchStatus.loading) {
-    return const Center(
-      child: SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      ),
-    );
-  }
-  if (searchState.status == SearchStatus.failure) {
-    return const _SmallError();
-  }
-  if (searchState.controlChartStats == null ||
-      searchState.chartDetails.isEmpty) {
-    return const _SmallNoData();
-  }
-
-  final uniqueKey = '${settingProfile.startDate?.millisecondsSinceEpoch ?? 0}-'
-      '${settingProfile.endDate?.millisecondsSinceEpoch ?? 0}-'
-      '${settingProfile.furnaceNo ?? ''}-'
-      '${settingProfile.materialNo ?? ''}-';
-
-  return SizedBox(
-    width: double.infinity,
-    height: height,
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: ControlChartTemplateCdeCdt(
-          key: ValueKey(uniqueKey.hashCode.toString()),
-          isMovingRange: false,
-          height: height,
-        ),
-      ),
-    ),
-  );
-}
-
-/// ==============================
-/// Lower chart (Moving Range)
-/// ==============================
-Widget _buildMrChart({
-  required HomeContentVar settingProfile,
-  required SearchState searchState,
-  required bool isMovingRange,
-  required double height,
-}) {
-  if (searchState.status == SearchStatus.loading) {
-    return const Center(
-      child: SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      ),
-    );
-  }
-  if (searchState.status == SearchStatus.failure) {
-    return const _SmallError();
-  }
-  if (searchState.controlChartStats == null ||
-      searchState.chartDetails.isEmpty) {
-    return const _SmallNoData();
-  }
-
-  final uniqueKey = '${settingProfile.startDate?.millisecondsSinceEpoch ?? 0}-'
-      '${settingProfile.endDate?.millisecondsSinceEpoch ?? 0}-'
-      '${settingProfile.furnaceNo ?? ''}-'
-      '${settingProfile.materialNo ?? ''}-';
-
-  return SizedBox(
-    width: double.infinity,
-    height: height,
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: ControlChartTemplateCdeCdt(
-          key: ValueKey(uniqueKey.hashCode.toString()),
-          isMovingRange: true,
-          height: height,
-        ),
-      ),
-    ),
   );
 }
 

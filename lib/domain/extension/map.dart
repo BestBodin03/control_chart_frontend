@@ -9,9 +9,9 @@ extension SecondChartSelectedLabel on SecondChartSelected {
       case SecondChartSelected.cdt:
         return 'CDT';
       case SecondChartSelected.compoundLayer:
-        return 'COMPOUND LAYER';
+        return 'Compound Layer';
       case SecondChartSelected.na:
-        return 'NA';
+        return 'N/A';
     }
   }
 }

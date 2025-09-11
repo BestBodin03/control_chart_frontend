@@ -1,5 +1,7 @@
 
 
+import 'package:intl/intl.dart';
+
 import '../../../../domain/models/chart_data_point.dart';
 import '../search_bloc.dart';
 
@@ -14,7 +16,7 @@ extension SearchStateExtension on SearchState {
       final mrValue = index < mrValues.length ? mrValues[index] : 0.0;
       
       return ChartDataPoint(
-        label: "${chartDetail.chartGeneralDetail.collectedDate.month.toString().padLeft(2, '0')}/${chartDetail.chartGeneralDetail.collectedDate.day.toString().padLeft(2, '0')}",
+        label: DateFormat('MM/dd/yy').format(chartDetail.chartGeneralDetail.collectedDate),
         fullLabel: "${chartDetail.chartGeneralDetail.collectedDate.month.toString().padLeft(2, '0')}/${chartDetail.chartGeneralDetail.collectedDate.day.toString().padLeft(2, '0')}/${chartDetail.chartGeneralDetail.collectedDate.year.toString().padLeft(4, '0')}",
         furnaceNo: chartDetail.chartGeneralDetail.furnaceNo.toString(),
         matNo: chartDetail.cpNo,

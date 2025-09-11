@@ -20,7 +20,8 @@ Widget buildChartsSectionCdeCdt(SearchState searchState) {
     children: [
       Expanded(
         child: _buildChartContainerCdeCdt(
-          title: searchState.controlChartStats?.secondChartSelected?.label ??
+          searchState: searchState,
+          title: searchState.controlChartStats?.secondChartSelected?.label ?? '',
         ),
       ),
     ],

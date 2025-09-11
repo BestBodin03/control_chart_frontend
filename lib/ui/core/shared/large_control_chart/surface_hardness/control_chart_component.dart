@@ -1,15 +1,15 @@
 import 'dart:math' as math;
-
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
+import 'package:control_chart/ui/core/shared/dashed_line_painter.dart' show DashedLinePainter;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
   
-class ControlChartComponentSmall extends StatelessWidget implements ChartComponent {
+class ControlChartComponent extends StatelessWidget implements ChartComponent {
   final List<ChartDataPoint>? dataPoints;
   final ControlChartStats? controlChartStats;
   // final String xAxisLabel;
@@ -19,7 +19,7 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
   final double? height;
   final double? width;
 
-  ControlChartComponentSmall({
+  ControlChartComponent({
     super.key,
     this.dataPoints,
     this.controlChartStats,
@@ -27,8 +27,8 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
     // this.yAxisLabel = 'Surface Hardness',
     this.dataLineColor = AppColors.colorBrand,
     this.backgroundColor,
-    this.height = 240,
-    this.width = 560,
+    this.height,
+    this.width,
   });
   
   @override
@@ -51,11 +51,11 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
             child: LineChart(
               LineChartData(
                 gridData: buildGridData(),
-                // titlesData: buildTitlesData(),
+                titlesData: buildTitlesData(),
                 borderData: buildBorderData(),
                 lineBarsData: buildLineBarsData(),
                 extraLinesData: buildControlLines(),
-                // lineTouchData: buildTouchData(),
+                lineTouchData: buildTouchData(),
                 minX: 0,
                 maxX: (dataPoints!.length - 1).toDouble(),
                 minY: getMinY(),
@@ -83,8 +83,8 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
       show: true,
       drawHorizontalLine: true,
       drawVerticalLine: true,
-      horizontalInterval: _calculateYAxisInterval(),
-      // horizontalInterval: 24,
+      horizontalInterval: dataPoints!.length/10,
+      // horizontalInterval: visibleSpot(dataPoints).length.toDouble()/4,
       verticalInterval: 24,
       getDrawingHorizontalLine: (value) {
         return FlLine(
@@ -125,25 +125,24 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
         ),
         ),
       bottomTitles: AxisTitles(
-        // axisNameSize: 36, // กำหนดขนาด axis name
-        axisNameWidget: SizedBox(
-          width: width,
-        ),
+        axisNameWidget: SizedBox(width: width),
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 16, // เพิ่มขนาดสำหรับ X-axis labels
+          reservedSize: 80, // 👈 เพิ่มพื้นที่เผื่อ label หมุน
           interval: _calculateXInterval(),
           getTitlesWidget: (value, meta) {
             final index = value.toInt();
             if (index >= 0 && index < dataPoints!.length) {
-              return 
-                Text(
+              return RotatedBox(
+                quarterTurns: 3, // 1 = 90 องศา, 3 = -90 องศา
+                child: Text(
                   dataPoints![index].label,
                   style: const TextStyle(
                     color: Colors.black54,
-                    fontSize: 8, // เพิ่มขนาดฟอนต์
+                    fontSize: 8,
                   ),
-                );
+                ),
+              );
             }
             return const SizedBox.shrink();
           },
@@ -183,6 +182,15 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
           color: Colors.amberAccent,
           strokeWidth: 1.5,
         ),
+
+    if (controlChartStats?.specAttribute?.surfaceHardnessTarget != null &&
+        controlChartStats!.specAttribute!.surfaceHardnessTarget != 0.0)
+      HorizontalLine(
+        y: controlChartStats!.specAttribute!.surfaceHardnessTarget!,
+        color: Colors.deepPurple.shade300,
+        strokeWidth: 1.5,
+      ),
+
         
         // Average Line
         HorizontalLine(
@@ -210,23 +218,32 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
 
   @override
   List<LineChartBarData> buildLineBarsData() {
-    // final interval = _calculateXInterval().toInt();
-    
+  // final len = dataPoints!.length;
+  // final start = (len - 24).clamp(0, len);
+  // final visible = dataPoints!.sublist(start, len); // <= 24 จุด (ล่าสุด)
+
+  // final spots = List.generate(
+  //   visible.length,
+  //   (i) => FlSpot(i.toDouble(), visible[i].value),
+  // );
+
     return [
       LineChartBarData(
         spots: dataPoints!
             .asMap()
             .entries
-            .where((entry) => entry.key % 1 == 0)
+            .take(30)
             .map((entry) => FlSpot(entry.key.toDouble(), entry.value.value))
             .toList(),
+
+        // spots: visibleSpot(dataPoints),
         
         isCurved: false,
         color: dataLineColor,
-        barWidth: 3,
+        barWidth: 2,
         isStrokeCapRound: true,
         dotData: FlDotData(
-          show: false,
+          show: true,
           getDotPainter: (spot, percent, barData, index) {
             final realIndex = spot.x.toInt();
             final value = dataPoints![realIndex].value;
@@ -243,9 +260,9 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
             }
             
             return FlDotCirclePainter(
-              radius: 4,
+              radius: 3.5,
               color: dotColor,
-              strokeWidth: 2,
+              strokeWidth: 1,
               strokeColor: Colors.white,
             );
           },
@@ -286,7 +303,82 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
       ),
     );
   }
-  
+
+  @override
+  Widget buildLegend() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      direction: Axis.horizontal,
+      alignment: WrapAlignment.spaceEvenly,
+      children: [
+      if (formatValue(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec) != 'N/A')
+        buildLegendItem('Spec', Colors.red, false,
+            formatValue(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec)),
+
+      if (formatValue(controlChartStats?.controlLimitIChart?.ucl) != 'N/A')
+        buildLegendItem('UCL', Colors.orange, false,
+            formatValue(controlChartStats?.controlLimitIChart?.ucl)),
+
+      if (formatValue(controlChartStats?.specAttribute?.surfaceHardnessTarget) != 'N/A')
+        buildLegendItem('Target', Colors.deepPurple.shade300, false,
+            formatValue(controlChartStats?.specAttribute?.surfaceHardnessTarget)),
+
+      if (formatValue(controlChartStats?.average) != 'N/A')
+        buildLegendItem('AVG', Colors.green, false,
+            formatValue(controlChartStats?.average)),
+
+      if (formatValue(controlChartStats?.controlLimitIChart?.lcl) != 'N/A')
+        buildLegendItem('LCL', Colors.orange, false,
+            formatValue(controlChartStats?.controlLimitIChart?.lcl)),
+
+      if (formatValue(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec) != 'N/A')
+        buildLegendItem('Spec', Colors.red, false,
+            formatValue(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec)),
+        ],
+    );
+  }
+
+  Widget buildLegendItem(String label, Color color, bool isDashed, String? value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 8,
+          height: 2,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: color,
+              border: isDashed ? Border.all(color: color, width: 1) : null,
+            ),
+            child: isDashed
+                ? CustomPaint(
+                    painter: DashedLinePainter(color: color),
+                  )
+                : null,
+          ),
+        ),
+        const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.colorBlack,
+              ),
+            ),
+        const SizedBox(width: 8),
+            Text(
+              value ?? 'N/A',
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.colorBlack,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+    );
+  }
+
 // ---------- Cache ----------
 double? _cachedMinY;
 double? _cachedMaxY;
@@ -340,12 +432,12 @@ double _getInterval() {
 }
 
 // ---------- Utilities ----------
-  double _roundUpToPowerOf10(double x) {
-    if (x <= 0 || x.isNaN || x.isInfinite) return x;
-    final exp = (math.log(x) / math.log(10)).floor();
-    final base = math.pow(10.0, exp).toDouble();
-    return (x <= base) ? base : math.pow(10.0, exp + 1).toDouble();
-  }
+  // double _roundUpToPowerOf10(double x) {
+  //   if (x <= 0 || x.isNaN || x.isInfinite) return x;
+  //   final exp = (math.log(x) / math.log(10)).floor();
+  //   final base = math.pow(10.0, exp).toDouble();
+  //   return (x <= base) ? base : math.pow(10.0, exp + 1).toDouble();
+  // }
 
   double _niceStepCeil(double x) {
     if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
@@ -389,14 +481,34 @@ double _getInterval() {
   double _calculateXInterval() {
     int pointCount = dataPoints!.length;
     
-    if (pointCount <= 24) return 1.0;
-    return (pointCount / 24).ceilToDouble();
+    if (pointCount <= 30) return 1.0;
+    return (pointCount / 30).floorToDouble();
   }
 
-  
-  @override
-  Widget? buildLegend() {
-    // TODO: implement buildLegend
-    throw UnimplementedError();
+  String formatValue(double? value) {
+    if (value == null || value == 0.0) return 'N/A';
+    return value.toStringAsFixed(2);
   }
+
+  // List<FlSpot> visibleSpot(List<ChartDataPoint>? dataPoints, {int maxPoints = 24}) {
+  //   if (dataPoints == null || dataPoints.isEmpty) return const <FlSpot>[];
+
+  //   final len = dataPoints.length;
+  //   final start = (len - maxPoints).clamp(0, len);
+  //   final visibleLen = len - start;
+
+  //   return List<FlSpot>.generate(
+  //     visibleLen,
+  //     (i) => FlSpot(
+  //       i.toDouble(),                      // x = index ภายในหน้าต่างที่ตัดมา
+  //       dataPoints[start + i].value,       // y = ค่า point
+  //     ),
+  //   );
+  // }
+
+  Widget? _legendIfHas(String label, Color color, String v) {
+    if (v == 'N/A') return null;
+    return buildLegendItem(label, color, false, v);
+  }
+
 }

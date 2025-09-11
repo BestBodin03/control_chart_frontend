@@ -206,7 +206,7 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                         BlocBuilder<SettingFormCubit, SettingFormState>(
                           builder: (context, s) {
                             final cubit = context.read<SettingFormCubit>();
-                            debugPrint('The ID of this profile card: $s.profileId');
+                            // debugPrint('The ID of this profile card: $s.profileId');
 
                             if (selectedDisplayType.isEmpty) {
                               switch (s.displayType) {
@@ -470,7 +470,8 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                                     index: i,
                                                     // ส่งค่าปัจจุบันของแถวนี้ไปด้วย (ให้ API ฟิลเตอร์ร่วม)
                                                     furnaceNo: val?.toString(),
-                                                    cpNo: state.specifics[i].cpNo,
+                                                    // cpNo: state.specifics[i].cpNo,
+                                                    cpNo: null
                                                   );
                                                 },
                                               ),
@@ -492,7 +493,8 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                                   cubit.updateCpNo(i, val);
                                                   cubit.loadDropdownOptions(
                                                     index: i,
-                                                    furnaceNo: state.specifics[i].furnaceNo?.toString(),
+                                                    furnaceNo: null,
+                                                    // furnaceNo: state.specifics[i].furnaceNo?.toString(),
                                                     cpNo: val,
                                                   );
                                                 },
@@ -530,7 +532,7 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                 elevation: 0,
                               ),
                               onPressed: isSubmitting ? null : () async {
-                                debugPrint('The ID Value To save $profileId');
+                                // debugPrint('The ID Value To save $profileId');
 
                                 var savedSuccess = await cubit.saveForm(
                                   id: isEditing ? profileId : null,

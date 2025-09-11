@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:math' as math;
 
 import 'package:control_chart/domain/models/chart_data_point.dart';
@@ -32,16 +33,11 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
     this.width = 560,
     this.isMovingRange = true
   });
-
-    // cache for Y range/interval
-  double? _cachedMinY;
-  double? _cachedMaxY;
-  double? _cachedInterval;
   
   @override
   Widget build(BuildContext context) {
     if (dataPoints == null || dataPoints!.isEmpty) {
-      return const Center(child: Text('ไม่พบข้อมูล'));
+      return const Center(child: Text('No data available'));
     }
 
     return Container(
@@ -83,80 +79,78 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
       ),
     );
   }
-  static const int _windowSize = 24;
-
-  List<dynamic> get _visiblePoints {
-    // final src = dataPoints ?? const <ControlChartStats>[];
-    final src = dataPoints ?? const <ChartDataPoint>[];
-    if (src.length <= _windowSize) return src;
-    return src.sublist(src.length - _windowSize);
-  }
   
   @override
   FlGridData buildGridData() {
-    final n = _visiblePoints.length;
     return FlGridData(
       show: true,
       drawHorizontalLine: true,
       drawVerticalLine: true,
-      horizontalInterval: _getInterval(),                   // Y grid aligns with Y ticks
-      verticalInterval: _xIntervalForCount(n),              // X grid aligns with window size
-      getDrawingHorizontalLine: (_) => FlLine(
-        color: Colors.grey.shade100,
-        strokeWidth: 0.5,
-      ),
-      getDrawingVerticalLine: (_) => FlLine(
-        color: Colors.grey.shade100,
-        strokeWidth: 0.5,
-      ),
+      horizontalInterval: _calculateYAxisInterval(),
+      // horizontalInterval: 24,
+      verticalInterval: 24,
+      getDrawingHorizontalLine: (value) {
+        return FlLine(
+          color: Colors.grey.shade300,
+          strokeWidth: 0.5,
+        );
+      },
+      getDrawingVerticalLine: (value) {
+        return FlLine(
+          color: Colors.grey.shade300,
+          strokeWidth: 0.5,
+        );
+      },
     );
   }
 
   @override
   FlTitlesData buildTitlesData() {
-    final visible = _visiblePoints;
-    // final step = _xIntervalForCount(visible.length);
-    final step = 1.0;
-
     return FlTitlesData(
-      leftTitles: AxisTitles(
-        axisNameWidget: SizedBox(width: height),
+        leftTitles: AxisTitles(
+        // axisNameSize: 16, // กำหนดขนาด axis name
+        axisNameWidget: SizedBox(
+          width: height,
+        ),
         sideTitles: SideTitles(
           showTitles: true,
           reservedSize: 24,
-          interval: _getInterval(),
-          getTitlesWidget: (value, _) => Text(
-            value.toStringAsFixed(0),
-            style: const TextStyle(
-              color: Colors.black54,
-              fontSize: 8,
-            ),
-          ),
-        ),
-      ),
-      bottomTitles: AxisTitles(
-        sideTitles: SideTitles(
-          showTitles: true,
-          reservedSize: 32,   // ✅ เพิ่มความสูงของ label zone
-          interval: step, 
+          interval: _calculateYAxisInterval(),
           getTitlesWidget: (value, meta) {
-            final i = value.round();
-            if (i < 0 || i >= visible.length) return const SizedBox.shrink();
-
-            return SideTitleWidget(
-              meta: meta,
-              space: 8,       // ✅ ดัน label ออกห่างจากกราฟ
-              child: Transform.rotate(
-                angle: -30 * math.pi / 180, // ใช้ radians (270° = -90°)
-                child: Text(
-                  visible[i].label,
-                  style: const TextStyle(fontSize: 8, color: Colors.black54),
-                ),
+            return Text(
+              value.toStringAsFixed(0),
+              style: const TextStyle(
+                color: Colors.black54,
+                fontSize: 8,
               ),
             );
           },
         ),
-      ),
+        ),
+        bottomTitles: AxisTitles(
+          axisNameWidget: SizedBox(width: width),
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 28, // 👈 เพิ่มพื้นที่เผื่อ label หมุน
+            interval: _calculateXInterval(),
+            getTitlesWidget: (value, meta) {
+              final index = value.toInt();
+              if (index >= 0 && index < dataPoints!.length) {
+                return RotatedBox(
+                  quarterTurns: 3, // 1 = 90 องศา, 3 = -90 องศา
+                  child: Text(
+                    dataPoints![index].label,
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 8,
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
       topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
     );
@@ -204,40 +198,42 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
 
   @override
   List<LineChartBarData> buildLineBarsData() {
-    final visible = _visiblePoints;
-
-    final spots = List<FlSpot>.generate(
-      visible.length,
-      (i) => FlSpot(i.toDouble(), visible[i].mrValue),
-    );
-
+    final interval = _calculateXInterval().toInt();
+    final int nullMrValue = dataPoints!.length - 1;
+    
     return [
       LineChartBarData(
-        spots: spots,
+      spots: dataPoints!
+        .asMap()
+        .entries
+        .take(nullMrValue)
+        .where((entry) => (entry.key - 1) % interval == 0)
+        .map((entry) => FlSpot(
+          entry.key.toDouble() + 1.0,
+          entry.value.mrValue
+        ))
+        .toList(),
+        
         isCurved: false,
         color: dataLineColor,
         barWidth: 2,
         isStrokeCapRound: true,
         dotData: FlDotData(
           show: true,
-          getDotPainter: (spot, _, __, ___) {
-            final i = spot.x.toInt();
-            final v = visible[i].mrValue;
+          getDotPainter: (spot, percent, barData, index) {
+            final realIndex = spot.x.toInt();
+            final value = dataPoints![realIndex].mrValue;
             Color dotColor = dataLineColor!;
-
-            // final upperSpec = controlChartStats?.specAttribute?.surfaceHardnessUpperSpec ?? 0.0;
-            // final lowerSpec = controlChartStats?.specAttribute?.surfaceHardnessLowerSpec ?? 0.0;
-            final ucl = controlChartStats?.controlLimitMRChart?.ucl ?? 0.0;
-            // final lcl = controlChartStats?.controlLimitMRChart?.lcl ?? 0.0;
-
-            if ((ucl > 0 && v > ucl)) {
-              dotColor = Colors.orange; // warning zone
+            
+            if (value > (controlChartStats?.controlLimitMRChart?.ucl ?? 0.0) || 
+                      value < (controlChartStats?.controlLimitMRChart?.lcl ?? 0.0)) {
+            dotColor = Colors.orange; // Warning zone
             }
-
+            
             return FlDotCirclePainter(
-              radius: 3.5,
+              radius: 4,
               color: dotColor,
-              strokeWidth: 1,
+              strokeWidth: 2,
               strokeColor: Colors.white,
             );
           },
@@ -246,7 +242,6 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
       ),
     ];
   }
-
 
   @override
   LineTouchData buildTouchData() {
@@ -308,68 +303,94 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
               border: isDashed ? Border.all(color: color, width: 1) : null,
             ),
             child: isDashed
-                ? CustomPaint(painter: DashedLinePainter(color: color))
+                ? CustomPaint(
+                    painter: DashedLinePainter(color: color),
+                  )
                 : null,
           ),
         ),
         const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack)),
-        const SizedBox(width: 4),
-        Text(value ?? 'N/A',
-            style: const TextStyle(
-              fontSize: 10,
-              color: AppColors.colorBlack,
-              fontWeight: FontWeight.w500,
-            )),
-      ],
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.colorBlack,
+              ),
+            ),
+        const SizedBox(width: 8),
+            Text(
+              value ?? 'N/A',
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.colorBlack,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
     );
   }
 
-  // ---------- Y scale cache/public ----------
-  @override
-  double getMaxY() {
-    if (_cachedInterval == null) _getInterval();
-    return _cachedMaxY ?? 0.0;
+  // ---------- Cache ----------
+  double? _cachedMinY;
+  double? _cachedMaxY;
+  double? _cachedInterval;
+
+  // ---------- Public ----------
+@override
+double getMaxY() {
+  if (_cachedInterval == null) _getInterval();
+  return _cachedMaxY ?? 0.0;
+}
+
+@override
+double getMinY() {
+  if (_cachedInterval == null) _getInterval();
+  return _cachedMinY ?? 0.0;
+}
+
+
+double _getInterval() {
+  const divisions = 5; // => 6 ticks
+  final spotMin = 0.0;
+  final spotMax =
+      controlChartStats?.yAxisRange?.maxYsurfaceHardnessMrChart ?? spotMin;
+
+  if (spotMax <= spotMin) {
+    _cachedMinY = spotMin;
+    _cachedMaxY = spotMin + divisions;
+    _cachedInterval = 1.0;
+    return _cachedInterval!;
   }
 
-  @override
-  double getMinY() {
-    if (_cachedInterval == null) _getInterval();
-    return _cachedMinY ?? 0.0;
+  // target step for desired divisions
+  final ideal = (spotMax - spotMin) / divisions;
+  double interval = _niceStepCeil(ideal);
+
+  // snap min to multiple of step; max exactly divisions*step above
+  double minY = (spotMin / interval).floor() * interval;
+  double maxY = minY + divisions * interval;
+
+  // if not yet covering data max, bump to next nice step(s)
+  while (maxY < spotMax - 1e-12) {
+    interval = _nextNiceStep(interval);
+    minY = (spotMin / interval).floor() * interval;
+    maxY = minY + divisions * interval;
   }
 
-  // ---------- Y scale compute ----------
-  double _getInterval() {
-    const divisions = 5; // -> 6 ticks
-    final spotMin = 0.0;
-    final spotMax = controlChartStats?.yAxisRange?.maxYsurfaceHardnessMrChart ?? spotMin;
+  _cachedMinY = minY;
+  _cachedMaxY = maxY;
+  _cachedInterval = interval;
+  return interval;
+}
 
-    if (spotMax <= spotMin) {
-      _cachedMinY = spotMin;
-      _cachedMaxY = spotMin + divisions;
-      _cachedInterval = 1.0;
-      return _cachedInterval!;
-    }
-
-    final ideal = (spotMax - spotMin) / divisions;
-    double interval = _niceStepCeil(ideal);
-
-    double minY = (spotMin / interval).floor() * interval;
-    double maxY = minY + divisions * interval;
-
-    while (maxY < spotMax - 1e-12) {
-      interval = _nextNiceStep(interval);
-      minY = (spotMin / interval).floor() * interval;
-      maxY = minY + divisions * interval;
-    }
-
-    _cachedMinY = minY;
-    _cachedMaxY = maxY;
-    _cachedInterval = interval;
-    return interval;
+  // ---------- Utilities ----------
+  double _roundUpToPowerOf10(double x) {
+  if (x <= 0 || x.isNaN || x.isInfinite) return x;
+      final exp = (math.log(x) / math.log(10)).floor();
+      final base = math.pow(10.0, exp).toDouble();
+      return (x <= base) ? base : math.pow(10.0, exp + 1).toDouble();
   }
 
-  // ---------- Y step helpers ----------
   double _niceStepCeil(double x) {
     if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
     final exp = (math.log(x) / math.log(10)).floor();
@@ -382,8 +403,6 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
     if (mant <= 0.25) return 0.25 * mag;
     if (mant <= 0.5) return 0.5 * mag;
     if (mant <= 1.0) return 1.0 * mag;
-    if (mant <= 1.25) return 1.25 * mag;
-    if (mant <= 1.5) return 1.5 * mag;
     if (mant <= 2.0) return 2.0 * mag;
     if (mant <= 2.5) return 2.5 * mag;
     if (mant <= 5.0) return 5.0 * mag;
@@ -394,29 +413,33 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
     final exp = (math.log(step) / math.log(10)).floor();
     final mag = math.pow(10.0, exp).toDouble();
     final mant = step / mag;
-    if (mant <= 0.025) return 0.050 * mag;
-    if (mant <= 0.050) return 0.075 * mag;
-    if (mant <= 0.075) return 0.125 * mag;
-    if (mant <= 0.125) return 0.25 * mag;
-    if (mant <= 0.25) return 0.5 * mag;
-    if (mant <= 0.5) return 1.0 * mag;
-    if (mant < 1.0) return 2.0 * mag;
-    if (mant < 2.0) return 2.5 * mag;
-    if (mant < 2.5) return 5.0 * mag;
-    if (mant < 5.0) return 10.0 * mag;
+    if (mant <= 0.025) return 0.025 * mag;
+    if (mant <= 0.050) return 0.050 * mag;
+    if (mant <= 0.075) return 0.075 * mag;
+    if (mant <= 0.125) return 0.125 * mag;
+    if (mant <= 0.25) return 0.25 * mag;
+    if (mant <= 0.5) return 0.5 * mag;
+    if (mant < 1.0) return 1.0 * mag;
+    if (mant < 2.0) return 2.0 * mag;
+    if (mant < 2.5) return 2.5 * mag;
+    if (mant < 5.0) return 5.0 * mag;
     return 10.0 * mag;
   }
 
-  // ---------- X helpers ----------
-  double _xIntervalForCount(int n) {
-    if (n <= 8) return 1;
-    if (n <= 12) return 2;
-    if (n <= 24) return 3; // good default for 24
-    return (n / 8).floorToDouble().clamp(1, 10);
+  double _calculateYAxisInterval() {
+    return _getInterval();
+  }
+    
+  double _calculateXInterval() {
+    int pointCount = dataPoints!.length;
+    
+    if (pointCount <= 10) return 1.0;
+    return (pointCount / 10).ceilToDouble();
   }
 
   String formatValue(double? value) {
-    if (value == null || value == 0.0) return 'N/A';
+    if (value == null) return 'N/A';
     return value.toStringAsFixed(2);
   }
+  
 }

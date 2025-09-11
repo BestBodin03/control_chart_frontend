@@ -20,7 +20,7 @@ Future<void> main() async {
   // bootstrap -> ได้ prefs; ถ้าไม่มีจะโหลดจาก API แล้วเซฟ
   final state = await bootstrap(prefs: prefs, api: api);
   if (state is TvSettingProfileLoaded) {
-    debugPrint('In Main\n${const JsonEncoder.withIndent('  ').convert(state.data)}');
+    // debugPrint('In Main\n${const JsonEncoder.withIndent('  ').convert(state.data)}');
   }
 
   // แปลง prefs -> POJO สำหรับจอแรก

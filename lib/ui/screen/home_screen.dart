@@ -52,7 +52,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
     switch (index) {
       case 0:
         if (profiles.isNotEmpty) return HomeContent(profiles: profiles);
-        return const Center(child: Text('No TV setting profile'));
+        return const Center(child: Text('โปรดเลือกโปรไฟล์ตั้งค่าเพื่อแสดงแผนภูมิควบคุม'));
       case 1:
         return const SearchingScreen();
       case 2:

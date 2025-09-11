@@ -57,6 +57,6 @@ Future<TvSettingProfileState> bootstrap({
 
   // 5) เซฟลง SharedPreferences แล้วคืน Loaded
   await prefs.save(shape);
-  debugPrint('In Bootstrap: $shape');
+  // debugPrint('In Bootstrap: $shape');
   return TvSettingProfileLoaded(shape);
 }

@@ -2,20 +2,20 @@ import 'package:control_chart/data/bloc/search_chart_details/extension/search_st
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
-import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/control_chart_component.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/mr_chart_component.dart';
+import 'package:control_chart/utils/select_second_chart_attribute.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../../../domain/types/chart_component.dart';
 
 class ControlChartTemplateCdeCdt extends StatelessWidget {
   final String xAxisLabel;
   final String yAxisLabel;
   final Color? dataLineColor;
-  final List<ChartDataPointCdeCdt>? dataPoints;
-  final ControlChartStats? controlChartStats;
   final Color? backgroundColor;
   final double? height;
   final double? width;
@@ -23,8 +23,6 @@ class ControlChartTemplateCdeCdt extends StatelessWidget {
 
   const ControlChartTemplateCdeCdt({
     super.key,
-    this.dataPoints,
-    this.controlChartStats,
     this.xAxisLabel = 'Date',
     this.yAxisLabel = 'Attr.',
     this.dataLineColor = AppColors.colorBrand,
@@ -37,74 +35,112 @@ class ControlChartTemplateCdeCdt extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<SearchBloc, SearchState>(
-      builder: (context, searchState) {
+      builder: (context, state) {
+        // --- Guards ---
+        if (state.status == SearchStatus.loading) {
+          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+        }
+        if (state.status == SearchStatus.failure) {
+          return const Center(child: Text('จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ'));
+        }
+        final stats = state.controlChartStats;
+        if (stats == null) {
+          return const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล'));
+        }
+        final sel = stats.secondChartSelected;
+        if (sel == null || sel == SecondChartSelected.na) {
+          // เลือก NA = ไม่ต้องแสดง
+          return const SizedBox.shrink();
+        }
+
+        // --- เลือกชุดข้อมูลตาม secondChartSelected ---
+        final bundle = pickBundle(stats);
+        if (bundle == null) {
+          return const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล'));
+        }
+
+        // map values -> ChartDataPoint (ทำ label ง่าย ๆ เป็นลำดับ 1..n)
+        final iPoints = List<ChartDataPointCdeCdt>.generate(bundle.values.length, (i) {
+          final v = bundle.values[i];
+          // final mrv = bundle.mrValue[i];
+          return ChartDataPointCdeCdt(
+            value: v,
+            label: '${i + 1}',
+            fullLabel: '${i + 1}',
+          );
+        });
+
+        final mrPoints = List<ChartDataPointCdeCdt>.generate(bundle.mrValues.length, (i) {
+          final mrv = bundle.mrValues[i];
+          // final v = bundle.value[i];
+          return ChartDataPointCdeCdt(
+            // value: v,
+            label: '${i + 1}',
+            fullLabel: '${i + 1}', mrValue: mrv,
+          );
+        });
+
+        if (!isMovingRange && iPoints.isEmpty) {
+          return const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล'));
+        }
+        if (isMovingRange && mrPoints.isEmpty) {
+          return const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล'));
+        }
+
+        // --- เลือกคอมโพเนนต์ตามโหมด ---
+        final ChartComponent selectedWidget = isMovingRange
+            ? MrChartComponent(
+                dataPoints: mrPoints,
+                controlChartStats: stats,
+                dataLineColor: dataLineColor,
+                backgroundColor: backgroundColor,
+                height: height,
+                width: width,
+              )
+            : ControlChartComponent(
+                dataPoints: iPoints,
+                controlChartStats: stats,
+                dataLineColor: dataLineColor,
+                backgroundColor: backgroundColor,
+                height: height,
+                width: width,
+              );
+
+        final dataLen = isMovingRange ? mrPoints.length : iPoints.length;
+
+        // --- Layout (legend + chart) ---
         return LayoutBuilder(
           builder: (context, constraints) {
             final w = width ?? constraints.maxWidth;
             final h = height ?? constraints.maxHeight;
 
-            // --- Loading / Error / Empty guards ---
-            if (searchState.status == SearchStatus.loading) {
-              return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-            }
-            if (searchState.status == SearchStatus.failure) {
-              return const Center(child: Text('จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ'));
-            }
-            if (searchState.controlChartStats == null ||
-                searchState.chartDataPointsCdeCdt.isEmpty) {
-              return const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล'));
-            }
-
-            // --- ใช้ข้อมูลจาก searchState ---
-            final dataPoints = searchState.chartDataPointsCdeCdt;
-            final stats = searchState.controlChartStats!;
-
-            // component I / MR
-            final useIndividual = ControlChartComponent(
-              dataPoints: dataPoints,
-              controlChartStats: stats,
-            );
-
-            final useMr = MrChartComponent(
-              dataPoints: dataPoints,
-              controlChartStats: stats,
-            );
-
-            final ChartComponent selectedWidget = isMovingRange ? useMr : useIndividual;
-
-            const legendTopPad = 0.0;
-            const legendLeftPad = 8.0;
-            const legendRightPad = 24.0;
-            const innerPadBottom = 0.0;
             const legendHeight = 32.0;
-            const gapLegendToChart = 16.0;
+            const gapLegendToChart = 4.0;
 
             return SizedBox(
               width: w,
               height: h,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: backgroundColor,
+                  color: backgroundColor ?? Colors.white,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.grey.shade300),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                      legendLeftPad, legendTopPad, legendRightPad, innerPadBottom),
-                  child: Stack(
+                  padding: const EdgeInsets.fromLTRB(0, 0, 24, 0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Positioned(
-                        top: 8,
-                        left: 16,
-                        right: 0,
+                      SizedBox(
                         height: legendHeight,
                         child: Align(
                           alignment: Alignment.center,
                           child: selectedWidget.buildLegend(),
                         ),
                       ),
-                      Positioned.fill(
-                        top: legendHeight + gapLegendToChart,
+                      const SizedBox(height: gapLegendToChart),
+
+                      Expanded(
                         child: LineChart(
                           LineChartData(
                             gridData: selectedWidget.buildGridData(),
@@ -113,7 +149,7 @@ class ControlChartTemplateCdeCdt extends StatelessWidget {
                             borderData: selectedWidget.buildBorderData(),
                             lineBarsData: selectedWidget.buildLineBarsData(),
                             minX: 0,
-                            maxX: dataPoints.length.toDouble() - 1,
+                            maxX: (dataLen - 1).toDouble(),
                             minY: selectedWidget.getMinY(),
                             maxY: selectedWidget.getMaxY(),
                             lineTouchData: selectedWidget.buildTouchData(),

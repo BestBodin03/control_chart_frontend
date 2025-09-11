@@ -1,12 +1,12 @@
-// file: home_content.dart
 import 'dart:async';
 import 'dart:developer' as dev;
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
-import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/help.dart';
+import 'package:control_chart/ui/core/shared/large_control_chart/surface_hardness/help.dart';
+import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/help.dart'; // <-- ของเดิมคุณ
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/help.dart';
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
-import 'package:flutter/foundation.dart'; // kDebugMode, listEquals
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -146,28 +146,34 @@ class _HomeContentState extends State<HomeContent> {
                 return Center(child: Text('Error: ${searchState.errorMessage}'));
               }
 
-              return Expanded(
-                child: Row(
-                  children: [
-                    // left: Surface Hardness
-                    SizedBox(
-                      width: halfW,
-                      height: h,
-                      child: _ChartFillBox(
-                        child: buildChartsSectionSurfaceHardness(q, searchState),
+              return Row(
+                children: [
+                  // left: Surface Hardness (แบบ medium)
+                  SizedBox(
+                    width: halfW,
+                    height: h,
+                    child: _ChartFillBox(
+                      child: buildChartsSectionSurfaceHardness(
+                        [q],              // ห่อเป็นลิสต์
+                        0,                // index เดียว
+                        searchState,
+                        zoomBuilder: (ctx, profileAtIndex, st) =>
+                            buildChartsSectionSurfaceHardnessLarge(
+                              profileAtIndex,
+                              st,
+                              onClose: () => Navigator.of(ctx).maybePop(),
+                            ),
                       ),
                     ),
-                    const SizedBox(width: gap),
-                    // right: CDE/CDT
-                    SizedBox(
-                      width: halfW,
-                      height: h,
-                      child: _ChartFillBox(
-                        child: buildChartsSectionCdeCdt(q, searchState),
-                      ),
+                  ),
+                  const SizedBox(width: gap),
+                  // right: CDE/CDT (ของเดิมคุณ)
+                  Expanded(
+                    child: _ChartFillBox(
+                      child: buildChartsSectionCdeCdt(q, searchState),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               );
             },
           );
@@ -188,23 +194,76 @@ class _HomeContentState extends State<HomeContent> {
               _startTimerForIndex(i);
             },
             itemCount: profiles.length,
-            itemBuilder: (ctx, i) => _TwoChartsPane(settingProfile: profiles[i]),
+            itemBuilder: (ctx, i) => LayoutBuilder(
+              builder: (context, constraints) {
+                return BlocBuilder<SearchBloc, SearchState>(
+                  builder: (context, searchState) {
+                    if (searchState.status == SearchStatus.loading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (searchState.status == SearchStatus.failure) {
+                      return Center(child: Text('Error: ${searchState.errorMessage}'));
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                      child: Row(
+                        children: [
+                          // left: Surface Hardness (medium + zoom snapshot)
+                          Expanded(
+                            child: SizedBox(
+                              height: constraints.maxHeight - (8 + 16),
+                              child: _ChartFillBox(
+                                child: buildChartsSectionSurfaceHardness(
+                                  profiles, // ทั้งลิสต์
+                                  i,        // index ของสไลด์นี้
+                                  searchState,
+                                  zoomBuilder: (ctx, profileAtIndex, st) =>
+                                      buildChartsSectionSurfaceHardnessLarge(
+                                        profileAtIndex,
+                                        st,
+                                        onClose: () => Navigator.of(ctx).maybePop(),
+                                      ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+
+                          // right: CDE/CDT (ของเดิมคุณ)
+                          Expanded(
+                            child: SizedBox(
+                              height: constraints.maxHeight - (8 + 16),
+                              child: _ChartFillBox(
+                                child: buildChartsSectionCdeCdt(
+                                  profiles[i],
+                                  searchState,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ),
 
         const SizedBox(height: 8),
-        
+
+        // Dots (เลื่อนหน้าต่าง 6 จุด)
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
-            (profiles.length <= 6)
-                ? profiles.length
-                : 6, // จำนวนจุดที่จะสร้าง (ถ้าน้อยกว่าก็ใช้จริง ถ้ามากกว่าใช้ 6)
-            (i) {
+            (profiles.length <= 6) ? profiles.length : 6,
+            (dot) {
               final start = (profiles.length <= 6)
                   ? 0
                   : (_index - 3).clamp(0, profiles.length - 6);
-              final realIndex = start + i;
+              final realIndex = start + dot;
               final isActive = realIndex == _index;
 
               return AnimatedContainer(
@@ -224,66 +283,6 @@ class _HomeContentState extends State<HomeContent> {
 
         const SizedBox(height: 8),
       ],
-    );
-  }
-}
-
-/// หนึ่งสไลด์ = กราฟซ้าย/ขวา
-class _TwoChartsPane extends StatelessWidget {
-  final HomeContentVar settingProfile;
-  const _TwoChartsPane({required this.settingProfile});
-
-  @override
-  Widget build(BuildContext context) {
-    final uniqueKey =
-        '${settingProfile.startDate?.millisecondsSinceEpoch ?? 0}-'
-        '${settingProfile.endDate?.millisecondsSinceEpoch ?? 0}-'
-        '${settingProfile.furnaceNo ?? ''}-'
-        '${settingProfile.materialNo ?? ''}-';
-
-    return LayoutBuilder(
-      key: ValueKey(uniqueKey),
-      builder: (context, constraints) {
-        return BlocBuilder<SearchBloc, SearchState>(
-          builder: (context, searchState) {
-            if (searchState.status == SearchStatus.loading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (searchState.status == SearchStatus.failure) {
-              return Center(child: Text('Error: ${searchState.errorMessage}'));
-            }
-
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Row(
-                children: [
-                  // left
-                  Expanded(
-                    child: SizedBox(
-                      height: constraints.maxHeight - (8 + 16), // เผื่อ vertical padding
-                      child: _ChartFillBox(
-                        child: buildChartsSectionSurfaceHardness(settingProfile, searchState),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-
-                  // right
-                  Expanded(
-                    child: SizedBox(
-                      height: constraints.maxHeight - (8 + 16),
-                      child: _ChartFillBox(
-                        child: buildChartsSectionCdeCdt(settingProfile, searchState),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-
-          },
-        );
-      },
     );
   }
 }
