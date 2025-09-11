@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as dev;
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
+import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/large_control_chart/surface_hardness/help.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/help.dart'; // <-- ของเดิมคุณ
@@ -149,20 +150,22 @@ class _HomeContentState extends State<HomeContent> {
               return Row(
                 children: [
                   // left: Surface Hardness (แบบ medium)
-                  SizedBox(
-                    width: halfW,
-                    height: h,
-                    child: _ChartFillBox(
-                      child: buildChartsSectionSurfaceHardness(
-                        [q],              // ห่อเป็นลิสต์
-                        0,                // index เดียว
-                        searchState,
-                        zoomBuilder: (ctx, profileAtIndex, st) =>
-                            buildChartsSectionSurfaceHardnessLarge(
-                              profileAtIndex,
-                              st,
-                              onClose: () => Navigator.of(ctx).maybePop(),
-                            ),
+                  Expanded(
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: h,
+                      child: _ChartFillBox(
+                        child: buildChartsSectionSurfaceHardness(
+                          [q],              // ห่อเป็นลิสต์
+                          0,                // index เดียว
+                          searchState,
+                          zoomBuilder: (ctx, profileAtIndex, st) =>
+                              buildChartsSectionSurfaceHardnessLarge(
+                                profileAtIndex,
+                                st,
+                                onClose: () => Navigator.of(ctx).maybePop(),
+                              ),
+                        ),
                       ),
                     ),
                   ),
@@ -231,13 +234,16 @@ class _HomeContentState extends State<HomeContent> {
                           const SizedBox(width: 16),
 
                           // right: CDE/CDT (ของเดิมคุณ)
-                          Expanded(
-                            child: SizedBox(
-                              height: constraints.maxHeight - (8 + 16),
-                              child: _ChartFillBox(
-                                child: buildChartsSectionCdeCdt(
-                                  profiles[i],
-                                  searchState,
+                          Visibility(
+                            visible: searchState.controlChartStats?.secondChartSelected != SecondChartSelected.na,
+                            child: Expanded(
+                              child: SizedBox(
+                                height: constraints.maxHeight - (8 + 16),
+                                child: _ChartFillBox(
+                                  child: buildChartsSectionCdeCdt(
+                                    profiles[i],
+                                    searchState,
+                                  ),
                                 ),
                               ),
                             ),

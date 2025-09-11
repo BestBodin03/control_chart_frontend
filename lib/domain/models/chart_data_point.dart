@@ -21,15 +21,15 @@ class ChartDataPointCdeCdt {
   final String fullLabel;
   final String? furnaceNo;
   final String? matNo;
-  final double? value;
-  final double? mrValue;
+  final Object value;
+  final Object mrValue;
 
   ChartDataPointCdeCdt({
     required this.label,
     required this.fullLabel,
     this.furnaceNo,
     this.matNo,
-    this.value,
-    this.mrValue
+    this.value = 0.0,
+    this.mrValue = 0.0
   });
 }

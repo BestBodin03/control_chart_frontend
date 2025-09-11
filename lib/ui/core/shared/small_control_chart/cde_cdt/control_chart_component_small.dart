@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'dart:math' as math;
 
 import 'package:control_chart/domain/models/chart_data_point.dart';
@@ -10,7 +9,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
   
 class ControlChartComponentSmall extends StatelessWidget implements ChartComponent {
-  final List<ChartDataPointCdeCdt>? dataPoints;
+  final List<ChartDataPointCdeCdt> dataPoints;
   final ControlChartStats? controlChartStats;
   // final String xAxisLabel;
   // final String yAxisLabel;
@@ -21,7 +20,7 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
 
   ControlChartComponentSmall({
     super.key,
-    this.dataPoints,
+    this.dataPoints = []<ChartDataPointCdeCdt>,
     this.controlChartStats,
     // this.xAxisLabel = 'Date (mm/dd)',
     // this.yAxisLabel = 'Surface Hardness',
@@ -282,7 +281,7 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
             if (index >= 0 && index < dataPoints!.length) {
               return LineTooltipItem(
                 "วันที่: ${dataPoints![index].fullLabel}\n"
-                "ค่า: ${dataPoints![index].value.toStringAsFixed(3)}\n"
+                "ค่า: ${dataPoints![index].value?.toStringAsFixed(3)}\n"
                 "เตา: ${dataPoints![index].furnaceNo}\n"
                 "เลขแมต: ${dataPoints![index].matNo}",
                 AppTypography.textBody3W,

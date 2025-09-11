@@ -1,0 +1,28 @@
+  final ChartSpot? surfaceHardnessChartSpots;
+  final ChartSpot? compoundLayerChartSpots;
+  final ChartSpot? cdeChartSpots;
+  final ChartSpot? cdtChartSpots;
+
+  final List<double>? mrChartSpots;
+  final List<double>? compoundLayerMrChartSpots;
+  final List<double>? cdeMrChartSpots;
+  final List<double>? cdtMrChartSpots;
+
+@JsonSerializable(explicitToJson: true)
+class ChartPoints {
+  final List<DataPoint> surfaceHardness;
+  final List<DataPoint> compoundLayer;
+  final List<DataPoint> cde;
+  final List<DataPoint> cdt;
+
+  const ChartPoints({
+    this.surfaceHardness = const [],
+    this.compoundLayer = const [],
+    this.cde = const [],
+    this.cdt = const [],
+  });
+
+  factory ChartPoints.fromJson(Map<String, dynamic> json) =>
+      _$ChartPointsFromJson(json);
+  Map<String, dynamic> toJson() => _$ChartPointsToJson(this);
+}

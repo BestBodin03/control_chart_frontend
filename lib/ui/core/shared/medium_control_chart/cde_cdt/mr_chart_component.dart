@@ -1,9 +1,5 @@
-
-
-import 'dart:math';
 import 'dart:math' as math;
 
-import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
@@ -16,8 +12,6 @@ import 'package:flutter/material.dart';
 class MrChartComponent extends StatelessWidget implements ChartComponent  {
   final List<ChartDataPointCdeCdt>? dataPoints;
   final ControlChartStats? controlChartStats;
-  // final String xAxisLabel;
-  // final String yAxisLabel;
   final Color? dataLineColor;
   final Color? backgroundColor;
   final double? height;
@@ -28,25 +22,53 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
     super.key, 
     this.dataPoints,
     this.controlChartStats,
-    // this.xAxisLabel = 'Date (mm/dd)',
-    // this.yAxisLabel = 'Surface Hardness',
     this.dataLineColor = AppColors.colorBrand,
     this.backgroundColor,
     this.height = 240,
     this.width = 560,
     this.isMovingRange = true
   });
-  
+
+  // ------- window config (latest N points) -------
+  static const int _windowSize = 24;
+
+  // cache for Y range/interval
+  double? _cachedMinY;
+  double? _cachedMaxY;
+  double? _cachedInterval;
+
+  // Visible window
+  List<ChartDataPointCdeCdt> get _visiblePoints {
+    final src = dataPoints ?? const <ChartDataPointCdeCdt>[];
+    if (src.length <= _windowSize) return src;
+    return src.sublist(src.length - _windowSize);
+  }
+
+  // strictly pick per selection
+  T? _sel<T>(T? cde, T? cdt, T? comp) {
+    switch (controlChartStats?.secondChartSelected) {
+      case SecondChartSelected.cde:
+        return cde;
+      case SecondChartSelected.cdt:
+        return cdt;
+      case SecondChartSelected.compoundLayer:
+        return comp;
+      default:
+        return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (dataPoints == null || dataPoints!.isEmpty) {
-      return const Center(child: Text('No data available'));
+      return const Center(child: Text('ไม่พบข้อมูล'));
     }
+
+    final visible = _visiblePoints;
 
     return Container(
       height: height,
       width: width,
-      // padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: backgroundColor ?? Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -57,103 +79,86 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
             child: LineChart(
               LineChartData(
                 gridData: buildGridData(),
-                // titlesData: buildTitlesData(),
+                titlesData: buildTitlesData(),
                 borderData: buildBorderData(),
                 lineBarsData: buildLineBarsData(),
                 extraLinesData: buildControlLines(),
-                // lineTouchData: buildTouchData(),
                 minX: 0,
-                maxX: (dataPoints!.length - 1).toDouble(),
-                minY: 0,
+                maxX: (visible.length - 1).toDouble(),
+                minY: getMinY(),
                 maxY: getMaxY(),
               ),
             ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Y-axis label (rotated)
-              RotatedBox(
-                quarterTurns: 3,
-              ),
-            ],
           ),
         ],
       ),
     );
   }
-  
+
   @override
   FlGridData buildGridData() {
+    final n = _visiblePoints.length;
     return FlGridData(
       show: true,
       drawHorizontalLine: true,
       drawVerticalLine: true,
-      horizontalInterval: _calculateYAxisInterval(),
-      // horizontalInterval: 24,
-      verticalInterval: 24,
-      getDrawingHorizontalLine: (value) {
-        return FlLine(
-          color: Colors.grey.shade300,
-          strokeWidth: 0.5,
-        );
-      },
-      getDrawingVerticalLine: (value) {
-        return FlLine(
-          color: Colors.grey.shade300,
-          strokeWidth: 0.5,
-        );
-      },
+      horizontalInterval: _getInterval(),
+      verticalInterval: _xIntervalForCount(n),
+      getDrawingHorizontalLine: (_) => FlLine(
+        color: Colors.grey.shade100,
+        strokeWidth: 0.5,
+      ),
+      getDrawingVerticalLine: (_) => FlLine(
+        color: Colors.grey.shade100,
+        strokeWidth: 0.5,
+      ),
     );
   }
 
   @override
   FlTitlesData buildTitlesData() {
+    final visible = _visiblePoints;
+    final step = 1.0;
+
     return FlTitlesData(
-        leftTitles: AxisTitles(
-        // axisNameSize: 16, // กำหนดขนาด axis name
-        axisNameWidget: SizedBox(
-          width: height,
-        ),
+      leftTitles: AxisTitles(
+        axisNameWidget: SizedBox(width: height),
         sideTitles: SideTitles(
           showTitles: true,
           reservedSize: 24,
-          interval: _calculateYAxisInterval(),
+          interval: _getInterval(),
+          getTitlesWidget: (value, _) => Text(
+            value.toStringAsFixed(0),
+            style: const TextStyle(
+              color: Colors.black54,
+              fontSize: 8,
+            ),
+          ),
+        ),
+      ),
+      bottomTitles: AxisTitles(
+        sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 32,
+          interval: step,
           getTitlesWidget: (value, meta) {
-            return Text(
-              value.toStringAsFixed(2),
-              style: const TextStyle(
-                color: Colors.black54,
-                fontSize: 8,
+            final i = value.round();
+            if (i < 0 || i >= visible.length) return const SizedBox.shrink();
+
+            return SideTitleWidget(
+              meta: meta,
+              space: 8,
+              child: Transform.rotate(
+                angle: -30 * math.pi / 180,
+                child: Text(
+                  visible[i].label,
+                  style: const TextStyle(fontSize: 8, color: Colors.black54),
+                ),
               ),
             );
           },
         ),
-        ),
-        bottomTitles: AxisTitles(
-          axisNameWidget: SizedBox(width: width),
-          sideTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 28, // 👈 เพิ่มพื้นที่เผื่อ label หมุน
-            interval: _calculateXInterval(),
-            getTitlesWidget: (value, meta) {
-              final index = value.toInt();
-              if (index >= 0 && index < dataPoints!.length) {
-                return RotatedBox(
-                  quarterTurns: 3, // 1 = 90 องศา, 3 = -90 องศา
-                  child: Text(
-                    dataPoints![index].label,
-                    style: const TextStyle(
-                      color: Colors.black54,
-                      fontSize: 8,
-                    ),
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-        ),
+      ),
       topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
     );
@@ -172,81 +177,63 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
 
   @override
   ExtraLinesData buildControlLines() {
+    final ucl = _sel(
+      controlChartStats?.cdeControlLimitMRChart?.ucl,
+      controlChartStats?.cdtControlLimitMRChart?.ucl,
+      controlChartStats?.compoundLayerControlLimitMRChart?.ucl,
+    );
+    final cl = _sel(
+      controlChartStats?.cdeControlLimitMRChart?.cl,
+      controlChartStats?.cdtControlLimitMRChart?.cl,
+      controlChartStats?.compoundLayerControlLimitMRChart?.cl,
+    );
+
     return ExtraLinesData(
       extraLinesOnTop: false,
       horizontalLines: [
-        
-        HorizontalLine(
-          y: _chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.ucl ?? 0.0,
-          controlChartStats?.cdtControlLimitMRChart?.ucl ?? 0.0,
-          controlChartStats?.compoundLayerControlLimitMRChart?.ucl ?? 0.0,),
-          color: Colors.amberAccent,
-          strokeWidth: 1.5,
-        ),
-        
-        // Average Line
-        HorizontalLine(
-          y: _chooseCdeOrCdt(controlChartStats?.cdeMrAverage ?? 0.0, 
-          controlChartStats?.cdtMrAverage ?? 0.0,
-          controlChartStats?.compoundLayerMrAverage ?? 0.0),
-          // y: controlChartStats?.mrAverage ?? 0.0,
-          color: AppColors.colorSuccess1,
-          strokeWidth: 2,
-        ),
-
-        // HorizontalLine(
-        //   y: _chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.lcl ?? 0.0,
-        //   controlChartStats?.cdtControlLimitMRChart?.lcl ?? 0.0),
-        //   color: Colors.amberAccent,
-        //   strokeWidth: 1.5,
-        // ),
-
+        if (ucl != null) HorizontalLine(y: ucl, color: Colors.amberAccent, strokeWidth: 1.5),
+        if (cl != null) HorizontalLine(y: cl, color: AppColors.colorSuccess1, strokeWidth: 2),
       ],
     );
   }
 
   @override
   List<LineChartBarData> buildLineBarsData() {
-    final interval = _calculateXInterval().toInt();
-    final int nullMrValue = dataPoints!.length - 1;
-    
+    final visible = _visiblePoints;
+
+    final spots = List<FlSpot>.generate(
+      visible.length,
+      (i) => FlSpot(i.toDouble(), visible[i].mrValue),
+    );
+
+    final ucl = _sel(
+      controlChartStats?.cdeControlLimitMRChart?.ucl,
+      controlChartStats?.cdtControlLimitMRChart?.ucl,
+      controlChartStats?.compoundLayerControlLimitMRChart?.ucl,
+    ) ?? 0.0;
+
     return [
       LineChartBarData(
-      spots: dataPoints!
-        .asMap()
-        .entries
-        .take(nullMrValue)
-        .where((entry) => (entry.key - 1) % interval == 0)
-        .map((entry) => FlSpot(
-          entry.key.toDouble() + 1.0,
-          entry.value.mrValue
-        ))
-        .toList(),
-        
+        spots: spots,
         isCurved: false,
         color: dataLineColor,
         barWidth: 2,
         isStrokeCapRound: true,
         dotData: FlDotData(
           show: true,
-          getDotPainter: (spot, percent, barData, index) {
-            final realIndex = spot.x.toInt();
-            final value = dataPoints![realIndex].mrValue;
+          getDotPainter: (spot, _, __, ___) {
+            final i = spot.x.toInt();
+            final v = visible[i].mrValue;
             Color dotColor = dataLineColor!;
-            
-            // RULE 1 # OVER CONTROL
-            dotColor = (value < _chooseCdeOrCdt(
-              controlChartStats?.cdeControlLimitMRChart?.lcl ?? 0.0,
-              controlChartStats?.cdtControlLimitMRChart?.lcl ?? 0.0,
-              controlChartStats?.compoundLayerControlLimitMRChart?.lcl ?? 0.0,
-            )) ? Colors.orange : AppColors.colorBrand;
 
+            if (ucl > 0 && v > ucl) {
+              dotColor = Colors.orange; // warning zone
+            }
 
-            
             return FlDotCirclePainter(
-              radius: 4,
+              radius: 3.5,
               color: dotColor,
-              strokeWidth: 2,
+              strokeWidth: 1,
               strokeColor: Colors.white,
             );
           },
@@ -258,6 +245,8 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
 
   @override
   LineTouchData buildTouchData() {
+    final visible = _visiblePoints;
+
     return LineTouchData(
       handleBuiltInTouches: true,
       touchTooltipData: LineTouchTooltipData(
@@ -269,9 +258,9 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
         tooltipMargin: 8,
         getTooltipItems: (spots) {
           return spots.map((barSpot) {
-            final index = barSpot.x.toInt() - 1; // map กลับจาก x -> index เดิม
-            if (index >= 0 && index < (dataPoints!.length - 1)) { // ให้สอดคล้องกับ .take(nullMrValue)
-              final mr = dataPoints![index].mrValue;
+            final index = barSpot.x.toInt();
+            if (index >= 0 && index < visible.length) {
+              final mr = visible[index].mrValue;
               return LineTooltipItem(
                 "ค่า: ${mr.isNaN ? '-' : mr.toStringAsFixed(3)}\n",
                 AppTypography.textBody3W,
@@ -279,55 +268,36 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
               );
             }
             return const LineTooltipItem('', TextStyle());
-
           }).whereType<LineTooltipItem>().toList();
         },
       ),
     );
-  } 
+  }
 
   @override
   Widget buildLegend() {
+    final ucl = _sel(
+      controlChartStats?.cdeControlLimitMRChart?.ucl,
+      controlChartStats?.cdtControlLimitMRChart?.ucl,
+      controlChartStats?.compoundLayerControlLimitMRChart?.ucl,
+    );
+    final cl = _sel(
+      controlChartStats?.cdeControlLimitMRChart?.cl,
+      controlChartStats?.cdtControlLimitMRChart?.cl,
+      controlChartStats?.compoundLayerControlLimitMRChart?.cl,
+    );
+
     return Wrap(
       spacing: 8,
       runSpacing: 4,
       direction: Axis.horizontal,
       alignment: WrapAlignment.spaceEvenly,
       children: [
-      // if (formatValue(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec) != 'N/A')
-      //   buildLegendItem('Spec', Colors.red, false,
-      //       formatValue(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec)),
-
-      if (formatValue(_chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.ucl,
-       controlChartStats?.cdtControlLimitMRChart?.ucl,
-        controlChartStats?.compoundLayerControlLimitMRChart?.ucl)) != 'N/A')
-        buildLegendItem('UCL', Colors.orange, false,
-            formatValue(_chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.ucl,
-             controlChartStats?.cdtControlLimitMRChart?.ucl,
-             controlChartStats?.compoundLayerControlLimitMRChart?.ucl))),
-
-      // if (formatValue(controlChartStats?.specAttribute?.surfaceHardnessTarget) != 'N/A')
-      //   buildLegendItem('Target', Colors.deepPurple.shade300, false,
-      //       formatValue(controlChartStats?.specAttribute?.surfaceHardnessTarget)),
-
-      if (formatValue(_chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.cl,
-       controlChartStats?.cdtControlLimitMRChart?.cl,
-       controlChartStats?.compoundLayerControlLimitMRChart?.cl
-       )) != 'N/A')
-        buildLegendItem('AVG', Colors.green, false,
-            formatValue(_chooseCdeOrCdt(controlChartStats?.cdeControlLimitMRChart?.cl,
-             controlChartStats?.cdtControlLimitMRChart?.cl,
-             controlChartStats?.compoundLayerControlLimitMRChart?.cl
-             ))),
-
-      // if (formatValue(controlChartStats?.controlLimitIChart?.lcl) != 'N/A')
-      //   buildLegendItem('LCL', Colors.orange, false,
-      //       formatValue(controlChartStats?.controlLimitIChart?.lcl)),
-
-      // if (formatValue(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec) != 'N/A')
-      //   buildLegendItem('Spec', Colors.red, false,
-      //       formatValue(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec)),
-        ],
+        if (formatValue(ucl) != 'N/A')
+          buildLegendItem('UCL', Colors.orange, false, formatValue(ucl)),
+        if (formatValue(cl) != 'N/A')
+          buildLegendItem('AVG', Colors.green, false, formatValue(cl)),
+      ],
     );
   }
 
@@ -344,112 +314,73 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
               border: isDashed ? Border.all(color: color, width: 1) : null,
             ),
             child: isDashed
-                ? CustomPaint(
-                    painter: DashedLinePainter(color: color),
-                  )
+                ? CustomPaint(painter: DashedLinePainter(color: color))
                 : null,
           ),
         ),
         const SizedBox(width: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 10,
-                color: AppColors.colorBlack,
-              ),
-            ),
+        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack)),
         const SizedBox(width: 8),
-            Text(
-              value ?? 'N/A',
-              style: const TextStyle(
-                fontSize: 10,
-                color: AppColors.colorBlack,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+        Text(value ?? 'N/A',
+            style: const TextStyle(
+              fontSize: 10,
+              color: AppColors.colorBlack,
+              fontWeight: FontWeight.w500,
+            )),
+      ],
     );
   }
 
-// ---------- Cache ----------
-double? _cachedMinY;
-double? _cachedMaxY;
-double? _cachedInterval;
-
-// ---------- Public ----------
-@override
-double getMaxY() {
-  if (_cachedInterval == null) _getInterval();
-  return _cachedMaxY ?? 0.0;
-}
-
-@override
-double getMinY() {
-  if (_cachedInterval == null) _getInterval();
-  return _cachedMinY ?? 0.0;
-}
-
-
-double _getInterval() {
-  const divisions = 5; // => 6 ticks
-  final spotMin = 0.0;
-  final spotMax =
-        _chooseCdeOrCdt(controlChartStats?.yAxisRange?.maxYcdeMrChart, 
-        controlChartStats?.yAxisRange?.maxYcdtMrChart,
-        controlChartStats?.yAxisRange?.maxYcompoundLayerMrChart);
-
-  if (spotMax <= spotMin) {
-    _cachedMinY = spotMin;
-    _cachedMaxY = spotMin + divisions;
-    _cachedInterval = 1.0;
-    return _cachedInterval!;
+  // ---------- Y scale cache/public ----------
+  @override
+  double getMaxY() {
+    if (_cachedInterval == null) _getInterval();
+    return _cachedMaxY ?? 0.0;
   }
 
-  // target step for desired divisions
-  final ideal = (spotMax - spotMin) / divisions;
-  double interval = _niceStepCeil(ideal);
-
-  // snap min to multiple of step; max exactly divisions*step above
-  double minY = (spotMin / interval).floor() * interval;
-  double maxY = minY + divisions * interval;
-
-  // if not yet covering data max, bump to next nice step(s)
-  while (maxY < spotMax - 1e-12) {
-    interval = _nextNiceStep(interval);
-    minY = (spotMin / interval).floor() * interval;
-    maxY = minY + divisions * interval;
+  @override
+  double getMinY() {
+    if (_cachedInterval == null) _getInterval();
+    return _cachedMinY ?? 0.0;
   }
 
-  _cachedMinY = minY;
-  _cachedMaxY = maxY;
-  _cachedInterval = interval;
-  return interval;
-}
+  // ---------- Y scale compute ----------
+  double _getInterval() {
+    const divisions = 5; // -> 6 ticks
+    final minSel = 0.0;
+    final maxSel = _sel(
+          controlChartStats?.yAxisRange?.maxYcdeMrChart,
+          controlChartStats?.yAxisRange?.maxYcdtMrChart,
+          controlChartStats?.yAxisRange?.maxYcompoundLayerMrChart,
+        ) ??
+        0.0;
 
-  // utilities -------
-  double _roundUpToPowerOf10(double x) {
-    if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
-    
-    final exp = (math.log(x) / math.log(10)).floor();
-    final base = math.pow(10.0, exp).toDouble();
-    
-    if (x <= base) {
-      return base;
-    } else {
-      final nextPower = math.pow(10.0, exp + 1).toDouble();
-      
-      // สำหรับค่าเล็ก ให้ใช้ค่ากลาง (base * 5)
-      if (x < 1.0) {
-        final intermediate = base * 5;
-        if (x <= intermediate && intermediate < nextPower) {
-          return intermediate;
-        }
-      }
-      
-      return nextPower;
+    if (maxSel <= minSel) {
+      _cachedMinY = minSel;
+      _cachedMaxY = minSel + divisions;
+      _cachedInterval = 1.0;
+      return _cachedInterval!;
     }
+
+    final ideal = (maxSel - minSel) / divisions;
+    double interval = _niceStepCeil(ideal);
+
+    double minY = (minSel / interval).floor() * interval;
+    double maxY = minY + divisions * interval;
+
+    while (maxY < maxSel - 1e-12) {
+      interval = _nextNiceStep(interval);
+      minY = (minSel / interval).floor() * interval;
+      maxY = minY + divisions * interval;
+    }
+
+    _cachedMinY = minY;
+    _cachedMaxY = maxY;
+    _cachedInterval = interval;
+    return interval;
   }
 
+  // ---------- Y step helpers ----------
   double _niceStepCeil(double x) {
     if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
     final exp = (math.log(x) / math.log(10)).floor();
@@ -462,8 +393,12 @@ double _getInterval() {
     if (mant <= 0.25) return 0.25 * mag;
     if (mant <= 0.5) return 0.5 * mag;
     if (mant <= 1.0) return 1.0 * mag;
+    if (mant <= 1.25) return 1.25 * mag;
+    if (mant <= 1.5) return 1.5 * mag;
     if (mant <= 2.0) return 2.0 * mag;
     if (mant <= 2.5) return 2.5 * mag;
+    if (mant <= 3.0) return 3.0 * mag;
+    if (mant <= 4.0) return 4.0 * mag;
     if (mant <= 5.0) return 5.0 * mag;
     return 10.0 * mag;
   }
@@ -472,51 +407,30 @@ double _getInterval() {
     final exp = (math.log(step) / math.log(10)).floor();
     final mag = math.pow(10.0, exp).toDouble();
     final mant = step / mag;
-    if (mant <= 0.025) return 0.025 * mag;
-    if (mant <= 0.050) return 0.050 * mag;
-    if (mant <= 0.075) return 0.075 * mag;
-    if (mant <= 0.125) return 0.125 * mag;
-    if (mant <= 0.25) return 0.25 * mag;
-    if (mant <= 0.5) return 0.5 * mag;
-    if (mant < 1.0) return 1.0 * mag;
-    if (mant < 2.0) return 2.0 * mag;
-    if (mant < 2.5) return 2.5 * mag;
-    if (mant < 5.0) return 5.0 * mag;
+    if (mant <= 0.025) return 0.050 * mag;
+    if (mant <= 0.050) return 0.075 * mag;
+    if (mant <= 0.075) return 0.125 * mag;
+    if (mant <= 0.125) return 0.25 * mag;
+    if (mant <= 0.25) return 0.5 * mag;
+    if (mant <= 0.5) return 1.0 * mag;
+    if (mant < 1.0) return 2.0 * mag;
+    if (mant < 2.0) return 2.5 * mag;
+    if (mant < 2.5) return 3.0 * mag;
+    if (mant < 3.0) return 3.5 * mag;
+    if (mant < 5.0) return 10.0 * mag;
     return 10.0 * mag;
   }
 
-  double _calculateYAxisInterval() {
-    return _getInterval();
-  }
-    
-  double _calculateXInterval() {
-    int pointCount = dataPoints!.length;
-    
-    if (pointCount <= 10) return 1.0;
-    return (pointCount / 10).ceilToDouble();
+  // ---------- X helpers ----------
+  double _xIntervalForCount(int n) {
+    if (n <= 8) return 1;
+    if (n <= 12) return 2;
+    if (n <= 24) return 3;
+    return (n / 8).floorToDouble().clamp(1, 10);
   }
 
-  double _chooseCdeOrCdt(
-    double? cde,
-    double? cdt,
-    double? compoundLayer, {
-    double fallback = 0,
-  }) {
-    final a = cde ?? 0;
-    final b = cdt ?? 0;
-    final c = compoundLayer ?? 0;
-
-    // หา max จากทั้งสามค่า
-    final maxValue = [a, b, c].reduce((curr, next) => curr > next ? curr : next);
-
-    // ถ้าทุกค่าคือ 0 → คืน fallback
-    return maxValue == 0 ? fallback : maxValue;
-  }
-
-
-  
   String formatValue(double? value) {
-    if (value == null || value <= 0) return 'N/A';
-    return value.toStringAsFixed(3);
+    if (value == null || value == 0.0) return 'N/A';
+    return value.toStringAsFixed(2);
   }
 }

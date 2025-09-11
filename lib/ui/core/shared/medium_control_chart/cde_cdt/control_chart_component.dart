@@ -4,15 +4,13 @@ import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
-import 'package:control_chart/ui/core/shared/dashed_line_painter.dart';
+import 'package:control_chart/ui/core/shared/dashed_line_painter.dart' show DashedLinePainter;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-class ControlChartComponent extends StatelessWidget implements ChartComponent{
+class ControlChartComponent extends StatelessWidget implements ChartComponent {
   final List<ChartDataPointCdeCdt>? dataPoints;
   final ControlChartStats? controlChartStats;
-  // final String xAxisLabel;
-  // final String yAxisLabel;
   final Color? dataLineColor;
   final Color? backgroundColor;
   final double? height;
@@ -22,25 +20,51 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
     super.key,
     this.dataPoints,
     this.controlChartStats,
-    // this.xAxisLabel = 'Date (mm/dd)',
-    // this.yAxisLabel = 'Surface Hardness',
     this.dataLineColor = AppColors.colorBrand,
     this.backgroundColor,
-    this.height = 240,
+    this.height,
     this.width = 560,
   });
-  
+
+  // ------- window config (latest N points) -------
+  static const int _windowSize = 24;
+
+  // cache for Y range/interval
+  double? _cachedMinY;
+  double? _cachedMaxY;
+  double? _cachedInterval;
+
+  // Visible window (last 24 or all if < 24)
+  List<ChartDataPointCdeCdt> get _visiblePoints {
+    final src = dataPoints ?? const <ChartDataPointCdeCdt>[];
+    if (src.length <= _windowSize) return src;
+    return src.sublist(src.length - _windowSize);
+  }
+
+  // --------- helpers: strictly pick per selection (no max-of-three) ----------
+  T? _sel<T>(T? cde, T? cdt, T? comp) {
+    switch (controlChartStats?.secondChartSelected) {
+      case SecondChartSelected.cde:
+        return cde;
+      case SecondChartSelected.cdt:
+        return cdt;
+      case SecondChartSelected.compoundLayer:
+        return comp;
+      default:
+        return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-
-    if (dataPoints == null || dataPoints!.isEmpty) {
-      return const Center(child: Text('No data available'));
+    final visible = _visiblePoints;
+    if (visible.isEmpty) {
+      return const Center(child: Text('ไม่พบข้อมูล'));
     }
 
     return Container(
       height: height,
       width: width,
-      // padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: backgroundColor ?? Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -51,104 +75,88 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
             child: LineChart(
               LineChartData(
                 gridData: buildGridData(),
-                // titlesData: buildTitlesData(),
+                titlesData: buildTitlesData(),
                 borderData: buildBorderData(),
                 lineBarsData: buildLineBarsData(),
                 extraLinesData: buildControlLines(),
-                // lineTouchData: buildTouchData(),
+                lineTouchData: buildTouchData(),
                 minX: 0,
-                maxX: (dataPoints!.length - 1).toDouble(),
-                minY: 0,
+                maxX: (visible.length - 1).toDouble(), // domain = window only
+                minY: getMinY(),
                 maxY: getMaxY(),
               ),
             ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Y-axis label (rotated)
-              RotatedBox(
-                quarterTurns: 3,
-              ),
-            ],
           ),
         ],
       ),
     );
   }
-  
+
+  // ---------------- grid / titles / border ----------------
   @override
   FlGridData buildGridData() {
+    final n = _visiblePoints.length;
     return FlGridData(
       show: true,
       drawHorizontalLine: true,
       drawVerticalLine: true,
-      horizontalInterval: _calculateXInterval(),
-      // horizontalInterval: 24,
-      verticalInterval: 24,
-      getDrawingHorizontalLine: (value) {
-        return FlLine(
-          color: Colors.grey.shade300,
-          strokeWidth: 0.5,
-        );
-      },
-      getDrawingVerticalLine: (value) {
-        return FlLine(
-          color: Colors.grey.shade300,
-          strokeWidth: 0.5,
-        );
-      },
+      horizontalInterval: _getInterval(),                   // Y grid aligns with Y ticks
+      verticalInterval: _xIntervalForCount(n),              // X grid aligns with window size
+      getDrawingHorizontalLine: (_) => FlLine(
+        color: Colors.grey.shade100,
+        strokeWidth: 0.5,
+      ),
+      getDrawingVerticalLine: (_) => FlLine(
+        color: Colors.grey.shade100,
+        strokeWidth: 0.5,
+      ),
     );
   }
 
   @override
   FlTitlesData buildTitlesData() {
+    final visible = _visiblePoints;
+    final step = 1.0;
+
     return FlTitlesData(
-        leftTitles: AxisTitles(
-        // axisNameSize: 16, // กำหนดขนาด axis name
-        axisNameWidget: SizedBox(
-          width: height,
-        ),
+      leftTitles: AxisTitles(
+        axisNameWidget: SizedBox(width: height),
         sideTitles: SideTitles(
           showTitles: true,
           reservedSize: 24,
-          interval: _calculateYAxisInterval(),
+          interval: _getInterval(),
+          getTitlesWidget: (value, _) => Text(
+            value.toStringAsFixed(0),
+            style: const TextStyle(
+              color: Colors.black54,
+              fontSize: 8,
+            ),
+          ),
+        ),
+      ),
+      bottomTitles: AxisTitles(
+        sideTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 32,
+          interval: step,
           getTitlesWidget: (value, meta) {
-            return Text(
-              value.toStringAsFixed(2),
-              style: const TextStyle(
-                color: Colors.black54,
-                fontSize: 8,
+            final i = value.round();
+            if (i < 0 || i >= visible.length) return const SizedBox.shrink();
+
+            return SideTitleWidget(
+              meta: meta,
+              space: 8,
+              child: Transform.rotate(
+                angle: -30 * math.pi / 180,
+                child: Text(
+                  visible[i].label,
+                  style: const TextStyle(fontSize: 8, color: Colors.black54),
+                ),
               ),
             );
           },
         ),
-        ),
-        bottomTitles: AxisTitles(
-          axisNameWidget: SizedBox(width: width),
-          sideTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 28, // 👈 เพิ่มพื้นที่เผื่อ label หมุน
-            interval: _calculateXInterval(),
-            getTitlesWidget: (value, meta) {
-              final index = value.toInt();
-              if (index >= 0 && index < dataPoints!.length) {
-                return RotatedBox(
-                  quarterTurns: 3, // 1 = 90 องศา, 3 = -90 องศา
-                  child: Text(
-                    dataPoints![index].label,
-                    style: const TextStyle(
-                      color: Colors.black54,
-                      fontSize: 8,
-                    ),
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-        ),
-
+      ),
       topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
     );
@@ -165,113 +173,117 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
     );
   }
 
+  // ---------------- control lines ----------------
   @override
   ExtraLinesData buildControlLines() {
+    final specUsl = _sel(
+      controlChartStats?.specAttribute?.cdeUpperSpec,
+      controlChartStats?.specAttribute?.cdtUpperSpec,
+      controlChartStats?.specAttribute?.compoundLayerUpperSpec,
+    );
+    final specLsl = _sel(
+      controlChartStats?.specAttribute?.cdeLowerSpec,
+      controlChartStats?.specAttribute?.cdtLowerSpec,
+      controlChartStats?.specAttribute?.compoundLayerLowerSpec,
+    );
+    final target = _sel(
+      controlChartStats?.specAttribute?.cdeTarget,
+      controlChartStats?.specAttribute?.cdtTarget,
+      controlChartStats?.specAttribute?.compoundLayerTarget,
+    );
+    final ucl = _sel(
+      controlChartStats?.cdeControlLimitIChart?.ucl,
+      controlChartStats?.cdtControlLimitIChart?.ucl,
+      controlChartStats?.compoundLayerControlLimitIChart?.ucl,
+    );
+    final lcl = _sel(
+      controlChartStats?.cdeControlLimitIChart?.lcl,
+      controlChartStats?.cdtControlLimitIChart?.lcl,
+      controlChartStats?.compoundLayerControlLimitIChart?.lcl,
+    );
+    final avg = _sel(
+      controlChartStats?.cdeAverage,
+      controlChartStats?.cdtAverage,
+      controlChartStats?.compoundLayerAverage,
+    );
+
     return ExtraLinesData(
       extraLinesOnTop: false,
       horizontalLines: [
-        // USL (Upper Specification Limit)
-        if ((_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec,
-         controlChartStats?.specAttribute?.cdtUpperSpec,
-         controlChartStats?.specAttribute?.compoundLayerUpperSpec,
-         )) > 0.0)
-          HorizontalLine(
-            y: (_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec,
-             controlChartStats?.specAttribute?.cdtUpperSpec,
-             controlChartStats?.specAttribute?.compoundLayerUpperSpec))?? 0.0,
-            color: Colors.red.shade400,
-            strokeWidth: 2,
-          ),
-        
-        HorizontalLine(
-          y: _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart?.ucl,
-           controlChartStats?.cdtControlLimitIChart?.ucl,
-           controlChartStats?.compoundLayerControlLimitIChart?.ucl,),
-          color: Colors.amberAccent,
-          strokeWidth: 1.5,
-        ),
-        
-        // Average Line
-        HorizontalLine(
-          y: _chooseCdeOrCdt(controlChartStats?.cdeAverage,
-           controlChartStats?.cdtAverage,
-           controlChartStats?.compoundLayerAverage),
-          color: AppColors.colorSuccess1,
-          strokeWidth: 2,
-        ),
+        if ((specUsl ?? 0) > 0)
+          HorizontalLine(y: specUsl!, color: Colors.red.shade400, strokeWidth: 2),
 
-        HorizontalLine(
-          y: _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart?.lcl,
-           controlChartStats?.cdtControlLimitIChart?.lcl,
-           controlChartStats?.compoundLayerControlLimitIChart?.lcl),
-          color: Colors.amberAccent,
-          strokeWidth: 1.5,
-        ),
-        
-        // LSL (Lower Specification Limit)
-        if ((_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec,
-         controlChartStats?.specAttribute?.cdtLowerSpec,
-         controlChartStats?.specAttribute?.compoundLayerLowerSpec,
-         )) > 0.0)
-        HorizontalLine(
-          y: _chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec,
-           controlChartStats?.specAttribute?.cdtLowerSpec,
-           controlChartStats?.specAttribute?.compoundLayerLowerSpec,
-           ) ?? 0.0,
-          color: Colors.red.shade400,
-          strokeWidth: 2,
-        ),
+        if (ucl != null)
+          HorizontalLine(y: ucl, color: Colors.amberAccent, strokeWidth: 1.5),
+
+        if ((target ?? 0) != 0)
+          HorizontalLine(y: target!, color: Colors.deepPurple.shade300, strokeWidth: 1.5),
+
+        if (avg != null)
+          HorizontalLine(y: avg, color: AppColors.colorSuccess1, strokeWidth: 2),
+
+        if (lcl != null)
+          HorizontalLine(y: lcl, color: Colors.amberAccent, strokeWidth: 1.5),
+
+        if ((specLsl ?? 0) > 0)
+          HorizontalLine(y: specLsl!, color: Colors.red.shade400, strokeWidth: 2),
       ],
     );
   }
 
+  // ---------------- line & touch ----------------
   @override
   List<LineChartBarData> buildLineBarsData() {
+    final visible = _visiblePoints;
+
+    final spots = List<FlSpot>.generate(
+      visible.length,
+      (i) => FlSpot(i.toDouble(), visible[i].value),
+    );
+
+    final specUsl = _sel(
+      controlChartStats?.specAttribute?.cdeUpperSpec,
+      controlChartStats?.specAttribute?.cdtUpperSpec,
+      controlChartStats?.specAttribute?.compoundLayerUpperSpec,
+    ) ?? 0.0;
+    final specLsl = _sel(
+      controlChartStats?.specAttribute?.cdeLowerSpec,
+      controlChartStats?.specAttribute?.cdtLowerSpec,
+      controlChartStats?.specAttribute?.compoundLayerLowerSpec,
+    ) ?? 0.0;
+    final ucl = _sel(
+      controlChartStats?.cdeControlLimitIChart?.ucl,
+      controlChartStats?.cdtControlLimitIChart?.ucl,
+      controlChartStats?.compoundLayerControlLimitIChart?.ucl,
+    ) ?? 0.0;
+    final lcl = _sel(
+      controlChartStats?.cdeControlLimitIChart?.lcl,
+      controlChartStats?.cdtControlLimitIChart?.lcl,
+      controlChartStats?.compoundLayerControlLimitIChart?.lcl,
+    ) ?? 0.0;
+
     return [
       LineChartBarData(
-        spots: dataPoints!
-            .asMap()
-            .entries
-            .where((entry) => entry.key % 1 == 0)
-            .map((entry) => FlSpot(entry.key.toDouble(), entry.value.value))
-            .toList(),
-        
+        spots: spots,
         isCurved: false,
         color: dataLineColor,
         barWidth: 2,
         isStrokeCapRound: true,
         dotData: FlDotData(
           show: true,
-          getDotPainter: (spot, percent, barData, index) {
-            final realIndex = spot.x.toInt();
-            final value = dataPoints![realIndex].value;
+          getDotPainter: (spot, _, __, ___) {
+            final i = spot.x.toInt();
+            final v = visible[i].value;
             Color dotColor = dataLineColor!;
 
-            // RULE 1 # OVER CONTROL
-            dotColor = (
-              (_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec,
-                              controlChartStats?.specAttribute?.cdtUpperSpec,
-                              controlChartStats?.specAttribute?.compoundLayerUpperSpec))
-                               > 0.0 &&
-              (value > _chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec ?? 0.0,
-                                      controlChartStats?.specAttribute?.cdtUpperSpec ?? 0.0,
-                                      controlChartStats?.specAttribute?.compoundLayerUpperSpec ?? 0.0) ||
-              value < _chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec ?? 0.0,
-                                      controlChartStats?.specAttribute?.cdtLowerSpec ?? 0.0,
-                                      controlChartStats?.specAttribute?.compoundLayerLowerSpec ?? 0.0)))
-              ? Colors.red // Out of spec
-              : (value >= _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart?.ucl,
-                                          controlChartStats?.cdtControlLimitIChart?.ucl,
-                                          controlChartStats?.compoundLayerControlLimitIChart?.ucl) ||
-                value <= _chooseCdeOrCdt(controlChartStats?.cdeControlLimitIChart?.lcl,
-                                          controlChartStats?.cdtControlLimitIChart?.lcl,
-                                          controlChartStats?.compoundLayerControlLimitIChart?.lcl))
-                ? Colors.orange // Warning zone
-                : dotColor; // unchanged (safe zone)
+            if (((specUsl > 0) && v > specUsl) || ((specLsl > 0) && v < specLsl)) {
+              dotColor = Colors.red; // out of spec
+            } else if ((ucl > 0 && v > ucl) || (lcl > 0 && v < lcl)) {
+              dotColor = Colors.orange; // warning zone
+            }
 
-            
             return FlDotCirclePainter(
-              radius: 4,
+              radius: 3.5,
               color: dotColor,
               strokeWidth: 1,
               strokeColor: Colors.white,
@@ -285,30 +297,30 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
 
   @override
   LineTouchData buildTouchData() {
+    final visible = _visiblePoints;
+
     return LineTouchData(
       handleBuiltInTouches: true,
       touchTooltipData: LineTouchTooltipData(
         maxContentWidth: 150,
         getTooltipColor: (_) => AppColors.colorBrand.withValues(alpha: 0.9),
         tooltipBorderRadius: BorderRadius.circular(8),
-        // กัน tooltip หลุดกรอบ/ถูกตัด
         fitInsideHorizontally: true,
         fitInsideVertically: true,
         tooltipMargin: 8,
         getTooltipItems: (spots) {
           return spots.map((barSpot) {
-            final index = barSpot.x.toInt();
-            if (index >= 0 && index < dataPoints!.length) {
-              return LineTooltipItem(
-                "วันที่: ${dataPoints![index].fullLabel}\n"
-                "ค่า: ${dataPoints![index].value.toStringAsFixed(3)}\n"
-                "เตา: ${dataPoints![index].furnaceNo}\n"
-                "เลขแมต: ${dataPoints![index].matNo}",
-                AppTypography.textBody3W,
-                textAlign: TextAlign.left,
-              );
-            }
-            return null;
+            final i = barSpot.x.toInt();
+            if (i < 0 || i >= visible.length) return null;
+            final p = visible[i];
+            return LineTooltipItem(
+              "วันที่: ${p.fullLabel}\n"
+              "ค่า: ${p.value.toStringAsFixed(3)}\n"
+              "เตา: ${p.furnaceNo ?? '-'}\n"
+              "เลขแมต: ${p.matNo ?? '-'}",
+              AppTypography.textBody3W,
+              textAlign: TextAlign.left,
+            );
           }).whereType<LineTooltipItem>().toList();
         },
       ),
@@ -317,77 +329,56 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
 
   @override
   Widget buildLegend() {
+    final specUsl = _sel(
+      controlChartStats?.specAttribute?.cdeUpperSpec,
+      controlChartStats?.specAttribute?.cdtUpperSpec,
+      controlChartStats?.specAttribute?.compoundLayerUpperSpec,
+    );
+    final target = _sel(
+      controlChartStats?.specAttribute?.cdeTarget,
+      controlChartStats?.specAttribute?.cdtTarget,
+      controlChartStats?.specAttribute?.compoundLayerTarget,
+    );
+    final avg = _sel(
+      controlChartStats?.cdeAverage,
+      controlChartStats?.cdtAverage,
+      controlChartStats?.compoundLayerAverage,
+    );
+    final ucl = _sel(
+      controlChartStats?.cdeControlLimitIChart?.ucl,
+      controlChartStats?.cdtControlLimitIChart?.ucl,
+      controlChartStats?.compoundLayerControlLimitIChart?.ucl,
+    );
+    final lcl = _sel(
+      controlChartStats?.cdeControlLimitIChart?.lcl,
+      controlChartStats?.cdtControlLimitIChart?.lcl,
+      controlChartStats?.compoundLayerControlLimitIChart?.lcl,
+    );
+    final specLsl = _sel(
+      controlChartStats?.specAttribute?.cdeLowerSpec,
+      controlChartStats?.specAttribute?.cdtLowerSpec,
+      controlChartStats?.specAttribute?.compoundLayerLowerSpec,
+    );
+
     return Wrap(
-      spacing: 8,
+      spacing: 4,
       runSpacing: 4,
       direction: Axis.horizontal,
       alignment: WrapAlignment.spaceEvenly,
       children: [
-
-  if (formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec,
-      controlChartStats?.specAttribute?.cdtUpperSpec,
-      controlChartStats?.specAttribute?.compoundLayerUpperSpec)) != 'N/A')
-    buildLegendItem('Spec', Colors.red, false,
-        formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeUpperSpec,
-      controlChartStats?.specAttribute?.cdtUpperSpec,
-      controlChartStats?.specAttribute?.compoundLayerUpperSpec))),
-
-  // UCL (choose CDE/CDT I-Chart)
-  if (formatValue(_chooseCdeOrCdt(
-        controlChartStats?.cdeControlLimitIChart?.ucl,
-        controlChartStats?.cdtControlLimitIChart?.ucl,
-        controlChartStats?.compoundLayerControlLimitIChart?.ucl
-      )) != 'N/A')
-    buildLegendItem('UCL', Colors.orange, false,
-        formatValue(_chooseCdeOrCdt(
-          controlChartStats?.cdeControlLimitIChart?.ucl,
-          controlChartStats?.cdtControlLimitIChart?.ucl,
-          controlChartStats?.compoundLayerControlLimitIChart?.ucl
-        ))),
-
-  if (formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeTarget,
-      controlChartStats?.specAttribute?.cdtTarget,
-      controlChartStats?.specAttribute?.compoundLayerTarget)) != 'N/A')
-    buildLegendItem('Spec', Colors.deepPurple.shade300, false,
-        formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeTarget,
-      controlChartStats?.specAttribute?.cdtTarget,
-      controlChartStats?.specAttribute?.compoundLayerTarget))),
-
-  // AVG (choose CDE/CDT MR-Chart CL)
-  if (formatValue(_chooseCdeOrCdt(
-        controlChartStats?.cdeControlLimitMRChart?.cl,
-        controlChartStats?.cdtControlLimitMRChart?.cl,
-        controlChartStats?.compoundLayerControlLimitMRChart?.cl
-      )) != 'N/A')
-    buildLegendItem('AVG', Colors.green, false,
-        formatValue(_chooseCdeOrCdt(
-          controlChartStats?.cdeControlLimitMRChart?.cl,
-          controlChartStats?.cdtControlLimitMRChart?.cl,
-          controlChartStats?.compoundLayerControlLimitMRChart?.cl
-        ))),
-
-  // LCL (choose CDE/CDT I-Chart)
-  if (formatValue(_chooseCdeOrCdt(
-        controlChartStats?.cdeControlLimitIChart?.lcl,
-        controlChartStats?.cdtControlLimitIChart?.lcl,
-        controlChartStats?.compoundLayerControlLimitIChart?.lcl
-      )) != 'N/A')
-    buildLegendItem('LCL', Colors.orange, false,
-        formatValue(_chooseCdeOrCdt(
-          controlChartStats?.cdeControlLimitIChart?.lcl,
-          controlChartStats?.cdtControlLimitIChart?.lcl,
-          controlChartStats?.compoundLayerControlLimitIChart?.lcl
-        ))),
-
-  if (formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec,
-      controlChartStats?.specAttribute?.cdtLowerSpec,
-      controlChartStats?.specAttribute?.compoundLayerLowerSpec)) != 'N/A')
-    buildLegendItem('Spec', Colors.red, false,
-        formatValue(_chooseCdeOrCdt(controlChartStats?.specAttribute?.cdeLowerSpec,
-      controlChartStats?.specAttribute?.cdtLowerSpec,
-      controlChartStats?.specAttribute?.compoundLayerLowerSpec))),
-]
-
+        if (formatValue(specUsl) != 'N/A')
+          buildLegendItem('Spec', Colors.red, false, formatValue(specUsl)),
+        if (formatValue(ucl) != 'N/A')
+          buildLegendItem('UCL', Colors.orange, false, formatValue(ucl)),
+        if (formatValue(target) != 'N/A')
+          buildLegendItem('Target', Colors.deepPurple.shade300, false, formatValue(target)),
+        if (formatValue(avg) != 'N/A')
+          buildLegendItem('AVG', Colors.green, false, formatValue(avg)),
+        if (formatValue(lcl) != 'N/A')
+          buildLegendItem('LCL', Colors.orange, false, formatValue(lcl)),
+        if (formatValue(specLsl) != 'N/A')
+          buildLegendItem('Spec', Colors.red, false, formatValue(specLsl)),
+      ],
     );
   }
 
@@ -404,99 +395,78 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent{
               border: isDashed ? Border.all(color: color, width: 1) : null,
             ),
             child: isDashed
-                ? CustomPaint(
-                    painter: DashedLinePainter(color: color),
-                  )
+                ? CustomPaint(painter: DashedLinePainter(color: color))
                 : null,
           ),
         ),
         const SizedBox(width: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 10,
-                color: AppColors.colorBlack,
-              ),
-            ),
-        const SizedBox(width: 8),
-            Text(
-              value ?? 'N/A',
-              style: const TextStyle(
-                fontSize: 10,
-                color: AppColors.colorBlack,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack)),
+        const SizedBox(width: 4),
+        Text(value ?? 'N/A',
+            style: const TextStyle(
+              fontSize: 10,
+              color: AppColors.colorBlack,
+              fontWeight: FontWeight.w500,
+            )),
+      ],
     );
   }
 
-// ---------- Cache ----------
-double? _cachedMinY;
-double? _cachedMaxY;
-double? _cachedInterval;
-
-// ---------- Public ----------
-@override
-double getMaxY() {
-  if (_cachedInterval == null) _getInterval();
-  return _cachedMaxY ?? 0.0;
-}
-
-@override
-double getMinY() {
-  if (_cachedInterval == null) _getInterval();
-  return _cachedMinY ?? 0.0;
-}
-
-
-double _getInterval() {
-  const divisions = 5; // => 6 ticks
-  final spotMin =
-      _chooseCdeOrCdt(controlChartStats?.yAxisRange?.minYcdeControlChart, 
-      controlChartStats?.yAxisRange?.minYcdtControlChart,
-      controlChartStats?.yAxisRange?.minYcompoundLayerControlChart);
-  final spotMax =
-      _chooseCdeOrCdt(controlChartStats?.yAxisRange?.maxYcdeControlChart, 
-      controlChartStats?.yAxisRange?.maxYcdtControlChart,
-      controlChartStats?.yAxisRange?.maxYcompoundLayerControlChart);
-
-  if (spotMax <= spotMin) {
-    _cachedMinY = spotMin;
-    _cachedMaxY = spotMin + divisions;
-    _cachedInterval = 1.0;
-    return _cachedInterval!;
+  // ---------- Y scale cache/public ----------
+  @override
+  double getMaxY() {
+    if (_cachedInterval == null) _getInterval();
+    return _cachedMaxY ?? 0.0;
   }
 
-  // target step for desired divisions
-  final ideal = (spotMax - spotMin) / divisions;
-  double interval = _niceStepCeil(ideal);
-
-  // snap min to multiple of step; max exactly divisions*step above
-  double minY = (spotMin / interval).floor() * interval;
-  double maxY = minY + divisions * interval;
-
-  // if not yet covering data max, bump to next nice step(s)
-  while (maxY < spotMax - 1e-12) {
-    interval = _nextNiceStep(interval);
-    minY = (spotMin / interval).floor() * interval;
-    maxY = minY + divisions * interval;
+  @override
+  double getMinY() {
+    if (_cachedInterval == null) _getInterval();
+    return _cachedMinY ?? 0.0;
   }
 
-  _cachedMinY = minY;
-  _cachedMaxY = maxY;
-  _cachedInterval = interval;
-  return interval;
-}
-// ---------- Utilities ----------
+  // ---------- Y scale compute ----------
+  double _getInterval() {
+    const divisions = 5; // -> 6 ticks
+    final minSel = _sel(
+          controlChartStats?.yAxisRange?.minYcdeControlChart,
+          controlChartStats?.yAxisRange?.minYcdtControlChart,
+          controlChartStats?.yAxisRange?.minYcompoundLayerControlChart,
+        ) ??
+        0.0;
+    final maxSel = _sel(
+          controlChartStats?.yAxisRange?.maxYcdeControlChart,
+          controlChartStats?.yAxisRange?.maxYcdtControlChart,
+          controlChartStats?.yAxisRange?.maxYcompoundLayerControlChart,
+        ) ??
+        minSel;
 
-double _roundUpToPowerOf10(double x) {
-  if (x <= 0 || x.isNaN || x.isInfinite) return x;
-  final exp = (math.log(x) / math.log(10)).floor();
-  final base = math.pow(10.0, exp).toDouble();
-  return (x <= base) ? base : math.pow(10.0, exp + 1).toDouble();
-}
+    if (maxSel <= minSel) {
+      _cachedMinY = minSel;
+      _cachedMaxY = minSel + divisions;
+      _cachedInterval = 1.0;
+      return _cachedInterval!;
+    }
 
+    final ideal = (maxSel - minSel) / divisions;
+    double interval = _niceStepCeil(ideal);
+
+    double minY = (minSel / interval).floor() * interval;
+    double maxY = minY + divisions * interval;
+
+    while (maxY < maxSel - 1e-12) {
+      interval = _nextNiceStep(interval);
+      minY = (minSel / interval).floor() * interval;
+      maxY = minY + divisions * interval;
+    }
+
+    _cachedMinY = minY;
+    _cachedMaxY = maxY;
+    _cachedInterval = interval;
+    return interval;
+  }
+
+  // ---------- Y step helpers ----------
   double _niceStepCeil(double x) {
     if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
     final exp = (math.log(x) / math.log(10)).floor();
@@ -509,8 +479,12 @@ double _roundUpToPowerOf10(double x) {
     if (mant <= 0.25) return 0.25 * mag;
     if (mant <= 0.5) return 0.5 * mag;
     if (mant <= 1.0) return 1.0 * mag;
+    if (mant <= 1.25) return 1.25 * mag;
+    if (mant <= 1.5) return 1.5 * mag;
     if (mant <= 2.0) return 2.0 * mag;
     if (mant <= 2.5) return 2.5 * mag;
+    if (mant <= 3.0) return 3.0 * mag;
+    if (mant <= 4.0) return 4.0 * mag;
     if (mant <= 5.0) return 5.0 * mag;
     return 10.0 * mag;
   }
@@ -519,52 +493,30 @@ double _roundUpToPowerOf10(double x) {
     final exp = (math.log(step) / math.log(10)).floor();
     final mag = math.pow(10.0, exp).toDouble();
     final mant = step / mag;
-    if (mant <= 0.025) return 0.025 * mag;
-    if (mant <= 0.050) return 0.050 * mag;
-    if (mant <= 0.075) return 0.075 * mag;
-    if (mant <= 0.125) return 0.125 * mag;
-    if (mant <= 0.25) return 0.25 * mag;
-    if (mant <= 0.5) return 0.5 * mag;
-    if (mant < 1.0) return 1.0 * mag;
-    if (mant < 2.0) return 2.0 * mag;
-    if (mant < 2.5) return 2.5 * mag;
-    if (mant < 5.0) return 5.0 * mag;
+    if (mant <= 0.025) return 0.050 * mag;
+    if (mant <= 0.050) return 0.075 * mag;
+    if (mant <= 0.075) return 0.125 * mag;
+    if (mant <= 0.125) return 0.25 * mag;
+    if (mant <= 0.25) return 0.5 * mag;
+    if (mant <= 0.5) return 1.0 * mag;
+    if (mant < 1.0) return 2.0 * mag;
+    if (mant < 2.0) return 2.5 * mag;
+    if (mant < 2.5) return 3.0 * mag;
+    if (mant < 3.0) return 3.5 * mag;
+    if (mant < 5.0) return 10.0 * mag;
     return 10.0 * mag;
   }
 
-
-double _chooseCdeOrCdt(
-  double? cde,
-  double? cdt,
-  double? compoundLayer, {
-  double fallback = 0,
-}) {
-  final a = cde ?? 0;
-  final b = cdt ?? 0;
-  final c = compoundLayer ?? 0;
-
-  // หา max จากทั้งสามค่า
-  final maxValue = [a, b, c].reduce((curr, next) => curr > next ? curr : next);
-
-  // ถ้าทุกค่าคือ 0 → คืน fallback
-  return maxValue == 0 ? fallback : maxValue;
-}
-
-  double _calculateXInterval() {
-    int pointCount = dataPoints!.length;
-    
-    // if (pointCount <= 10) return 1.0;
-    // return (pointCount / 10).ceilToDouble();
-    return pointCount.toDouble();
+  // ---------- X helpers ----------
+  double _xIntervalForCount(int n) {
+    if (n <= 8) return 1;
+    if (n <= 12) return 2;
+    if (n <= 24) return 3; // good default for 24
+    return (n / 8).floorToDouble().clamp(1, 10);
   }
 
-  double _calculateYAxisInterval() {
-    return _getInterval();
-  }
-  
   String formatValue(double? value) {
-    if (value == null || value <= 0) return 'N/A';
-    return value.toStringAsFixed(3);
+    if (value == null || value == 0.0) return 'N/A';
+    return value.toStringAsFixed(2);
   }
-  
 }

@@ -418,6 +418,8 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     if (mant <= 1.5) return 1.5 * mag;
     if (mant <= 2.0) return 2.0 * mag;
     if (mant <= 2.5) return 2.5 * mag;
+    if (mant <= 3.0) return 3.0 * mag;
+    if (mant <= 4.0) return 4.0 * mag;
     if (mant <= 5.0) return 5.0 * mag;
     return 10.0 * mag;
   }
@@ -434,7 +436,8 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     if (mant <= 0.5) return 1.0 * mag;
     if (mant < 1.0) return 2.0 * mag;
     if (mant < 2.0) return 2.5 * mag;
-    if (mant < 2.5) return 5.0 * mag;
+    if (mant < 2.5) return 3.0 * mag;
+    if (mant < 3.0) return 3.5 * mag;
     if (mant < 5.0) return 10.0 * mag;
     return 10.0 * mag;
   }

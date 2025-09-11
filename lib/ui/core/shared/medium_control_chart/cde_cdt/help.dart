@@ -7,14 +7,11 @@ import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/material.dart';
 
-/// ==============================
 /// Public builder
-/// ==============================
 Widget buildChartsSectionCdeCdt(
   HomeContentVar settingProfile,
   SearchState searchState,
 ) {
-  // ถ้าไม่ได้เลือกอะไรหรือเลือก NA -> ไม่แสดง
   final sel = searchState.controlChartStats?.secondChartSelected;
   if (sel == null || sel == SecondChartSelected.na) {
     return const SizedBox.shrink();
@@ -27,7 +24,7 @@ Widget buildChartsSectionCdeCdt(
     SecondChartSelected.cde           => 'CDE',
     SecondChartSelected.cdt           => 'CDT',
     SecondChartSelected.compoundLayer => 'Compound Layer',
-    _                                 => '-', // กันกรณีอื่น ๆ
+    _                                 => '-',
   };
 
   final partName = isReady
@@ -42,16 +39,14 @@ Widget buildChartsSectionCdeCdt(
   return SizedBox.expand(
     child: _buildChartContainerCdeCdt(
       title: title,
+      selectedLabel: label,
       settingProfile: settingProfile,
       searchState: searchState,
-      selectedLabel: label,
     ),
   );
 }
 
-/// ==============================
-/// Container (title + 2 charts)
-/// ==============================
+/// Container: title + (Control + MR) with same style as surface hardness
 Widget _buildChartContainerCdeCdt({
   required String title,
   required String selectedLabel,
@@ -62,26 +57,21 @@ Widget _buildChartContainerCdeCdt({
     builder: (context, constraints) {
       final totalH = constraints.maxHeight;
       const outerPadTop = 8.0;
-      const outerPadBottom = 16.0; // <- fixed from 'outerPom'
+      const outerPadBottom = 8.0;
       const titleH = 24.0;
       const sectionLabelH = 20.0;
       const gapV = 8.0;
 
-      // คำนวณพื้นที่กราฟ
       final chartsAreaH = (totalH
               - outerPadTop - outerPadBottom
-              - titleH
-              - gapV
-              - 8.0 // padding top inside card
-              - sectionLabelH
-              - gapV
-              - sectionLabelH
-              - 8.0 // padding bottom inside card
-          ).clamp(0.0, double.infinity);
+              - titleH - gapV - 8.0
+              - sectionLabelH - gapV
+              - sectionLabelH - 8.0)
+          .clamp(0.0, double.infinity);
 
       final eachChartH = (chartsAreaH / 2).clamp(0.0, double.infinity);
 
-      // guard state
+      // guards
       if (searchState.status == SearchStatus.loading) {
         return const Center(
           child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
@@ -90,37 +80,32 @@ Widget _buildChartContainerCdeCdt({
       if (searchState.status == SearchStatus.failure) {
         return const _SmallError();
       }
-      if (searchState.controlChartStats == null ||
-          searchState.chartDetails.isEmpty) {
+      if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
         return const _SmallNoData();
       }
 
-      final uniqueKey = '${settingProfile.startDate?.millisecondsSinceEpoch ?? 0}-'
-          '${settingProfile.endDate?.millisecondsSinceEpoch ?? 0}-'
-          '${settingProfile.furnaceNo ?? ''}-'
-          '${settingProfile.materialNo ?? ''}-';
+      final q = settingProfile;
+      final uniqueKey = '${q.startDate?.millisecondsSinceEpoch ?? 0}-'
+          '${q.endDate?.millisecondsSinceEpoch ?? 0}-'
+          '${q.furnaceNo ?? ''}-'
+          '${q.materialNo ?? ''}-';
 
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Title (ให้สอดคล้องกับ Surface Hardness ส่วนบน)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
+      return Container(
+        color: Colors.transparent,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title row (centered)
+            Row(
               children: [
                 Expanded(
-                  child: Center(
-                    child: Text(title, style: AppTypography.textBody3BBold),
-                  ),
+                  child: Center(child: Text(title, style: AppTypography.textBody3BBold)),
                 ),
-                // ตำแหน่ง actions เพิ่มเติม (เช่น Zoom builder) ถ้าต้องการภายหลัง
               ],
             ),
-          ),
 
-          // Card ครอบสองกราฟ
-          Expanded(
-            child: DecoratedBox(
+            // Card
+            DecoratedBox(
               decoration: BoxDecoration(
                 color: AppColors.colorBrandTp.withValues(alpha: 0.15),
                 border: Border.all(
@@ -130,47 +115,26 @@ Widget _buildChartContainerCdeCdt({
                 borderRadius: BorderRadius.circular(8.0),
               ),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
                 child: Column(
                   children: [
-                    // Header บนของกราฟ (Control Chart) + ปุ่ม Zoom
+                    // Header Top
                     Row(
                       children: [
-                        const SizedBox(width: 8),
                         Expanded(
                           child: Center(
                             child: Text(
                               "$selectedLabel | Control Chart",
-                              style: AppTypography.textBody3BBold,
+                              style: AppTypography.textBody3B,
                               textAlign: TextAlign.center,
                             ),
                           ),
                         ),
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: GestureDetector(
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (_) => AlertDialog(
-                                  title: const Text("Zoom"),
-                                  content: const Text("ใส่ widget ขยายที่คุณมีอยู่แล้วในที่นี้"),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(context).pop(),
-                                      child: const Text("Close"),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            child: const Icon(Icons.zoom_out_map_rounded, size: 16),
-                          ),
-                        ),
+                        const SizedBox(width: 20),
                       ],
                     ),
 
-                    // กราฟบน (Control Chart)
+                    // Control Chart (with internal slider like surface)
                     SizedBox(
                       width: double.infinity,
                       height: eachChartH,
@@ -192,16 +156,13 @@ Widget _buildChartContainerCdeCdt({
 
                     const SizedBox(height: 8),
 
-                    // Header ล่าง (Moving Range)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4.0),
-                      child: Text(
-                        "$selectedLabel | Moving Range",
-                        style: AppTypography.textBody3BBold,
-                      ),
+                    // Header bottom
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 4.0),
+                      child: Text("Moving Range", style: AppTypography.textBody3B),
                     ),
 
-                    // กราฟล่าง (MR Chart)
+                    // MR Chart
                     SizedBox(
                       width: double.infinity,
                       height: eachChartH,
@@ -224,16 +185,13 @@ Widget _buildChartContainerCdeCdt({
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     },
   );
 }
 
-/// ==============================
-/// Small states
-/// ==============================
 class _SmallError extends StatelessWidget {
   const _SmallError({super.key});
   @override
@@ -243,8 +201,10 @@ class _SmallError extends StatelessWidget {
           children: [
             Icon(Icons.error_outline, size: 16, color: Colors.red),
             SizedBox(height: 4),
-            Text('จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
-                style: TextStyle(fontSize: 10, color: Colors.red)),
+            Text(
+              'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
+              style: TextStyle(fontSize: 10, color: Colors.red),
+            ),
           ],
         ),
       );
@@ -253,8 +213,6 @@ class _SmallError extends StatelessWidget {
 class _SmallNoData extends StatelessWidget {
   const _SmallNoData({super.key});
   @override
-  Widget build(BuildContext context) => const Center(
-        child: Text('No Data',
-            style: TextStyle(fontSize: 12, color: Colors.grey)),
-      );
+  Widget build(BuildContext context) =>
+      const Center(child: Text('No Data', style: TextStyle(fontSize: 12, color: Colors.grey)));
 }

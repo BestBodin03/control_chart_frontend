@@ -1,23 +1,25 @@
-
-
+import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../domain/models/chart_data_point.dart';
 import '../search_bloc.dart';
 
 extension SearchStateExtension on SearchState {
+  /// Surface Hardness points (unchanged)
   List<ChartDataPoint> get chartDataPoints {
-    final mrValues = controlChartStats?.mrChartSpots ?? [];
-    
+    final mrValues = controlChartStats?.mrChartSpots ?? const <double>[];
+
     return chartDetails.asMap().entries.map((entry) {
-      final index = entry.key;
+      final index       = entry.key;
       final chartDetail = entry.value;
-      
-      final mrValue = index < mrValues.length ? mrValues[index] : 0.0;
-      
+
+      final dt = chartDetail.chartGeneralDetail.collectedDate;
+      final mrValue = (index < mrValues.length) ? mrValues[index] : 0.0;
+
       return ChartDataPoint(
-        label: DateFormat('MM/dd/yy').format(chartDetail.chartGeneralDetail.collectedDate),
-        fullLabel: "${chartDetail.chartGeneralDetail.collectedDate.month.toString().padLeft(2, '0')}/${chartDetail.chartGeneralDetail.collectedDate.day.toString().padLeft(2, '0')}/${chartDetail.chartGeneralDetail.collectedDate.year.toString().padLeft(4, '0')}",
+        label: DateFormat('MM/dd/yy').format(dt),
+        fullLabel:
+            "${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}/${dt.year.toString().padLeft(4, '0')}",
         furnaceNo: chartDetail.chartGeneralDetail.furnaceNo.toString(),
         matNo: chartDetail.cpNo,
         value: chartDetail.machanicDetail.surfaceHardnessMean,
@@ -26,45 +28,51 @@ extension SearchStateExtension on SearchState {
     }).toList();
   }
 
+  /// CDE/CDT/Compound Layer points, driven by `secondChartSelected`
   List<ChartDataPointCdeCdt> get chartDataPointsCdeCdt {
-    // Fallbacks
-    const fallbackVals = <double>[];
-    final fallbackMr   = controlChartStats?.mrChartSpots ?? const <double>[];
+    final stats = controlChartStats;
+    if (stats == null) return const <ChartDataPointCdeCdt>[];
 
+    // Choose value & MR lists strictly by selection
+    late final List<double> values;
+    late final List<double> mrValues;
+
+    switch (stats.secondChartSelected) {
+      case SecondChartSelected.cde:
+        values   = stats.cdeChartSpots ?? const <double>[];
+        mrValues = stats.cdeMrChartSpots ?? const <double>[];
+        break;
+      case SecondChartSelected.cdt:
+        values   = stats.cdtChartSpots ?? const <double>[];
+        mrValues = stats.cdtMrChartSpots ?? const <double>[];
+        break;
+      case SecondChartSelected.compoundLayer:
+        values   = stats.compoundLayerChartSpots ?? const <double>[];
+        mrValues = stats.compoundLayerMrChartSpots ?? const <double>[];
+        break;
+      case SecondChartSelected.na:
+      default:
+        return const <ChartDataPointCdeCdt>[]; // not shown
+    }
+
+    // Map chartDetails to points; guard out-of-range indexes
     return chartDetails.asMap().entries.map((entry) {
       final index       = entry.key;
       final chartDetail = entry.value;
 
-      // Decide whether to use CDT or CDE
-      // final bool useCdt = (controlChartStats?.cdeAverage ?? 0) < (controlChartStats?.cdtAverage ?? 0);
-      final bool useCdt = (controlChartStats?.cdeAverage ?? 0) < (controlChartStats?.cdtAverage ?? 0);
-
-      // Pick value LIST by the same rule; then take the item at `index`
-      final List<double> valueList = useCdt
-          ? (controlChartStats?.cdtChartSpots ?? fallbackVals)
-          : (controlChartStats?.cdeChartSpots ?? fallbackVals);
-
-      final double value = index < valueList.length
-          ? (valueList[index])
-          : 0.0;
-
-      // Pick MR list by the same rule; fall back to generic MR if missing
-      final List<double> mrList = useCdt
-          ? (controlChartStats?.cdtMrChartSpots ?? fallbackMr)
-          : (controlChartStats?.cdeMrChartSpots ?? fallbackMr);
-
-      final double mrValue = index < mrList.length ? mrList[index] : 0.0;
+      final dt = chartDetail.chartGeneralDetail.collectedDate;
+      final value   = (index < values.length)   ? values[index]   : 0.0;
+      final mrValue = (index < mrValues.length) ? mrValues[index] : 0.0;
 
       return ChartDataPointCdeCdt(
-        label: "${chartDetail.chartGeneralDetail.collectedDate.month.toString().padLeft(2, '0')}/${chartDetail.chartGeneralDetail.collectedDate.day.toString().padLeft(2, '0')}",
-        fullLabel:
-            "${chartDetail.chartGeneralDetail.collectedDate.month.toString().padLeft(2, '0')}/${chartDetail.chartGeneralDetail.collectedDate.day.toString().padLeft(2, '0')}/${chartDetail.chartGeneralDetail.collectedDate.year.toString().padLeft(4, '0')}",
+        label: "${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}",
+        fullLabel: "${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}/${dt.year.toString().padLeft(4, '0')}",
         furnaceNo: chartDetail.chartGeneralDetail.furnaceNo.toString(),
         matNo: chartDetail.cpNo,
         value: value,
         mrValue: mrValue,
       );
+
     }).toList();
   }
-
 }
