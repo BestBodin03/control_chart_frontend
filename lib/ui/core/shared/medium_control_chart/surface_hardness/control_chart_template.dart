@@ -1,16 +1,19 @@
 import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
+import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart';
-import 'package:control_chart/domain/types/chart_component.dart';
+import 'package:control_chart/domain/models/control_chart_stats.dart';
+import 'package:control_chart/ui/core/design_system/app_color.dart';
+import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_component.dart';
+import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/mr_chart_component.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../../data/bloc/search_chart_details/search_bloc.dart';
-import '../../../../../domain/models/control_chart_stats.dart';
-import '../../../design_system/app_color.dart';
-import 'control_chart_component.dart';
-import 'mr_chart_component.dart';
+import '../../../../../domain/types/chart_component.dart';
 
+/// Surface Hardness template
+/// - NO internal slider
+/// - Uses [externalStart] & [externalWindowSize] provided by parent
 class ControlChartTemplate extends StatefulWidget {
   final String xAxisLabel;
   final String yAxisLabel;
@@ -20,10 +23,14 @@ class ControlChartTemplate extends StatefulWidget {
   final double? width;
   final bool isMovingRange;
 
-  // 🔒 Optional frozen overrides (keep same API as before)
+  /// Optional frozen overrides
   final ControlChartStats? frozenStats;
   final List<ChartDataPoint>? frozenDataPoints;
   final SearchStatus? frozenStatus;
+
+  /// Parent-controlled windowing
+  final int? externalStart;
+  final int? externalWindowSize;
 
   const ControlChartTemplate({
     super.key,
@@ -37,6 +44,8 @@ class ControlChartTemplate extends StatefulWidget {
     this.frozenStats,
     this.frozenDataPoints,
     this.frozenStatus,
+    this.externalStart,
+    this.externalWindowSize,
   });
 
   @override
@@ -44,54 +53,6 @@ class ControlChartTemplate extends StatefulWidget {
 }
 
 class _ControlChartTemplateState extends State<ControlChartTemplate> {
-  static const int _windowSize = 24;
-
-  // start index for the visible window [start, start+_windowSize)
-  int _start = 0;
-  int _maxStart = 0;
-
-  // cache latest full list length to decide if we need to reset the window
-  int _lastLen = 0;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _syncWindowToData(); // initialize the window
-  }
-
-  @override
-  void didUpdateWidget(covariant ControlChartTemplate oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _syncWindowToData();
-  }
-
-  void _syncWindowToData() {
-    final full = _fullDataPoints();
-    final n = full.length;
-
-    if (n != _lastLen) {
-      _lastLen = n;
-      if (n <= _windowSize) {
-        _start = 0;
-        _maxStart = 0;
-      } else {
-        _maxStart = n - _windowSize;
-        // default window shows the latest _windowSize points
-        _start = _maxStart.clamp(0, _maxStart);
-      }
-      setState(() {});
-    } else {
-      // keep window valid if data changed shape but not length
-      if (n <= _windowSize) {
-        _start = 0;
-        _maxStart = 0;
-      } else {
-        _maxStart = n - _windowSize;
-        _start = _start.clamp(0, _maxStart);
-      }
-    }
-  }
-
   List<ChartDataPoint> _fullDataPoints() {
     if (widget.frozenDataPoints != null) return widget.frozenDataPoints!;
     final state = context.read<SearchBloc>().state;
@@ -110,21 +71,23 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
   }
 
   List<ChartDataPoint> _visible(List<ChartDataPoint> full) {
-    if (full.length <= _windowSize) return full;
-    final end = (_start + _windowSize).clamp(0, full.length);
-    return full.sublist(_start, end);
+    if (full.isEmpty) return const <ChartDataPoint>[];
+    final start = (widget.externalStart ?? 0).clamp(0, full.length - 1);
+    final win = widget.externalWindowSize;
+    if (win == null || full.length <= win) return full;
+    final end = (start + win).clamp(0, full.length);
+    return full.sublist(start, end);
   }
 
   @override
   Widget build(BuildContext context) {
-    // If using frozen overrides, render without Bloc; else listen to Bloc
+    // Frozen path (no Bloc)
     if (widget.frozenStats != null && widget.frozenDataPoints != null) {
+      final data = _visible(widget.frozenDataPoints!);
       return _buildFromData(
-        dataPoints: _visible(widget.frozenDataPoints!),
+        dataPoints: data,
         stats: widget.frozenStats!,
         status: widget.frozenStatus ?? SearchStatus.success,
-        showSlider: (widget.frozenDataPoints!.length > _windowSize),
-        totalLength: widget.frozenDataPoints!.length,
       );
     }
 
@@ -140,13 +103,13 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
           return const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล'));
         }
 
-        final full = state.chartDataPoints;
+        final full = _fullDataPoints();
+        final data = _visible(full);
+
         return _buildFromData(
-          dataPoints: _visible(full),
+          dataPoints: data,
           stats: state.controlChartStats!,
           status: state.status,
-          showSlider: (full.length > _windowSize),
-          totalLength: full.length,
         );
       },
     );
@@ -156,16 +119,14 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
     required List<ChartDataPoint> dataPoints,
     required ControlChartStats stats,
     required SearchStatus status,
-    required bool showSlider,
-    required int totalLength,
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final w = widget.width ?? constraints.maxWidth;
         final h = widget.height ?? constraints.maxHeight;
 
-        // Components receive ONLY the visible window
-        final useIndividual = ControlChartComponent(
+        // Components receive only the visible window
+        final useI = ControlChartComponent(
           dataPoints: dataPoints,
           controlChartStats: stats,
           dataLineColor: widget.dataLineColor,
@@ -182,7 +143,7 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
           width: w,
         );
         final ChartComponent selectedWidget =
-            widget.isMovingRange ? useMr : useIndividual;
+            widget.isMovingRange ? useMr : useI;
 
         const legendRightPad = 24.0;
         const legendHeight = 32.0;
@@ -198,28 +159,21 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
               border: Border.all(color: Colors.grey.shade300),
             ),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  0, 0, legendRightPad, 0),
+              padding: const EdgeInsets.fromLTRB(0, 0, legendRightPad, 0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Legend
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        height: legendHeight,
-                        child: Align(
-                          alignment: Alignment.center,
-                          child: selectedWidget.buildLegend(),
-                        ),
-                      ),
-                    ],
+                  SizedBox(
+                    height: legendHeight,
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: selectedWidget.buildLegend(),
+                    ),
                   ),
                   const SizedBox(height: gapLegendToChart),
 
-
-                  // Chart area
+                  // Chart
                   Expanded(
                     child: LineChart(
                       LineChartData(
@@ -229,7 +183,7 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
                         borderData: selectedWidget.buildBorderData(),
                         lineBarsData: selectedWidget.buildLineBarsData(),
                         minX: 0,
-                        maxX: (dataPoints.length - 1).toDouble(), // domain = visible window
+                        maxX: (dataPoints.length - 1).toDouble(),
                         minY: selectedWidget.getMinY(),
                         maxY: selectedWidget.getMaxY(),
                         lineTouchData: selectedWidget.buildTouchData(),

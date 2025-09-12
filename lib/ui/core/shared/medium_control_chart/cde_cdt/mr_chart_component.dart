@@ -30,7 +30,7 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
   });
 
   // ------- window config (latest N points) -------
-  static const int _windowSize = 24;
+  static const int _windowSize = 30;
 
   // cache for Y range/interval
   double? _cachedMinY;
@@ -128,7 +128,7 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
           reservedSize: 24,
           interval: _getInterval(),
           getTitlesWidget: (value, _) => Text(
-            value.toStringAsFixed(0),
+            value.toStringAsFixed(2),
             style: const TextStyle(
               color: Colors.black54,
               fontSize: 8,
@@ -201,16 +201,28 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
   List<LineChartBarData> buildLineBarsData() {
     final visible = _visiblePoints;
 
+    // No MR values to draw if fewer than 2 points
+    if (visible.length < 2) {
+      return [
+        LineChartBarData(spots: const [], isCurved: false, barWidth: 2),
+      ];
+    }
+
+    // Start at index 1 so the first chart slot (x=0) is empty
     final spots = List<FlSpot>.generate(
-      visible.length,
-      (i) => FlSpot(i.toDouble(), visible[i].mrValue),
+      visible.length - 1,
+      (k) {
+        final i = k + 1; // i runs 1..visible.length-1
+        return FlSpot(i.toDouble(), visible[i].mrValue);
+      },
     );
 
     final ucl = _sel(
-      controlChartStats?.cdeControlLimitMRChart?.ucl,
-      controlChartStats?.cdtControlLimitMRChart?.ucl,
-      controlChartStats?.compoundLayerControlLimitMRChart?.ucl,
-    ) ?? 0.0;
+          controlChartStats?.cdeControlLimitMRChart?.ucl,
+          controlChartStats?.cdtControlLimitMRChart?.ucl,
+          controlChartStats?.compoundLayerControlLimitMRChart?.ucl,
+        ) ??
+        0.0;
 
     return [
       LineChartBarData(
@@ -222,10 +234,17 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
         dotData: FlDotData(
           show: true,
           getDotPainter: (spot, _, __, ___) {
+            // spot.x is the real index (1..N-1)
             final i = spot.x.toInt();
+            // guard just in case
+            if (i < 0 || i >= visible.length) {
+              return FlDotCirclePainter(
+                radius: 0, color: Colors.transparent, strokeWidth: 0,
+              );
+            }
+
             final v = visible[i].mrValue;
             Color dotColor = dataLineColor!;
-
             if (ucl > 0 && v > ucl) {
               dotColor = Colors.orange; // warning zone
             }
@@ -242,6 +261,7 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
       ),
     ];
   }
+
 
   @override
   LineTouchData buildTouchData() {

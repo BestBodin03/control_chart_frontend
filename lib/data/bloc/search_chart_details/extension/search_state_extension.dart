@@ -17,7 +17,10 @@ extension SearchStateExtension on SearchState {
       final mrValue = (index < mrValues.length) ? mrValues[index] : 0.0;
 
       return ChartDataPoint(
-        label: DateFormat('MM/dd/yy').format(dt),
+        // label: DateFormat('MM/dd/yy').format(dt),
+        // label: DateFormat('dd/MM/yy').format(dt),
+        collectDate: dt,
+        label: DateFormat('dd/MM').format(dt),
         fullLabel:
             "${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}/${dt.year.toString().padLeft(4, '0')}",
         furnaceNo: chartDetail.chartGeneralDetail.furnaceNo.toString(),
@@ -65,7 +68,10 @@ extension SearchStateExtension on SearchState {
       final mrValue = (index < mrValues.length) ? mrValues[index] : 0.0;
 
       return ChartDataPointCdeCdt(
-        label: "${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}",
+        // label: DateFormat('MM/dd/yy').format(dt),
+        // label: DateFormat('dd/MM/yy').format(dt),
+        collecDate: dt,
+        label: DateFormat('dd/MM').format(dt),
         fullLabel: "${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}/${dt.year.toString().padLeft(4, '0')}",
         furnaceNo: chartDetail.chartGeneralDetail.furnaceNo.toString(),
         matNo: chartDetail.cpNo,

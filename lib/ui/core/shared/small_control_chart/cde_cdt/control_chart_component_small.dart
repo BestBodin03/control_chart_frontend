@@ -9,7 +9,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
   
 class ControlChartComponentSmall extends StatelessWidget implements ChartComponent {
-  final List<ChartDataPointCdeCdt> dataPoints;
+  final List<ChartDataPointCdeCdt>? dataPoints;
   final ControlChartStats? controlChartStats;
   // final String xAxisLabel;
   // final String yAxisLabel;
@@ -20,7 +20,7 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
 
   ControlChartComponentSmall({
     super.key,
-    this.dataPoints = []<ChartDataPointCdeCdt>,
+    this.dataPoints = const [],
     this.controlChartStats,
     // this.xAxisLabel = 'Date (mm/dd)',
     // this.yAxisLabel = 'Surface Hardness',

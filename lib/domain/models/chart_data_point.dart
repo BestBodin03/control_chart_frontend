@@ -1,4 +1,5 @@
 class ChartDataPoint {
+  final DateTime collectDate;
   final String label;
   final String fullLabel;
   final String? furnaceNo;
@@ -7,6 +8,7 @@ class ChartDataPoint {
   final double mrValue;
 
   ChartDataPoint({
+    required this.collectDate,
     required this.label,
     required this.fullLabel,
     this.furnaceNo,
@@ -17,14 +19,16 @@ class ChartDataPoint {
 }
 
 class ChartDataPointCdeCdt {
+  final DateTime collecDate;
   final String label;
   final String fullLabel;
   final String? furnaceNo;
   final String? matNo;
-  final Object value;
-  final Object mrValue;
+  final double value;
+  final double mrValue;
 
   ChartDataPointCdeCdt({
+    required this.collecDate,
     required this.label,
     required this.fullLabel,
     this.furnaceNo,

@@ -92,26 +92,6 @@ class ControlChartTemplateSmallCdeCdt extends StatelessWidget {
   // เลือก widget ตาม isMovingRange
   final ChartComponent selectedWidget = isMovingRange ? useMrWidget : useWidget;
 
-  // // 1) Which widget?
-  // debugPrint('Selected chart widget: ${selectedWidget.runtimeType} '
-  //           '(isMovingRange=$isMovingRange)');
-
-  // // 2) What values will be plotted?
-  // final List<double> shownValues = isMovingRange
-  //   ? dataPoints!.map((p) => p.mrValue).toList()
-  //   : dataPoints!.map((p) => p.value).toList();
-
-  // debugPrint('Showing ${shownValues.length} points; first 10: '
-  //   '${shownValues.take(10).map((v) => v.toStringAsFixed(3)).toList()}');
-
-  // // 3) Index-by-index (best for tracing)
-  // for (var i = 0; i < dataPoints!.length; i++) {
-  //   final p = dataPoints![i];
-  //   final shown = isMovingRange ? p.mrValue : p.value;
-  //   debugPrint('[$i] ${p.fullLabel}  -> ${shown.toStringAsFixed(3)} '
-  //             '(furnace=${p.furnaceNo}, mat=${p.matNo})');
-  // }
-
   return DecoratedBox(
     decoration: BoxDecoration(
       color: backgroundColor,

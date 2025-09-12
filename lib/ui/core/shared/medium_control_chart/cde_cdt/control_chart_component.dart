@@ -27,14 +27,14 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
   });
 
   // ------- window config (latest N points) -------
-  static const int _windowSize = 24;
+  static const int _windowSize = 30;
 
   // cache for Y range/interval
   double? _cachedMinY;
   double? _cachedMaxY;
   double? _cachedInterval;
 
-  // Visible window (last 24 or all if < 24)
+  // Visible window (last 30 or all if < 24)
   List<ChartDataPointCdeCdt> get _visiblePoints {
     final src = dataPoints ?? const <ChartDataPointCdeCdt>[];
     if (src.length <= _windowSize) return src;
@@ -126,7 +126,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
           reservedSize: 24,
           interval: _getInterval(),
           getTitlesWidget: (value, _) => Text(
-            value.toStringAsFixed(0),
+            value.toStringAsFixed(2),
             style: const TextStyle(
               color: Colors.black54,
               fontSize: 8,
@@ -145,9 +145,9 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
 
             return SideTitleWidget(
               meta: meta,
-              space: 8,
+              space: 8,       // ✅ ดัน label ออกห่างจากกราฟ
               child: Transform.rotate(
-                angle: -30 * math.pi / 180,
+                angle: -30 * math.pi / 180, // ใช้ radians (270° = -90°)
                 child: Text(
                   visible[i].label,
                   style: const TextStyle(fontSize: 8, color: Colors.black54),

@@ -5,11 +5,10 @@ import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/setting_form.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-// profile_card.dart (เฉพาะจุดสำคัญ)
+/// profile_card.dart (one-file, drop-in)
 class ProfileCard extends StatefulWidget {
   const ProfileCard({
     super.key,
@@ -18,7 +17,7 @@ class ProfileCard extends StatefulWidget {
     required this.hasAnotherActive,
     this.onTap,
     this.onEdit,
-    // 👇 เพิ่ม
+    // multi-select delete mode
     required this.deleteMode,
     required this.selected,
     required this.onSelectedChanged,
@@ -30,7 +29,7 @@ class ProfileCard extends StatefulWidget {
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
 
-  // 👇 ใหม่
+  // delete-mode controls
   final bool deleteMode;
   final bool selected;
   final ValueChanged<bool> onSelectedChanged;
@@ -58,28 +57,28 @@ class _ProfileCardState extends State<ProfileCard> {
 
   @override
   Widget build(BuildContext context) {
-    final cubit = context.read<SettingFormCubit>();
-
     return GestureDetector(
+      behavior: HitTestBehavior.deferToChild, // ✅ ให้ child จัดการ tap ก่อน (icon/checkbox)
       onTap: widget.deleteMode
-          ? () => widget.onSelectedChanged(!widget.selected) // โหมดลบ → toggle เลือก
-          : widget.onTap,                                      // ปกติ → เปิดรายละเอียด
+          ? () => widget.onSelectedChanged(!widget.selected)
+          : widget.onTap,
       child: MouseRegion(
-        cursor: widget.deleteMode ? SystemMouseCursors.click
-                                  : (widget.onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic),
+        cursor: widget.deleteMode
+            ? SystemMouseCursors.click
+            : (widget.onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic),
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.all(Radius.circular(16)),
             color: widget.selected ? AppColors.colorAlert1.withValues(alpha: 0.15) : AppColors.colorBgGrey,
-            boxShadow: widget.selected ? 
-            [
-              BoxShadow(color: Colors.white.withValues(alpha: 0.6), blurRadius: 2, offset: const Offset(-5, -5)),
-              BoxShadow(color: AppColors.colorAlert2.withValues(alpha: 0.4), blurRadius: 4, offset: const Offset(5, 5)),
-            ]:
-            [
-              BoxShadow(color: Colors.white.withValues(alpha: 0.6), blurRadius: 2, offset: const Offset(-5, -5)),
-              BoxShadow(color: AppColors.colorBrandTp.withValues(alpha: 0.4), blurRadius: 4, offset: const Offset(5, 5)),
-            ],
+            boxShadow: widget.selected
+                ? [
+                    BoxShadow(color: Colors.white.withValues(alpha: 0.6), blurRadius: 2, offset: const Offset(-5, -5)),
+                    BoxShadow(color: AppColors.colorAlert2.withValues(alpha: 0.4), blurRadius: 4, offset: const Offset(5, 5)),
+                  ]
+                : [
+                    BoxShadow(color: Colors.white.withValues(alpha: 0.6), blurRadius: 2, offset: const Offset(-5, -5)),
+                    BoxShadow(color: AppColors.colorBrandTp.withValues(alpha: 0.4), blurRadius: 4, offset: const Offset(5, 5)),
+                  ],
           ),
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -112,9 +111,10 @@ class _ProfileCardState extends State<ProfileCard> {
                         ),
                       )
                     else
-                      // ✅ โหมดปกติ: แสดงปุ่มแก้ไขเหมือนเดิม
+                      // ✅ โหมดปกติ: ปุ่มแก้ไข (fallback เปิดฟอร์มเอง ถ้า onEdit ไม่ถูกส่งมา)
                       GestureDetector(
-                        onTap: widget.onEdit,
+                        behavior: HitTestBehavior.opaque, // ทำให้พื้นที่แตะง่ายขึ้น
+                        onTap: () => widget.onEdit != null ? widget.onEdit!() : _openEditForm(context),
                         child: MouseRegion(
                           cursor: SystemMouseCursors.click,
                           child: const Padding(
@@ -143,7 +143,8 @@ class _ProfileCardState extends State<ProfileCard> {
                 Row(
                   children: [
                     Text(
-                      'สร้างเมื่อ ${fmtDate(widget.profile.createdAt)}',
+                      // 'สร้างเมื่อ ${fmtDate(widget.profile.createdAt)}',
+                      'จำนวนหน้า ${widget.profile.specifics?.length ?? 0}',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(color: const Color(0xFF64748B)),
                     ),
                     const Spacer(),
@@ -165,11 +166,12 @@ class _ProfileCardState extends State<ProfileCard> {
 
                             final formCubit = context.read<SettingFormCubit>();
                             formCubit
+                              ..updateSettingProfileId(widget.profile.profileId)
                               ..updateSettingProfileName(widget.profile.name)
-                              ..updateDisplayType(widget.profile.profileDisplayType!)
-                              ..updateChartChangeInterval(widget.profile.chartChangeInterval!)
-                              ..updateRuleSelected(widget.profile.ruleSelected!)
-                              ..updateSpecifics(widget.profile.specifics!)
+                              ..updateDisplayType(widget.profile.profileDisplayType ?? formCubit.state.displayType)
+                              ..updateChartChangeInterval(widget.profile.chartChangeInterval ?? formCubit.state.chartChangeInterval)
+                              ..updateRuleSelected(widget.profile.ruleSelected ?? [])
+                              ..updateSpecifics(widget.profile.specifics ?? [])
                               ..updateIsUsed(v);
 
                             final success = await formCubit.saveForm(id: widget.profile.profileId);
@@ -203,5 +205,35 @@ class _ProfileCardState extends State<ProfileCard> {
         ),
       ),
     );
+  }
+
+  /// Opens SettingForm with current profile preloaded into SettingFormCubit.
+  Future<void> _openEditForm(BuildContext context) async {
+    final formCubit = context.read<SettingFormCubit>();
+
+    // Preload values from the profile into the form cubit
+    formCubit
+      ..updateSettingProfileId(widget.profile.profileId)
+      ..updateSettingProfileName(widget.profile.name)
+      ..updateDisplayType(widget.profile.profileDisplayType ?? formCubit.state.displayType)
+      ..updateChartChangeInterval(widget.profile.chartChangeInterval ?? formCubit.state.chartChangeInterval)
+      ..updateRuleSelected(widget.profile.ruleSelected ?? [])
+      ..updateSpecifics(widget.profile.specifics ?? [])
+      ..updateIsUsed(widget.profile.active);
+
+    // Push the SettingForm, reusing the same cubit instance
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: formCubit,
+          child: const SettingForm(),
+        ),
+        fullscreenDialog: true,
+      ),
+    );
+
+    if (!mounted) return;
+    // Optional: refresh list after returning from form
+    context.read<SettingProfileBloc>().add(const RefreshSettingProfiles());
   }
 }

@@ -27,7 +27,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
   });
 
   // ------- window config (latest N points) -------
-  static const int _windowSize = 24;
+  static const int _windowSize = 30;
 
   // cache for Y range/interval
   double? _cachedMinY;

@@ -83,7 +83,7 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
       ),
     );
   }
-  static const int _windowSize = 24;
+  static const int _windowSize = 30;
 
   List<dynamic> get _visiblePoints {
     // final src = dataPoints ?? const <ControlChartStats>[];

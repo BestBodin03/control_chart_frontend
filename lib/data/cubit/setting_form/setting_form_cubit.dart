@@ -30,10 +30,6 @@ class SettingFormCubit extends Cubit<SettingFormState> {
     emit(state.copyWith(settingProfileName: name));
   }
 
-  void updateSettingProfileId(String? id) {
-    emit(state.copyWith(profileId: id));
-  }
-
   /// Update isUsed flag
   void updateIsUsed(bool isUsed) {
     emit(state.copyWith(isUsed: isUsed));
@@ -43,6 +39,21 @@ class SettingFormCubit extends Cubit<SettingFormState> {
   void updateDisplayType(DisplayType displayType) {
     emit(state.copyWith(displayType: displayType));
   }
+
+DateTime? get startDateAll {
+  for (final s in state.specifics) {
+    if (s.startDate != null) return s.startDate;
+  }
+  return null;
+}
+
+DateTime? get endDateAll {
+  for (final s in state.specifics) {
+    if (s.endDate != null) return s.endDate;
+  }
+  return null;
+}
+
 
   /// Update chart change interval
   void updateChartChangeInterval(int interval) {
@@ -79,6 +90,10 @@ class SettingFormCubit extends Cubit<SettingFormState> {
   /// Update all specific settings
   void updateSpecifics(List<SpecificSettingState> specifics) {
     emit(state.copyWith(specifics: specifics));
+  }
+
+  void updateSettingProfileId(String? id) {
+    emit(state.copyWith(profileId: id));
   }
 
   /// Add a new specific setting block
@@ -129,6 +144,72 @@ class SettingFormCubit extends Cubit<SettingFormState> {
       emit(state.copyWith(specifics: updatedSpecifics));
     }
   }
+
+
+/// เซ็ต PeriodType ให้ทุกอัน โดยใช้เมธอดเดิม (updatePeriodType)
+void updatePeriodTypeAll(PeriodType periodType) {
+  final n = state.specifics.length;
+  for (var i = 0; i < n; i++) {
+    updatePeriodType(i, periodType);
+  }
+}
+
+void updateStartDateAll(DateTime date, {bool setCustom = false}) {
+  final n = state.specifics.length;
+  for (var i = 0; i < n; i++) {
+    updateStartDate(i, date, setCustom: setCustom);
+  }
+}
+
+void updateEndDateAll(DateTime date, {bool setCustom = false}) {
+  final n = state.specifics.length;
+  for (var i = 0; i < n; i++) {
+    updateEndDate(i, date, setCustom: setCustom);
+  }
+}
+
+/// สะดวกใช้ครั้งเดียวครบช่วงเวลา (preset → period+date range) โดยยังใช้เมธอดเดิม
+void applyPeriodPresetToAll(String label) {
+  final now = DateTime.now();
+  DateTime? startAuto;
+  late PeriodType period;
+
+  switch (label) {
+    case '1 เดือน':
+      period = PeriodType.ONE_MONTH;
+      startAuto = DateTime(now.year, now.month - 1, now.day);
+      break;
+    case '3 เดือน':
+      period = PeriodType.THREE_MONTHS;
+      startAuto = DateTime(now.year, now.month - 3, now.day);
+      break;
+    case '6 เดือน':
+      period = PeriodType.SIX_MONTHS;
+      startAuto = DateTime(now.year, now.month - 6, now.day);
+      break;
+    case '1 ปี':
+      period = PeriodType.ONE_YEAR;
+      startAuto = DateTime(now.year - 1, now.month, now.day);
+      break;
+    case 'ตลอดเวลา':
+      period = PeriodType.LIFETIME;
+      startAuto = DateTime(2024, 1, 1);
+      break;
+    default:
+      period = PeriodType.CUSTOM;
+      startAuto = null;
+  }
+
+  if (period == PeriodType.CUSTOM) {
+    updatePeriodTypeAll(PeriodType.CUSTOM);
+  } else {
+    updatePeriodTypeAll(period);
+    updateStartDateAll(startAuto!, setCustom: false);
+    updateEndDateAll(now, setCustom: false);
+  }
+}
+
+
 
   /// Update period type for a specific setting
   void updatePeriodType(int index, PeriodType periodType) {
@@ -216,7 +297,6 @@ class SettingFormCubit extends Cubit<SettingFormState> {
       .cast<SpecificSetting>()                           // 👈 บังคับเป็น SpecificSetting
       .map<SpecificSettingState>(SpecificSettingState.fromModel)
       .toList(growable: false);
-
 
     emit(state.copyWith(
       profileId: p.profileId,                       // <- เก็บ id ที่กำลังแก้
@@ -422,48 +502,8 @@ Future<void> loadDropdownOptions({
   }
 }
 
-Future<bool> removeSettingProfile({
-  required List<String> profileIds,
-}) async {
-  // กันเคสกดซ้ำตอนกำลัง process
-  if (state.status == SubmitStatus.submitting || isClosed) return false;
 
-  if (profileIds.isEmpty) {
-    emit(state.copyWith(
-      status: SubmitStatus.failure,
-      error: 'โปรดเลือกโปรไฟล์อย่างน้อย 1 รายการ',
-    ));
-    return false;
-  }
 
-  emit(state.copyWith(status: SubmitStatus.submitting, error: null));
 
-  try {
-    // เรียก API ลบหลายรายการ
-    final res = await _settingApis.removeSettingProfiles(ids: profileIds);
 
-    // รองรับ 204 / ไม่มี body -> ถือว่าสำเร็จ
-    final ok = (res == null) ? true : ((res['success'] as bool?) ?? true);
-    final msg = res == null ? null : (res['message'] ?? res['error'])?.toString();
-
-    if (ok) {
-      emit(state.copyWith(status: SubmitStatus.success));
-      return true;
-    } else {
-      emit(state.copyWith(status: SubmitStatus.failure, error: msg ?? 'ลบโปรไฟล์ไม่สำเร็จ'));
-      return false;
-    }
-  } on DioException catch (e) {
-    String err = e.message ?? 'Network error';
-    final data = e.response?.data;
-    if (data is Map<String, dynamic>) {
-      err = (data['message'] ?? data['error'] ?? err).toString();
-    }
-    emit(state.copyWith(status: SubmitStatus.failure, error: err));
-    return false;
-  } catch (e) {
-    emit(state.copyWith(status: SubmitStatus.failure, error: e.toString()));
-    return false;
-  }
-}
 }

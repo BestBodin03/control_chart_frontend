@@ -3,7 +3,6 @@ class DateAutoComplete {
     final now = DateTime.now();
     DateTime startDate;
     DateTime endDate;
-
     switch (period) {
       case '1 เดือน':
         startDate = DateTime(now.year, now.month - 1, now.day, 0, 0, 0);

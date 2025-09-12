@@ -11,6 +11,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../domain/types/chart_component.dart';
 
+/// CDE/CDT template
+/// - NO internal slider
+/// - Uses [externalStart] & [externalWindowSize] provided by parent
 class ControlChartTemplateCdeCdt extends StatefulWidget {
   final String xAxisLabel;
   final String yAxisLabel;
@@ -20,10 +23,14 @@ class ControlChartTemplateCdeCdt extends StatefulWidget {
   final double? width;
   final bool isMovingRange;
 
-  // Frozen overrides (sync window เหมือน surface hardness)
+  // Frozen overrides (sync window like surface hardness)
   final ControlChartStats? frozenStats;
   final List<ChartDataPointCdeCdt>? frozenDataPoints;
   final SearchStatus? frozenStatus;
+
+  /// Parent-controlled windowing
+  final int? externalStart;
+  final int? externalWindowSize;
 
   const ControlChartTemplateCdeCdt({
     super.key,
@@ -37,6 +44,8 @@ class ControlChartTemplateCdeCdt extends StatefulWidget {
     this.frozenStats,
     this.frozenDataPoints,
     this.frozenStatus,
+    this.externalStart,
+    this.externalWindowSize,
   });
 
   @override
@@ -44,61 +53,19 @@ class ControlChartTemplateCdeCdt extends StatefulWidget {
 }
 
 class _ControlChartTemplateCdeCdtState extends State<ControlChartTemplateCdeCdt> {
-  static const int _windowSize = 24;
-
-  int _start = 0;
-  int _maxStart = 0;
-  int _lastLen = 0;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _syncWindowToData();
-  }
-
-  @override
-  void didUpdateWidget(covariant ControlChartTemplateCdeCdt oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _syncWindowToData();
-  }
-
-  void _syncWindowToData() {
-    final full = _fullDataPoints();
-    final n = full.length;
-
-    if (n != _lastLen) {
-      _lastLen = n;
-      if (n <= _windowSize) {
-        _start = 0;
-        _maxStart = 0;
-      } else {
-        _maxStart = n - _windowSize;
-        _start = _maxStart.clamp(0, _maxStart);
-      }
-      setState(() {});
-    } else {
-      if (n <= _windowSize) {
-        _start = 0;
-        _maxStart = 0;
-      } else {
-        _maxStart = n - _windowSize;
-        _start = _start.clamp(0, _maxStart);
-      }
-    }
-  }
-
-  /// ✅ ใช้ข้อมูลจาก extension (ต้นทางเดียวกับ Surface Hardness)
   List<ChartDataPointCdeCdt> _fullDataPoints() {
     if (widget.frozenDataPoints != null) return widget.frozenDataPoints!;
     final state = context.read<SearchBloc>().state;
-    return state.chartDataPointsCdeCdt; // ✅ มี fullLabel/furnaceNo/matNo ครบ
+    return state.chartDataPointsCdeCdt;
   }
 
-
   List<ChartDataPointCdeCdt> _visible(List<ChartDataPointCdeCdt> full) {
-    if (full.length <= _windowSize) return full;
-    final end = (_start + _windowSize).clamp(0, full.length);
-    return full.sublist(_start, end);
+    if (full.isEmpty) return const <ChartDataPointCdeCdt>[];
+    final start = (widget.externalStart ?? 0).clamp(0, full.length - 1);
+    final win = widget.externalWindowSize;
+    if (win == null || full.length <= win) return full;
+    final end = (start + win).clamp(0, full.length);
+    return full.sublist(start, end);
   }
 
   @override
@@ -109,8 +76,6 @@ class _ControlChartTemplateCdeCdtState extends State<ControlChartTemplateCdeCdt>
         dataPoints: _visible(widget.frozenDataPoints!),
         stats: widget.frozenStats!,
         status: widget.frozenStatus ?? SearchStatus.success,
-        showSlider: (widget.frozenDataPoints!.length > _windowSize),
-        totalLength: widget.frozenDataPoints!.length,
       );
     }
 
@@ -127,19 +92,15 @@ class _ControlChartTemplateCdeCdtState extends State<ControlChartTemplateCdeCdt>
           return const SizedBox.shrink();
         }
 
-        final full = _fullDataPoints(); // ✅ มาจาก chartDetails เดียวกับ surface hardness
-        
+        final full = _fullDataPoints();
         if (full.isEmpty) {
           return const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล'));
         }
-
 
         return _buildFromData(
           dataPoints: _visible(full),
           stats: stats,
           status: state.status,
-          showSlider: (full.length > _windowSize),
-          totalLength: full.length,
         );
       },
     );
@@ -149,8 +110,6 @@ class _ControlChartTemplateCdeCdtState extends State<ControlChartTemplateCdeCdt>
     required List<ChartDataPointCdeCdt> dataPoints,
     required ControlChartStats stats,
     required SearchStatus status,
-    required bool showSlider,
-    required int totalLength,
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -194,24 +153,6 @@ class _ControlChartTemplateCdeCdtState extends State<ControlChartTemplateCdeCdt>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  if (showSlider)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4, left: 12, right: 12),
-                      child: SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          trackHeight: 2,
-                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                        ),
-                        child: Slider(
-                          min: 0,
-                          max: _maxStart.toDouble(),
-                          value: _start.toDouble().clamp(0, _maxStart.toDouble()),
-                          label: '${_start + 1} - ${(_start + _windowSize).clamp(0, totalLength)}',
-                          onChanged: (v) => setState(() => _start = v.round()),
-                        ),
-                      ),
-                    ),
-
                   // Legend
                   SizedBox(
                     height: legendHeight,
@@ -232,7 +173,7 @@ class _ControlChartTemplateCdeCdtState extends State<ControlChartTemplateCdeCdt>
                         borderData: selectedWidget.buildBorderData(),
                         lineBarsData: selectedWidget.buildLineBarsData(),
                         minX: 0,
-                        maxX: (dataPoints.length - 1).toDouble(), // เฉพาะ window ที่มองเห็น
+                        maxX: (dataPoints.length - 1).toDouble(),
                         minY: selectedWidget.getMinY(),
                         maxY: selectedWidget.getMaxY(),
                         lineTouchData: selectedWidget.buildTouchData(),

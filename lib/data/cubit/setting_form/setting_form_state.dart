@@ -8,7 +8,7 @@ class RuleSelected {
   final String? ruleName;
   final bool? isUsed;
 
-  const RuleSelected({this.ruleId, this.ruleName, this.isUsed});
+  const RuleSelected({this.ruleId , this.ruleName, this.isUsed});
 
   RuleSelected copyWith({int? ruleId, String? ruleName, bool? isUsed}) {
     return RuleSelected(
