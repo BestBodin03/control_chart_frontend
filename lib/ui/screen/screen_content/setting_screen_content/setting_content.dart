@@ -22,7 +22,10 @@ class SettingContent extends StatefulWidget {
 
   @override
   State<SettingContent> createState() => _SettingContentState();
+
+  
 }
+
 
 class _SettingContentState extends State<SettingContent> {
   TabKey _tab = TabKey.profiles;
@@ -41,20 +44,21 @@ class _SettingContentState extends State<SettingContent> {
     return Profile(
       profileId: s.id,
       name: s.settingProfileName,
-      displayType:
-          'ประเภทการแสดง: ${displayTypeMap[s.displayType.name] ?? s.displayType.name}',
+      displayType: 'ประเภทการแสดง: ${displayTypeMap[s.displayType.name] ?? s.displayType.name}',
       active: s.isUsed,
       createdAt: s.createdAt,
       profileDisplayType: s.displayType,
       chartChangeInterval: s.generalSetting.chartChangeInterval,
-      ruleSelected:
-          s.generalSetting.nelsonRule.map(RuleSelected.fromNelson).toList(),
-      specifics:
-          s.specificSetting.map(SpecificSettingState.fromModel).toList(),
-      status: SubmitStatus.idle, // ✅ ไม่เป็น null
+      ruleSelected: s.generalSetting.nelsonRule.map(RuleSelected.fromNelson).toList(),
+      specifics: s.specificSetting.map(SpecificSettingState.fromModel).toList(),
+      status: SubmitStatus.idle, // ✅ แทน null ถ้า field เป็น non-nullable
       error: null,
     );
+
   }
+
+  
+
 
   @override
   Widget build(BuildContext context) {
@@ -73,8 +77,7 @@ class _SettingContentState extends State<SettingContent> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 32, 32),
               child: switch (_tab) {
-                TabKey.profiles => BlocBuilder<SettingProfileBloc,
-                    SettingProfileState>(
+                TabKey.profiles => BlocBuilder<SettingProfileBloc, SettingProfileState>(
                   builder: (context, state) {
                     if (state.isLoading || state.isInitial) {
                       return const Center(child: CircularProgressIndicator());
@@ -100,12 +103,23 @@ class _SettingContentState extends State<SettingContent> {
                     final items = state.profiles.map(_toProfile).toList();
                     return ProfilesPage(
                       items: items,
-                      onToggleActive: (id, v) {},
-                      onAddProfile: () => _openSettingFormDialog(context),
+                      onToggleActive: (id, v) {
+                        // context.read<SettingProfileBloc>().add(ToggleSettingActive(id, v));
+                      },
+                      onAddProfile: () {
+                        final formCubit = context.read<SettingFormCubit>(); // instance from ancestor
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => BlocProvider.value(
+                              value: formCubit,           // pass the SAME instance
+                              child: const SettingForm(), // <-- your form widget
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
-
                 TabKey.importData => ImportPage(
                   fileName: _fileName,
                   onPickFile: () {
@@ -122,43 +136,5 @@ class _SettingContentState extends State<SettingContent> {
         ],
       ),
     );
-  }
-
-  Future<void> _openSettingFormDialog(BuildContext context,
-      {Profile? initial}) async {
-    final formCubit = context.read<SettingFormCubit>();
-
-    if (initial == null) {
-      formCubit.resetForm();
-    } else {
-      formCubit
-        ..updateSettingProfileId(initial.profileId)
-        ..updateSettingProfileName(initial.name)
-        ..updateDisplayType(initial.profileDisplayType!)
-        ..updateChartChangeInterval(initial.chartChangeInterval!)
-        ..updateRuleSelected(initial.ruleSelected!)
-        ..updateSpecifics(initial.specifics!)
-        ..updateIsUsed(initial.active);
-    }
-
-    await showDialog<bool>(
-      context: context,
-      builder: (_) => BlocProvider.value(
-        value: formCubit,
-        child: Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          child: const Padding(
-            padding: EdgeInsets.all(8),
-            child: SettingForm(),
-          ),
-        ),
-      ),
-    );
-
-    if (!mounted) return;
-    // if (shouldRefresh == true) {
-    //   context.read<SettingProfileBloc>().add(const RefreshSettingProfiles());
-    // }
   }
 }

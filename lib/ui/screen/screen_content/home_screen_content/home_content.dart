@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:developer' as dev;
-import 'dart:math' as math;
-
 import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
@@ -44,7 +42,7 @@ class _HomeContentState extends State<HomeContent> {
   int _winStart = 0;    // index start of window
   int _winMaxStart = 0; // max start we can slide to (len - winSize)
   int _winSize = 30;    // window size (30 latest points)
-  bool _showSlider = false;
+  final bool _showSlider = true;
 
   // ---------- Logging helpers ----------
   void _logIncomingProfiles(String tag) {
@@ -105,10 +103,7 @@ class _HomeContentState extends State<HomeContent> {
 
   void _dispatchQuery(HomeContentVar p) {
     dev.log('[dispatch] $p');
-    // ให้สไลเดอร์เริ่มขวาสุดเมื่อได้ข้อมูลชุดใหม่
-    _hasUserMovedSlider = false;
-    _didRightSnap = false;
-
+    _hasUserMovedSlider = false; // follow right edge until user moves
     context.read<SearchBloc>().add(
       LoadFilteredChartData(
         startDate: p.startDate,
@@ -118,6 +113,7 @@ class _HomeContentState extends State<HomeContent> {
       ),
     );
   }
+
 
 
   void _startTimerForIndex(int i) {
@@ -158,15 +154,15 @@ class _HomeContentState extends State<HomeContent> {
 
     _winMaxStart = longest > _winSize ? (longest - _winSize) : 0;
 
-    // ★ Snap ไปขวาสุดหนึ่งครั้ง เมื่อข้อมูลชุดนี้พร้อม และผู้ใช้ยังไม่ขยับเอง
-    if (!_hasUserMovedSlider && !_didRightSnap) {
+    // ⭐ Keep snapping to the latest as long as the user hasn't moved the slider
+    if (!_hasUserMovedSlider) {
       _winStart = _isAscendingChrono ? _winMaxStart : 0;
-      _didRightSnap = true; // กัน snap ซ้ำระหว่าง build/rebuild
     }
 
     if (_winStart > _winMaxStart) _winStart = _winMaxStart;
     if (_winStart < 0) _winStart = 0;
   }
+
 
 
   @override
@@ -361,18 +357,26 @@ class _HomeContentState extends State<HomeContent> {
   Widget _buildDotsAndRightSlider(int profilesLength, SearchState searchState) {
     final lenA = searchState.chartDataPoints.length;
     final lenB = searchState.chartDataPointsCdeCdt.length;
-    final hasAnyData = (lenA > 0) || (lenB > 0);
-
-    // for label boundary safety use chartDataPoints length
-    final allLen = lenA;
-
     final longest = lenA > lenB ? lenA : lenB;
+
+    // ✅ แสดงสไลเดอร์เมื่อมีอะไรให้เลื่อนจริงๆ
+    final bool showSliderNeeded = longest > _winSize;
+
     final int visibleCount = (longest <= 0) ? 0 : _winSize.clamp(1, longest).toInt();
 
-    final all = searchState.chartDataPoints;
+    double sliderWidthForVisible(int count) {
+      const double perItem = 8.0;
+      const double minW = 140.0;
+      const double maxW = 320.0;
+      return (count * perItem).clamp(minW, maxW);
+    }
 
-    // หา start และ end date ของ window
-    final DateTime? startDate = 
+    final sliderWidth = sliderWidthForVisible(visibleCount);
+
+    // ถ้าไม่ใช้ปุ่มไอคอนแล้ว ไม่ต้องเผื่อ _iconW
+    final all = searchState.chartDataPoints;
+    final reservedLeftWidth = showSliderNeeded ? (sliderWidth + _gap) : 0.0;
+        final DateTime? startDate = 
         (all.isNotEmpty && _winStart < all.length) 
             ? all[_winStart].collectDate 
             : null;
@@ -389,17 +393,10 @@ class _HomeContentState extends State<HomeContent> {
         ' - '
         '${endDate != null ? df.format(endDate) : ''}';
 
-    double sliderWidthForVisible(int count) {
-      const double perItem = 8.0;
-      const double minW = 140.0;
-      const double maxW = 320.0;
-      return (count * perItem).clamp(minW, maxW);
-    }
+    final double sliderValue = _isAscendingChrono
+        ? _winStart.toDouble()
+        : (_winMaxStart - _winStart).toDouble();
 
-    final sliderWidth = sliderWidthForVisible(visibleCount);
-    final reservedLeftWidth = hasAnyData ? (_iconW + sliderWidth + _gap) : 0.0;
-
-    // Dots widget
     Widget dots() => Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
@@ -426,94 +423,60 @@ class _HomeContentState extends State<HomeContent> {
           ),
         );
 
-    // Clamp label end safely against allLen
-    final int labelEnd = math.min(allLen, _winStart + _winSize);
-
-    // Map slider value depending on data order
-    final double sliderValue = _isAscendingChrono
-        ? _winStart.toDouble() // rightmost == latest window
-        : (_winStart - _winMaxStart).toDouble(); // reversed mapping
-
     return SizedBox(
-      height: _rowH, // fixed height, charts won't jiggle
+      height: _rowH,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Centered dots, always perfectly centered relative to full width
-          // IgnorePointer so slider remains fully interactive
           IgnorePointer(child: dots()),
-
-          // Foreground row for left controls (icon + slider)
           Row(
             children: [
-              // Left: fixed-width area for icon + slider (space always reserved if any data)
               SizedBox(
                 width: reservedLeftWidth,
-                child: hasAnyData
+                child: showSliderNeeded
                     ? Row(
                         children: [
-                          // Exact-size IconButton so our reserved width matches reality
+                          // ✅ แก้ Visibility เงื่อนไขให้โชว์เมื่อยาวกว่า window
                           Visibility(
-                            visible: searchState.chartDataPoints.length > _winMaxStart ||
-                                searchState.chartDataPointsCdeCdt.length > _winMaxStart,
-                            child: IconButton(
-                              tooltip: 'Window slider',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints.tightFor(
-                                width: _iconW,
-                                height: _rowH,
-                              ),
-                              splashRadius: 18,
-                              icon: Icon(
-                                _showSlider ? Icons.tune : Icons.tune_outlined,
-                                size: 20,
-                                color: AppColors.colorBrand,
-                              ),
-                              onPressed: () => setState(() => _showSlider = !_showSlider),
-                            ),
-                          ),
+                            visible: showSliderNeeded,
+                            child: SizedBox(
+                              width: sliderWidth,
+                              child: IgnorePointer(
+                                ignoring: !_showSlider,
+                                child: AnimatedOpacity(
+                                  opacity: _showSlider ? 1.0 : 0.0,
+                                  duration: const Duration(milliseconds: 200),
+                                  curve: Curves.easeInOut,
+                                  child: SliderTheme(
+                                    data: SliderTheme.of(context).copyWith(
+                                      thumbColor: AppColors.colorBrand,
+                                      activeTrackColor: AppColors.colorBrandTp,
+                                      trackHeight: 2,
+                                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                                    ),                         
+                                    child: Slider(
+  min: 0,
+  max: _winMaxStart.toDouble(),
+  divisions: _winMaxStart > 0 ? _winMaxStart : null,
+  value: _isAscendingChrono ? _winStart.toDouble()
+                            : (_winMaxStart - _winStart).toDouble(),
+  onChanged: (v) => setState(() {
+    _hasUserMovedSlider = true; // stop auto-following
+    final raw = v.round().clamp(0, _winMaxStart);
+    _winStart = _isAscendingChrono ? raw : (_winMaxStart - raw);
+  }),
+)
 
-                          // Slider area (always reserved; just faded)
-                          SizedBox(
-                            width: sliderWidth,
-                            child: IgnorePointer(
-                              ignoring: !_showSlider,
-                              child: AnimatedOpacity(
-                                opacity: _showSlider ? 1.0 : 0.0,
-                                duration: const Duration(milliseconds: 200),
-                                curve: Curves.easeInOut,
-                                child: SliderTheme(
-                                  data: SliderTheme.of(context).copyWith(
-                                    trackHeight: 2,
-                                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                                   ),
-                                  child: Slider(
-                                    thumbColor: AppColors.colorBrandTp,
-                                    activeColor: const Color.fromARGB(255, 142, 181, 206),
-                                    min: 0,
-                                    max: _winMaxStart.toDouble(),
-                                    divisions: _winMaxStart > 0 ? _winMaxStart : null,
-                                    value: sliderValue,
-                                    label: labelText, // ✅ ใช้วันที่แทน index
-                                    onChanged: (v) => setState(() {
-                                      _hasUserMovedSlider = true;
-                                      _winStart = _isAscendingChrono
-                                          ? v.round().clamp(0, _winMaxStart)
-                                          : (_winMaxStart - v.round()).clamp(0, _winMaxStart);
-                                    }),
-                                  )
                                 ),
                               ),
                             ),
                           ),
-
                           const SizedBox(width: _gap),
                         ],
                       )
                     : null,
               ),
-
-              // Fill the rest; dots remain centered because they are on the Stack center
               const Expanded(child: SizedBox()),
             ],
           ),
@@ -521,6 +484,7 @@ class _HomeContentState extends State<HomeContent> {
       ),
     );
   }
+
 }
 
 /// Forces child to fill and clips overflow

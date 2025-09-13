@@ -25,11 +25,40 @@ Widget buildChartsSectionSurfaceHardness(
   assert(currentIndex >= 0 && currentIndex < profiles.length, 'currentIndex out of range');
 
   final current = profiles[currentIndex];
-  final isReady = searchState.status == SearchStatus.success && searchState.chartDetails.isNotEmpty;
-  final partName = isReady ? (searchState.chartDetails.first.chartGeneralDetail.partName) : '-';
-  final title = "Furnace ${current.furnaceNo ?? "-"} "
-      " | $partName - ${current.materialNo ?? '-'}"
-      " | Date ${fmtDate(current.startDate)} - ${fmtDate(current.endDate)}";
+
+  final bool isReady =
+      searchState.status == SearchStatus.success &&
+      searchState.chartDetails.isNotEmpty;
+
+  final List<String> parts = [];
+
+  // 1) Furnace (แสดงเมื่อมี furnaceNo)
+  final String? furnaceNo = current.furnaceNo;
+  if (furnaceNo != null) {
+    parts.add('Furnace $furnaceNo');
+  }
+
+  // 2) Material (แสดงเมื่อ ready + มี materialNo)
+  if (isReady && current.materialNo != null) {
+    final partName = searchState
+        .chartDetails.first.chartGeneralDetail.partName
+        ?.trim();
+    final mat = current.materialNo!;
+    parts.add(
+      (partName != null && partName.isNotEmpty) ? '$partName - $mat' : '$mat',
+    );
+  }
+
+  // 3) Date (แสดงเมื่อมี start & end ครบ)
+  final s = current.startDate;
+  final e = current.endDate;
+  if (s != null && e != null) {
+    parts.add('Date ${fmtDate(s)} - ${fmtDate(e)}');
+  }
+
+  // ผลลัพธ์: จะมีเฉพาะส่วนที่มีข้อมูลจริง และคั่นด้วย " | "
+  final title = parts.join(' | ');
+
 
   return SizedBox.expand(
     child: _MediumContainer(

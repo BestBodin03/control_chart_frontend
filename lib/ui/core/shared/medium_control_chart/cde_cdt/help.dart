@@ -21,8 +21,6 @@ Widget buildChartsSectionCdeCdt(
     return const SizedBox.shrink();
   }
 
-  final isReady = searchState.status == SearchStatus.success && searchState.chartDetails.isNotEmpty;
-
   final label = switch (sel) {
     SecondChartSelected.cde => 'CDE',
     SecondChartSelected.cdt => 'CDT',
@@ -30,12 +28,38 @@ Widget buildChartsSectionCdeCdt(
     _ => '-',
   };
 
-  final partName =
-      isReady ? (searchState.chartDetails.first.chartGeneralDetail.partName ?? '-') : '-';
+  final bool isReady =
+      searchState.status == SearchStatus.success &&
+      searchState.chartDetails.isNotEmpty;
 
-  final title = "Furnace ${settingProfile.furnaceNo ?? "-"} "
-      " | $partName - ${settingProfile.materialNo ?? '-'}"
-      " | Date ${fmtDate(settingProfile.startDate)} - ${fmtDate(settingProfile.endDate)}";
+  final List<String> parts = [];
+
+  // 1) Furnace (แสดงเมื่อมี furnaceNo)
+  final String? furnaceNo = settingProfile.furnaceNo;
+  if (furnaceNo != null) {
+    parts.add('Furnace $furnaceNo');
+  }
+
+  // 2) Material (แสดงเมื่อ ready + มี materialNo)
+  if (isReady && settingProfile.materialNo != null) {
+    final partName = searchState
+        .chartDetails.first.chartGeneralDetail.partName
+        ?.trim();
+    final mat = settingProfile.materialNo!;
+    parts.add(
+      (partName != null && partName.isNotEmpty) ? '$partName - $mat' : '$mat',
+    );
+  }
+
+  // 3) Date (แสดงเมื่อมี start & end ครบ)
+  final s = settingProfile.startDate;
+  final e = settingProfile.endDate;
+  if (s != null && e != null) {
+    parts.add('Date ${fmtDate(s)} - ${fmtDate(e)}');
+  }
+
+  // ผลลัพธ์: จะมีเฉพาะส่วนที่มีข้อมูลจริง และคั่นด้วย " | "
+  final title = parts.join(' | ');
 
   return SizedBox.expand(
     child: _MediumContainerCdeCdt(

@@ -1,70 +1,75 @@
-
-import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:flutter/material.dart';
+import 'package:control_chart/ui/core/design_system/app_color.dart';
 
 class PillButton extends StatelessWidget {
-  const PillButton({super.key, 
+  const PillButton({
+    super.key,
     required this.label,
-    required this.onTap,
-    required this.labelSize,
+    this.labelSize,
+    this.leading,
     this.selected = false,
     this.solid = false,
-    this.bg = AppColors.colorBrand,
-    this.leading,
+    this.bg,
+    this.onTap, // ✅ nullable ตามวิธี A
+    this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    this.radius = 999,
   });
 
   final String label;
-  final VoidCallback onTap;
-  final double labelSize;
+  final double? labelSize;
+  final IconData? leading;
   final bool selected;
   final bool solid;
   final Color? bg;
-  final IconData? leading;
+  final VoidCallback? onTap; // ✅ เปลี่ยนเป็น VoidCallback?
+  final EdgeInsetsGeometry padding;
+  final double radius;
 
   @override
   Widget build(BuildContext context) {
-    // final bg = solid
-    //     ? (selected ? AppColors.colorBrand : const Color(0xFFEFF6FF))
-    //     : const Color(0xFFEFF6FF);
-    final fg = solid
-        ? Colors.white
-        : (selected ? const Color(0xFF1D4ED8) : const Color(0xFF1D4ED8));
-    final ring = solid ? Colors.transparent : const Color(0xFFBFDBFE);
+    final bool disabled = onTap == null;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(50),
-          border: Border.all(color: ring),
-          boxShadow: solid
-              ? const [
-                  BoxShadow(
-                    color: Color(0x14000000),
-                    blurRadius: 6,
-                    offset: Offset(0, 2),
-                  )
-                ]
-              : null,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              if (leading != null) ...[
-                Icon(leading, size: 16, color: fg),
-                const SizedBox(width: 6),
+    // สีพื้นฐาน
+    final Color baseBg = bg ??
+        (selected
+            ? AppColors.colorBrand
+            : AppColors.colorBrandTp);
+
+    // โทนพื้น/ขอบตามโหมด
+    final Color background =
+        solid ? baseBg : Colors.transparent;
+    final Color borderColor =
+        solid ? baseBg : (bg ?? AppColors.colorBrand);
+    final Color fgColor =
+        solid ? Colors.white : (bg != null ? bg!.computeLuminance() < 0.5 ? Colors.white : AppColors.colorBrand : AppColors.colorBrand);
+
+    return Opacity(
+      opacity: disabled ? 0.6 : 1,
+      child: Material(
+        color: background,
+        shape: StadiumBorder(side: BorderSide(color: borderColor, width: 1)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(radius),
+          onTap: onTap, // ✅ ส่ง null ได้
+          child: Padding(
+            padding: padding,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (leading != null) ...[
+                  Icon(leading, size: 18, color: fgColor),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: labelSize ?? 13,
+                    fontWeight: FontWeight.w600,
+                    color: fgColor,
+                  ),
+                ),
               ],
-              Text(
-                label,
-                style: Theme.of(context)
-                    .textTheme
-                    .labelMedium
-                    ?.copyWith(fontWeight: FontWeight.bold, color: fg, fontSize: labelSize),
-                    
-              ),
-            ],
+            ),
           ),
         ),
       ),

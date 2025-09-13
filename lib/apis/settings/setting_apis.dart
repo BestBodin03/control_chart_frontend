@@ -152,7 +152,7 @@ Future<Map<String, dynamic>> getSettingFormDropdown({
   }) async {
     final req = form.toRequest(ruleNameById: ruleNameById);
     final body = req.toJson();
-    print(body);
+    debugPrint('ADD NEW SETTING PROFILE');
     return await ApiConfig().post<Map<String, dynamic>>('/setting/create', body);
   }
 
@@ -163,7 +163,7 @@ Future<Map<String, dynamic>> getSettingFormDropdown({
   }) async {
     final req = form.toRequest(ruleNameById: ruleNameById);
     final body = req.toJson();
-    print(body);
+    debugPrint('UPDATE NEW SETTING PROFILE');
     print('/setting/update/$id');
     return await ApiConfig().patch<Map<String, dynamic>>(
       '/setting/update/$id',

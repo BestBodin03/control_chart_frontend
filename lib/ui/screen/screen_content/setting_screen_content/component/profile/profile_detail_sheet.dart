@@ -121,58 +121,6 @@ class ProfileDetailSheet extends StatelessWidget {
     );
   }
 
-  void _showEditFromDetail(BuildContext context, Profile profile) {
-    final formCubit = context.read<SettingFormCubit>();
-    
-    // Pre-populate form with profile data
-    formCubit
-      ..updateSettingProfileName(profile.name)
-      ..updateDisplayType(profile.profileDisplayType!)
-      ..updateChartChangeInterval(profile.chartChangeInterval!)
-      ..updateRuleSelected(profile.ruleSelected!)
-      ..updateSpecifics(profile.specifics!)
-      ..updateIsUsed(profile.active);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => BlocProvider.value(
-        value: formCubit,
-        child: Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: AppColors.colorBgGrey,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.colorBrandTp.withValues(alpha: 0.4),
-                  blurRadius: 15,
-                  offset: const Offset(5, 5),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'แก้ไขโปรไฟล์: ${profile.name}',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const SettingForm(),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   // ✅ Helper method to format selected rules
   String _formatSelectedRules(List<RuleSelected> rules) {

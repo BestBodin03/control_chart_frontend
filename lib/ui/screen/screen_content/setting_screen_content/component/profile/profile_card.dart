@@ -1,14 +1,12 @@
+// lib/ui/screen/screen_content/setting_screen_content/component/profile/profile_card.dart
 import 'package:control_chart/data/bloc/setting_profile/setting_profile_bloc.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_cubit.dart';
-import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
-import 'package:control_chart/ui/core/shared/setting_form.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// profile_card.dart (one-file, drop-in)
 class ProfileCard extends StatefulWidget {
   const ProfileCard({
     super.key,
@@ -17,7 +15,7 @@ class ProfileCard extends StatefulWidget {
     required this.hasAnotherActive,
     this.onTap,
     this.onEdit,
-    // multi-select delete mode
+    // โหมดลบ + การเลือกหลายรายการ
     required this.deleteMode,
     required this.selected,
     required this.onSelectedChanged,
@@ -29,7 +27,7 @@ class ProfileCard extends StatefulWidget {
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
 
-  // delete-mode controls
+  // โหมดลบ
   final bool deleteMode;
   final bool selected;
   final ValueChanged<bool> onSelectedChanged;
@@ -57,11 +55,13 @@ class _ProfileCardState extends State<ProfileCard> {
 
   @override
   Widget build(BuildContext context) {
+    // read เพื่อใช้งาน form cubit ตอนเซฟ
+    context.read<SettingFormCubit>();
+
     return GestureDetector(
-      behavior: HitTestBehavior.deferToChild, // ✅ ให้ child จัดการ tap ก่อน (icon/checkbox)
       onTap: widget.deleteMode
-          ? () => widget.onSelectedChanged(!widget.selected)
-          : widget.onTap,
+          ? () => widget.onSelectedChanged(!widget.selected) // โหมดลบ → toggle เลือก
+          : widget.onTap,                                      // ปกติ → เปิดรายละเอียด
       child: MouseRegion(
         cursor: widget.deleteMode
             ? SystemMouseCursors.click
@@ -100,9 +100,8 @@ class _ProfileCardState extends State<ProfileCard> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-
                     if (widget.deleteMode)
-                      // ✅ โหมดลบ: แสดง Checkbox
+                      // โหมดลบ: แสดง Checkbox
                       InkWell(
                         onTap: () => widget.onSelectedChanged(!widget.selected),
                         child: Checkbox(
@@ -111,10 +110,9 @@ class _ProfileCardState extends State<ProfileCard> {
                         ),
                       )
                     else
-                      // ✅ โหมดปกติ: ปุ่มแก้ไข (fallback เปิดฟอร์มเอง ถ้า onEdit ไม่ถูกส่งมา)
+                      // โหมดปกติ: แสดงปุ่มแก้ไข
                       GestureDetector(
-                        behavior: HitTestBehavior.opaque, // ทำให้พื้นที่แตะง่ายขึ้น
-                        onTap: () => widget.onEdit != null ? widget.onEdit!() : _openEditForm(context),
+                        onTap: widget.onEdit,
                         child: MouseRegion(
                           cursor: SystemMouseCursors.click,
                           child: const Padding(
@@ -143,13 +141,12 @@ class _ProfileCardState extends State<ProfileCard> {
                 Row(
                   children: [
                     Text(
-                      // 'สร้างเมื่อ ${fmtDate(widget.profile.createdAt)}',
-                      'จำนวนหน้า ${widget.profile.specifics?.length ?? 0}',
+                      'แสดงผล ${widget.profile.specifics?.length ?? 0} หน้า',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(color: const Color(0xFF64748B)),
                     ),
                     const Spacer(),
 
-                    // ✅ ปิด switch ขณะอยู่ในโหมดลบ
+                    // ปิด switch ขณะอยู่ในโหมดลบ
                     IgnorePointer(
                       ignoring: widget.deleteMode,
                       child: Opacity(
@@ -161,6 +158,18 @@ class _ProfileCardState extends State<ProfileCard> {
                           inactiveThumbColor: AppColors.colorBg,
                           inactiveTrackColor: const Color.fromARGB(255, 193, 194, 194),
                           onChanged: (v) async {
+                            // guard: ถ้าจะเปิด และมีตัวอื่นเปิดอยู่แล้ว → ปัดตก
+                            if (v && widget.hasAnotherActive()) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  duration: Duration(seconds: 1),
+                                  content: Text('สามารถใช้งานได้เพียง 1 โปรไฟล์เท่านั้น'),
+                                  backgroundColor: Colors.orange,
+                                ),
+                              );
+                              return;
+                            }
+
                             final prev = _isOn;
                             setState(() => _isOn = v);
 
@@ -168,21 +177,28 @@ class _ProfileCardState extends State<ProfileCard> {
                             formCubit
                               ..updateSettingProfileId(widget.profile.profileId)
                               ..updateSettingProfileName(widget.profile.name)
-                              ..updateDisplayType(widget.profile.profileDisplayType ?? formCubit.state.displayType)
-                              ..updateChartChangeInterval(widget.profile.chartChangeInterval ?? formCubit.state.chartChangeInterval)
-                              ..updateRuleSelected(widget.profile.ruleSelected ?? [])
-                              ..updateSpecifics(widget.profile.specifics ?? [])
+                              ..updateDisplayType(widget.profile.profileDisplayType!)
+                              ..updateChartChangeInterval(widget.profile.chartChangeInterval!)
+                              ..updateRuleSelected(widget.profile.ruleSelected!)
+                              ..updateSpecifics(widget.profile.specifics!)
                               ..updateIsUsed(v);
 
                             final success = await formCubit.saveForm(id: widget.profile.profileId);
-                            if (!mounted) return;
+                            if (!context.mounted) return;
 
                             if (success) {
                               context.read<SettingProfileBloc>().add(const RefreshSettingProfiles());
+                              // แจ้ง parent หลังเซฟสำเร็จเท่านั้น
+                              widget.onToggle(v);
+
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว'), backgroundColor: Colors.green),
+                                const SnackBar(
+                                  content: Text('บันทึกข้อมูลเรียบร้อยแล้ว'),
+                                  backgroundColor: Colors.green,
+                                ),
                               );
                             } else {
+                              // rollback
                               setState(() => _isOn = prev);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -192,7 +208,6 @@ class _ProfileCardState extends State<ProfileCard> {
                                 ),
                               );
                             }
-                            widget.onToggle(v);
                           },
                         ),
                       ),
@@ -205,35 +220,5 @@ class _ProfileCardState extends State<ProfileCard> {
         ),
       ),
     );
-  }
-
-  /// Opens SettingForm with current profile preloaded into SettingFormCubit.
-  Future<void> _openEditForm(BuildContext context) async {
-    final formCubit = context.read<SettingFormCubit>();
-
-    // Preload values from the profile into the form cubit
-    formCubit
-      ..updateSettingProfileId(widget.profile.profileId)
-      ..updateSettingProfileName(widget.profile.name)
-      ..updateDisplayType(widget.profile.profileDisplayType ?? formCubit.state.displayType)
-      ..updateChartChangeInterval(widget.profile.chartChangeInterval ?? formCubit.state.chartChangeInterval)
-      ..updateRuleSelected(widget.profile.ruleSelected ?? [])
-      ..updateSpecifics(widget.profile.specifics ?? [])
-      ..updateIsUsed(widget.profile.active);
-
-    // Push the SettingForm, reusing the same cubit instance
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => BlocProvider.value(
-          value: formCubit,
-          child: const SettingForm(),
-        ),
-        fullscreenDialog: true,
-      ),
-    );
-
-    if (!mounted) return;
-    // Optional: refresh list after returning from form
-    context.read<SettingProfileBloc>().add(const RefreshSettingProfiles());
   }
 }
