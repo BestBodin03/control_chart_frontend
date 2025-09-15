@@ -1,5 +1,3 @@
-// control_chart_template.dart
-import 'dart:developer' as dev;
 import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart';
@@ -21,18 +19,14 @@ class ControlChartTemplate extends StatefulWidget {
   final double? width;
   final bool isMovingRange;
 
-  /// Optional frozen overrides (window already sliced by parent)
+  /// Optional frozen overrides
   final ControlChartStats? frozenStats;
   final List<ChartDataPoint>? frozenDataPoints;
   final SearchStatus? frozenStatus;
 
-  /// (Optional) window control from parent (index-based) — if you pass frozenDataPoints,
-  /// those are already windowed so you can ignore these.
+  /// Parent-controlled windowing
   final int? externalStart;
   final int? externalWindowSize;
-
-  /// optional: server-recommended tick count (4/6)
-  final int? xTick;
 
   const ControlChartTemplate({
     super.key,
@@ -47,8 +41,7 @@ class ControlChartTemplate extends StatefulWidget {
     this.frozenDataPoints,
     this.frozenStatus,
     this.externalStart,
-    this.externalWindowSize,
-    this.xTick,
+    this.externalWindowSize, int? xTick,
   });
 
   @override
@@ -62,10 +55,10 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
     return state.chartDataPoints;
   }
 
-  ControlChartStats _fullStats() {
-    if (widget.frozenStats != null) return widget.frozenStats!;
+  ControlChartStats? _fullStats() {
+    if (widget.frozenStats != null) return widget.frozenStats;
     final state = context.read<SearchBloc>().state;
-    return state.controlChartStats!;
+    return state.controlChartStats;
   }
 
   SearchStatus _status() {
@@ -73,20 +66,18 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
     return context.read<SearchBloc>().state.status;
   }
 
-  /// if you pass frozenDataPoints (already windowed), this just returns them as-is
   List<ChartDataPoint> _visible(List<ChartDataPoint> full) {
     if (full.isEmpty) return const <ChartDataPoint>[];
+    final start = (widget.externalStart ?? 0).clamp(0, full.length - 1);
     final win = widget.externalWindowSize;
     if (win == null || full.length <= win) return full;
-
-    final start = (widget.externalStart ?? 0).clamp(0, full.length - 1);
     final end = (start + win).clamp(0, full.length);
     return full.sublist(start, end);
   }
 
   @override
   Widget build(BuildContext context) {
-    // Frozen path (no Bloc rebuild for content)
+    // Frozen path (no Bloc)
     if (widget.frozenStats != null && widget.frozenDataPoints != null) {
       final data = _visible(widget.frozenDataPoints!);
       return _buildFromData(
@@ -110,6 +101,7 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
 
         final full = _fullDataPoints();
         final data = _visible(full);
+
         return _buildFromData(
           dataPoints: data,
           stats: state.controlChartStats!,
@@ -129,39 +121,25 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
         final w = widget.width ?? constraints.maxWidth;
         final h = widget.height ?? constraints.maxHeight;
 
-        // Compose components for chart data providers
-        final controlChartComp = ControlChartComponent(
-          dataPoints: dataPoints,          // ⬅️ window already applied
+        // Components receive only the visible window
+        final useI = ControlChartComponent(
+          dataPoints: dataPoints,
           controlChartStats: stats,
           dataLineColor: widget.dataLineColor,
           backgroundColor: widget.backgroundColor,
           height: h,
           width: w,
-          xTick: widget.xTick ?? stats.xTick,
         );
-
-        final mrChartComp = MrChartComponent(
-          dataPoints: dataPoints,          // ⬅️ window already applied
+        final useMr = MrChartComponent(
+          dataPoints: dataPoints,
           controlChartStats: stats,
           dataLineColor: widget.dataLineColor,
           backgroundColor: widget.backgroundColor,
           height: h,
           width: w,
-          xTick: widget.xTick ?? stats.xTick,
         );
-
         final ChartComponent selectedWidget =
-            widget.isMovingRange ? mrChartComp : controlChartComp;
-
-        // ----- Time-domain min/max from the window (ms) -----
-        final double? minXms = stats.xAxisMediumLabel?.first.millisecondsSinceEpoch.toDouble();
-        final double? maxXms = stats.xAxisMediumLabel?.last.millisecondsSinceEpoch.toDouble();
-
-        // (Optional) log a quick summary of domain
-        // dev.log('[TEMPLATE] domain '
-        //     'min=${DateTime.fromMillisecondsSinceEpoch(minXms?.toInt())} '
-        //     'max=${DateTime.fromMillisecondsSinceEpoch(maxXms?.toInt())} '
-        //     'count=${dataPoints.length}');
+            widget.isMovingRange ? useMr : useI;
 
         const legendRightPad = 24.0;
         const legendHeight = 32.0;
@@ -181,7 +159,7 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Legend (uses selectedWidget to build)
+                  // Legend
                   SizedBox(
                     height: legendHeight,
                     child: Align(
@@ -191,20 +169,17 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
                   ),
                   const SizedBox(height: gapLegendToChart),
 
-                  // Chart body
+                  // Chart
                   Expanded(
                     child: LineChart(
                       LineChartData(
-                        // These method calls come from the chosen component (I or MR)
                         gridData: selectedWidget.buildGridData(),
                         extraLinesData: selectedWidget.buildControlLines(),
                         titlesData: selectedWidget.buildTitlesData(),
                         borderData: selectedWidget.buildBorderData(),
                         lineBarsData: selectedWidget.buildLineBarsData(),
-                        // ❗ Time-series domain (ms)
-                        minX: minXms,
-                        maxX: maxXms,
-                        // Y from component cache
+                        minX: 0,
+                        maxX: (dataPoints.length - 1).toDouble(),
                         minY: selectedWidget.getMinY(),
                         maxY: selectedWidget.getMaxY(),
                         lineTouchData: selectedWidget.buildTouchData(),

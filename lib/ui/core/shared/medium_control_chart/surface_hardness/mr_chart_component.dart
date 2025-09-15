@@ -9,7 +9,6 @@ import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/dashed_line_painter.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 class MrChartComponent extends StatelessWidget implements ChartComponent  {
   final List<ChartDataPoint>? dataPoints;      // ⬅️ already windowed by parent
@@ -103,12 +102,13 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
   }
   static const int _windowSize = 30;
 
-  // Return exactly what parent passed (already a window)
-  List<ChartDataPoint> get _visiblePoints {
+  List<dynamic> get _visiblePoints {
+    // final src = dataPoints ?? const <ControlChartStats>[];
     final src = dataPoints ?? const <ChartDataPoint>[];
-    return src;
+    if (src.length <= _windowSize) return src;
+    return src.sublist(src.length - _windowSize);
   }
-
+  
   @override
   FlGridData buildGridData() {
     final n = _visiblePoints.length;
@@ -131,44 +131,42 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
 
   @override
   FlTitlesData buildTitlesData() {
-    final v = _visiblePoints;
-    if (v.isEmpty) {
-      return const FlTitlesData(
-        bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
-        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-      );
-    }
-
-    final double stepMs = _xTickAndStep(v).stepMs;
+    final visible = _visiblePoints;
+    // final step = _xIntervalForCount(visible.length);
+    final step = 1.0;
 
     return FlTitlesData(
       leftTitles: AxisTitles(
+        axisNameWidget: SizedBox(width: height),
         sideTitles: SideTitles(
           showTitles: true,
           reservedSize: 24,
           interval: _getInterval(),
-          getTitlesWidget: (v, _) => Text(
-            v.toStringAsFixed(0),
-            style: const TextStyle(color: Colors.black54, fontSize: 8),
+          getTitlesWidget: (value, _) => Text(
+            value.toStringAsFixed(0),
+            style: const TextStyle(
+              color: Colors.black54,
+              fontSize: 8,
+            ),
           ),
         ),
       ),
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 32,
-          interval: stepMs, // time-based interval
+          reservedSize: 32,   // ✅ เพิ่มความสูงของ label zone
+          interval: step, 
           getTitlesWidget: (value, meta) {
-            final d = DateTime.fromMillisecondsSinceEpoch(value.round());
+            final i = value.round();
+            if (i < 0 || i >= visible.length) return const SizedBox.shrink();
+
             return SideTitleWidget(
               meta: meta,
-              space: 8,
+              space: 8,       // ✅ ดัน label ออกห่างจากกราฟ
               child: Transform.rotate(
-                angle: -30 * math.pi / 180,
+                angle: -30 * math.pi / 180, // ใช้ radians (270° = -90°)
                 child: Text(
-                  DateFormat('dd/MM').format(d),
+                  visible[i].label,
                   style: const TextStyle(fontSize: 8, color: Colors.black54),
                 ),
               ),
@@ -223,12 +221,12 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
 
   @override
   List<LineChartBarData> buildLineBarsData() {
-    final v = _visiblePoints;
+    final visible = _visiblePoints;
 
-    final spots = v.map((p) => FlSpot(
-      p.collectDate.millisecondsSinceEpoch.toDouble(), // time-based X
-      p.mrValue,
-    )).toList();
+    final spots = List<FlSpot>.generate(
+      visible.length,
+      (i) => FlSpot(i.toDouble(), visible[i].mrValue),
+    );
 
     return [
       LineChartBarData(
@@ -240,19 +238,17 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
         dotData: FlDotData(
           show: true,
           getDotPainter: (spot, _, __, ___) {
-            // classify using spot.y directly (no index lookup)
-            final vVal = spot.y;
+            final i = spot.x.toInt();
+            final v = visible[i].mrValue;
             Color dotColor = dataLineColor!;
 
             // final upperSpec = controlChartStats?.specAttribute?.surfaceHardnessUpperSpec ?? 0.0;
             // final lowerSpec = controlChartStats?.specAttribute?.surfaceHardnessLowerSpec ?? 0.0;
             final ucl = controlChartStats?.controlLimitMRChart?.ucl ?? 0.0;
-            // final lcl = controlChartStats?.controlLimitIChart?.lcl ?? 0.0;
+            // final lcl = controlChartStats?.controlLimitMRChart?.lcl ?? 0.0;
 
-            // if ((upperSpec > 0 && vVal > upperSpec) || (lowerSpec > 0 && vVal < lowerSpec)) {
-            //   dotColor = Colors.red;
-            if ((ucl > 0 && vVal > ucl)) {
-              dotColor = Colors.orange;
+            if ((ucl > 0 && v > ucl)) {
+              dotColor = Colors.orange; // warning zone
             }
 
             return FlDotCirclePainter(
@@ -266,27 +262,6 @@ class MrChartComponent extends StatelessWidget implements ChartComponent  {
         belowBarData: BarAreaData(show: false),
       ),
     ];
-  }
-
-  // Find nearest point in time (binary search; data must be sorted by time)
-  ChartDataPoint _nearestByTime(List<ChartDataPoint> v, double xMs) {
-    int lo = 0, hi = v.length - 1;
-    while (lo < hi) {
-      final mid = (lo + hi) >> 1;
-      final midMs = v[mid].collectDate.millisecondsSinceEpoch.toDouble();
-      if (midMs < xMs) {
-        lo = mid + 1;
-      } else {
-        hi = mid;
-      }
-    }
-    int idx = lo;
-    if (lo > 0) {
-      final leftMs  = v[lo - 1].collectDate.millisecondsSinceEpoch.toDouble();
-      final rightMs = v[lo].collectDate.millisecondsSinceEpoch.toDouble();
-      if ((xMs - leftMs).abs() <= (rightMs - xMs).abs()) idx = lo - 1;
-    }
-    return v[idx];
   }
 
 
