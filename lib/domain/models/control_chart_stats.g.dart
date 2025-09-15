@@ -140,6 +140,15 @@ ControlChartStats _$ControlChartStatsFromJson(
     _$SecondChartSelectedEnumMap,
     json['secondChartSelected'],
   ),
+  xAxisMediumLabel:
+      (json['xAxisMediumLabel'] as List<dynamic>?)
+          ?.map((e) => DateTime.parse(e as String))
+          .toList(),
+  xAxisLargeLabel:
+      (json['xAxisLargeLabel'] as List<dynamic>?)
+          ?.map((e) => DateTime.parse(e as String))
+          .toList(),
+  xTick: (json['xTick'] as num).toInt(),
 );
 
 Map<String, dynamic> _$ControlChartStatsToJson(ControlChartStats instance) =>
@@ -180,6 +189,11 @@ Map<String, dynamic> _$ControlChartStatsToJson(ControlChartStats instance) =>
       'controlChartSpots': instance.controlChartSpots?.toJson(),
       'secondChartSelected':
           _$SecondChartSelectedEnumMap[instance.secondChartSelected],
+      'xAxisMediumLabel':
+          instance.xAxisMediumLabel?.map((e) => e.toIso8601String()).toList(),
+      'xAxisLargeLabel':
+          instance.xAxisLargeLabel?.map((e) => e.toIso8601String()).toList(),
+      'xTick': instance.xTick,
     };
 
 const _$SecondChartSelectedEnumMap = {

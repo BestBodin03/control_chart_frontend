@@ -94,12 +94,26 @@ class _LargeContainer extends StatelessWidget {
                           children: [
                             const SizedBox(width: 20), // balance ซ้าย
                             Expanded(
-                              child: Center(
-                                child: Text(
-                                  "Surface Hardness | Control Chart",
-                                  style: AppTypography.textBody3BBold,
-                                  textAlign: TextAlign.center,
-                                ),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    "Surface Hardness | Control Chart",
+                                    style: AppTypography.textBody3BBold,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  Text(
+                                    'Beyond Control Limit',
+                                    style: AppTypography.textBody3B,
+                                  ),
+                                  Text(
+                                    'Beyond Spec',
+                                    style: AppTypography.textBody3B,
+                                  ),
+                                  Text(
+                                    'Trend',
+                                    style: AppTypography.textBody3B,
+                                  ),
+                                ]
                               ),
                             ),
                             MouseRegion(

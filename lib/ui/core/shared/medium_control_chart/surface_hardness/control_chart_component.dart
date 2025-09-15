@@ -1,3 +1,5 @@
+// control_chart_component.dart
+import 'dart:developer' as dev;
 import 'dart:math' as math;
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
@@ -7,14 +9,16 @@ import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/dashed_line_painter.dart' show DashedLinePainter;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class ControlChartComponent extends StatelessWidget implements ChartComponent {
-  final List<ChartDataPoint>? dataPoints;
+  final List<ChartDataPoint>? dataPoints;      // ⬅️ already windowed by parent
   final ControlChartStats? controlChartStats;
   final Color? dataLineColor;
   final Color? backgroundColor;
   final double? height;
   final double? width;
+  final int? xTick; // 4 or 6 from API
 
   ControlChartComponent({
     super.key,
@@ -24,120 +28,104 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     this.backgroundColor,
     this.height,
     this.width = 560,
+    this.xTick,
   });
 
-  // ------- window config (latest N points) -------
-  static const int _windowSize = 30;
-
-  // cache for Y range/interval
+  // ---- Y scale cache ----
   double? _cachedMinY;
   double? _cachedMaxY;
   double? _cachedInterval;
 
-  // Visible window (last 24 or all if < 24)
+  // Return exactly what parent passed (already a window)
   List<ChartDataPoint> get _visiblePoints {
     final src = dataPoints ?? const <ChartDataPoint>[];
-    if (src.length <= _windowSize) return src;
-    return src.sublist(src.length - _windowSize);
+    return src;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final visible = _visiblePoints;
-    if (visible.isEmpty) {
-      return const Center(child: Text('ไม่พบข้อมูล'));
-    }
+  // ---------- helpers: time domain ----------
+  double _minXms(List<ChartDataPoint> v) =>
+      v.first.collectDate.millisecondsSinceEpoch.toDouble();
 
-    return Container(
-      height: height,
-      width: width,
-      decoration: BoxDecoration(
-        color: backgroundColor ?? Colors.white,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Expanded(
-            child: LineChart(
-              LineChartData(
-                gridData: buildGridData(),
-                titlesData: buildTitlesData(),
-                borderData: buildBorderData(),
-                lineBarsData: buildLineBarsData(),
-                extraLinesData: buildControlLines(),
-                lineTouchData: buildTouchData(),
-                minX: 0,
-                maxX: (visible.length - 1).toDouble(), // domain = window only
-                minY: getMinY(),
-                maxY: getMaxY(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  double _maxXms(List<ChartDataPoint> v) =>
+      v.last.collectDate.millisecondsSinceEpoch.toDouble();
+
+  ({int tickCount, double stepMs}) _xTickAndStep(List<ChartDataPoint> v) {
+    final double minX = _minXms(v);
+    final double maxX = _maxXms(v);
+    final double range = (maxX - minX).abs();
+
+    // rule: if total ≤ 30 → 6 ticks, else → API ticks (4 or 6)
+    final int total = (dataPoints?.length ?? v.length);
+    final int apiTick = (xTick ?? controlChartStats?.xTick ?? 6);
+    final int tickCount = (total <= 30 ? 6 : apiTick).clamp(2, 12);
+    final double stepMs = range / (tickCount - 1);
+
+    dev.log('[COMP] domain '
+        'min=${DateTime.fromMillisecondsSinceEpoch(minX.toInt())} '
+        'max=${DateTime.fromMillisecondsSinceEpoch(maxX.toInt())} '
+        'rangeMs=$range tickCount=$tickCount stepMs=$stepMs');
+
+    return (tickCount: tickCount, stepMs: stepMs);
   }
 
-  // ---------------- grid / titles / border ----------------
+  // ---------- ChartComponent contract pieces ----------
 
   @override
   FlGridData buildGridData() {
-    final n = _visiblePoints.length;
+    final v = _visiblePoints;
+    final double verticalStep = v.isEmpty ? 1.0 : _xTickAndStep(v).stepMs;
+
     return FlGridData(
       show: true,
       drawHorizontalLine: true,
       drawVerticalLine: true,
-      horizontalInterval: _getInterval(),                   // Y grid aligns with Y ticks
-      verticalInterval: _xIntervalForCount(n),              // X grid aligns with window size
-      getDrawingHorizontalLine: (_) => FlLine(
-        color: Colors.grey.shade100,
-        strokeWidth: 0.5,
-      ),
-      getDrawingVerticalLine: (_) => FlLine(
-        color: Colors.grey.shade100,
-        strokeWidth: 0.5,
-      ),
+      horizontalInterval: _getInterval(),  // Y-grid
+      verticalInterval: verticalStep,      // X-grid in ms
+      getDrawingHorizontalLine: (_) => FlLine(color: Colors.grey.shade100, strokeWidth: 0.5),
+      getDrawingVerticalLine:   (_) => FlLine(color: Colors.grey.shade100, strokeWidth: 0.5),
     );
   }
 
   @override
   FlTitlesData buildTitlesData() {
-    final visible = _visiblePoints;
-    // final step = _xIntervalForCount(visible.length);
-    final step = 1.0;
+    final v = _visiblePoints;
+    if (v.isEmpty) {
+      return const FlTitlesData(
+        bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
+        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      );
+    }
+
+    final double stepMs = _xTickAndStep(v).stepMs;
 
     return FlTitlesData(
       leftTitles: AxisTitles(
-        axisNameWidget: SizedBox(width: height),
         sideTitles: SideTitles(
           showTitles: true,
           reservedSize: 24,
           interval: _getInterval(),
-          getTitlesWidget: (value, _) => Text(
-            value.toStringAsFixed(0),
-            style: const TextStyle(
-              color: Colors.black54,
-              fontSize: 8,
-            ),
+          getTitlesWidget: (v, _) => Text(
+            v.toStringAsFixed(0),
+            style: const TextStyle(color: Colors.black54, fontSize: 8),
           ),
         ),
       ),
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 32,   // ✅ เพิ่มความสูงของ label zone
-          interval: step, 
+          reservedSize: 32,
+          interval: stepMs, // time-based interval
           getTitlesWidget: (value, meta) {
-            final i = value.round();
-            if (i < 0 || i >= visible.length) return const SizedBox.shrink();
-
+            final d = DateTime.fromMillisecondsSinceEpoch(value.round());
             return SideTitleWidget(
               meta: meta,
-              space: 8,       // ✅ ดัน label ออกห่างจากกราฟ
+              space: 8,
               child: Transform.rotate(
-                angle: -30 * math.pi / 180, // ใช้ radians (270° = -90°)
+                angle: -30 * math.pi / 180,
                 child: Text(
-                  visible[i].label,
+                  DateFormat('dd/MM').format(d),
                   style: const TextStyle(fontSize: 8, color: Colors.black54),
                 ),
               ),
@@ -150,20 +138,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     );
   }
 
-  @override
-  FlBorderData buildBorderData() {
-    return FlBorderData(
-      show: true,
-      border: Border.all(
-        color: Colors.black54,
-        width: 1,
-      ),
-    );
-  }
-
-  // ---------------- control lines ----------------
-
-  @override
+    @override
   ExtraLinesData buildControlLines() {
     return ExtraLinesData(
       extraLinesOnTop: false,
@@ -216,16 +191,29 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     );
   }
 
-  // ---------------- line & touch ----------------
+  @override
+  FlBorderData buildBorderData() {
+    return FlBorderData(
+      show: true,
+      border: Border.all(color: Colors.black54, width: 1),
+    );
+  }
 
   @override
   List<LineChartBarData> buildLineBarsData() {
-    final visible = _visiblePoints;
+    final v = _visiblePoints;
 
-    final spots = List<FlSpot>.generate(
-      visible.length,
-      (i) => FlSpot(i.toDouble(), visible[i].value),
-    );
+    final spots = v.map((p) => FlSpot(
+      p.collectDate.millisecondsSinceEpoch.toDouble(), // time-based X
+      p.value,
+    )).toList();
+
+    if (spots.isNotEmpty) {
+      dev.log('[COMP] spots '
+          'minX=${DateTime.fromMillisecondsSinceEpoch(spots.first.x.toInt())} '
+          'maxX=${DateTime.fromMillisecondsSinceEpoch(spots.last.x.toInt())} '
+          'count=${spots.length}');
+    }
 
     return [
       LineChartBarData(
@@ -237,8 +225,8 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
         dotData: FlDotData(
           show: true,
           getDotPainter: (spot, _, __, ___) {
-            final i = spot.x.toInt();
-            final v = visible[i].value;
+            // classify using spot.y directly (no index lookup)
+            final vVal = spot.y;
             Color dotColor = dataLineColor!;
 
             final upperSpec = controlChartStats?.specAttribute?.surfaceHardnessUpperSpec ?? 0.0;
@@ -246,10 +234,10 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
             final ucl = controlChartStats?.controlLimitIChart?.ucl ?? 0.0;
             final lcl = controlChartStats?.controlLimitIChart?.lcl ?? 0.0;
 
-            if ((upperSpec > 0 && v > upperSpec) || (lowerSpec > 0 && v < lowerSpec)) {
-              dotColor = Colors.red; // out of spec
-            } else if ((ucl > 0 && v > ucl) || (lcl > 0 && v < lcl)) {
-              dotColor = Colors.orange; // warning zone
+            if ((upperSpec > 0 && vVal > upperSpec) || (lowerSpec > 0 && vVal < lowerSpec)) {
+              dotColor = Colors.red;
+            } else if ((ucl > 0 && vVal > ucl) || (lcl > 0 && vVal < lcl)) {
+              dotColor = Colors.orange;
             }
 
             return FlDotCirclePainter(
@@ -265,9 +253,26 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     ];
   }
 
+  ChartDataPoint _nearestByTime(List<ChartDataPoint> v, double xMs) {
+    int lo = 0, hi = v.length - 1;
+    while (lo < hi) {
+      final mid = (lo + hi) >> 1;
+      final midMs = v[mid].collectDate.millisecondsSinceEpoch.toDouble();
+      if (midMs < xMs) { lo = mid + 1; } else { hi = mid; }
+    }
+    int idx = lo;
+    if (lo > 0) {
+      final leftMs  = v[lo - 1].collectDate.millisecondsSinceEpoch.toDouble();
+      final rightMs = v[lo].collectDate.millisecondsSinceEpoch.toDouble();
+      if ((xMs - leftMs).abs() <= (rightMs - xMs).abs()) idx = lo - 1;
+    }
+    return v[idx];
+  }
+
+
   @override
   LineTouchData buildTouchData() {
-    final visible = _visiblePoints;
+    final v = _visiblePoints; // List<ChartDataPoint>, sorted by time
 
     return LineTouchData(
       handleBuiltInTouches: true,
@@ -280,22 +285,24 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
         tooltipMargin: 8,
         getTooltipItems: (spots) {
           return spots.map((barSpot) {
-            final i = barSpot.x.toInt();
-            if (i < 0 || i >= visible.length) return null;
-            final p = visible[i];
+            final p = _nearestByTime(v, barSpot.x);              // ← match by time (ms)
+            final when = DateTime.fromMillisecondsSinceEpoch(    // format X
+              barSpot.x.round(),
+            );
             return LineTooltipItem(
-              "วันที่: ${p.fullLabel}\n"
+              "วันที่: ${p.fullLabel.isNotEmpty ? p.fullLabel : DateFormat('dd/MM/yyyy HH:mm').format(when)}\n"
               "ค่า: ${p.value.toStringAsFixed(3)}\n"
-              "เตา: ${p.furnaceNo}\n"
-              "เลขแมต: ${p.matNo}",
+              "เตา: ${p.furnaceNo ?? '-'}\n"
+              "เลขแมต: ${p.matNo ?? '-'}",
               AppTypography.textBody3W,
               textAlign: TextAlign.left,
             );
-          }).whereType<LineTooltipItem>().toList();
+          }).toList();
         },
       ),
     );
   }
+
 
   @override
   Widget buildLegend() {
@@ -442,7 +449,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     return 10.0 * mag;
   }
 
-  // ---------- X helpers ----------
+  // (Unused now, kept if you need index-based plots elsewhere)
   double _xIntervalForCount(int n) {
     if (n <= 8) return 1;
     if (n <= 12) return 2;
@@ -454,4 +461,8 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     if (value == null || value == 0.0) return 'N/A';
     return value.toStringAsFixed(2);
   }
+
+  // Since the chart is built in the template, this build is not used.
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }

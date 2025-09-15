@@ -56,6 +56,9 @@ class ControlChartStats {
 
   /// NEW: ตัวเลือกกราฟที่สองจาก backend ("CDE","CDT","COMPOUND LAYER","NA")
   final SecondChartSelected? secondChartSelected;
+  final List<DateTime>? xAxisMediumLabel;
+  final List<DateTime>? xAxisLargeLabel;
+  final int xTick;
 
   const ControlChartStats({
     this.numberOfSpots,
@@ -91,6 +94,10 @@ class ControlChartStats {
     this.yAxisRange,
     this.controlChartSpots,
     this.secondChartSelected,
+    this.xAxisMediumLabel,
+    this.xAxisLargeLabel,
+    required this.xTick
+
   });
 
   /// Empty-safe
@@ -126,7 +133,10 @@ class ControlChartStats {
         cdtMrChartSpots = const [],
         specAttribute = null,
         controlChartSpots = null,
-        secondChartSelected = null;
+        secondChartSelected = null,
+        xAxisMediumLabel = const [],
+        xAxisLargeLabel = const [],
+        xTick = 6;
 
   factory ControlChartStats.fromJson(Map<String, dynamic> json) =>
       _$ControlChartStatsFromJson(json);

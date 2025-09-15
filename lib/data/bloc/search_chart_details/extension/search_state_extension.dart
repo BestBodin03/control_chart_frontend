@@ -70,7 +70,7 @@ extension SearchStateExtension on SearchState {
       return ChartDataPointCdeCdt(
         // label: DateFormat('MM/dd/yy').format(dt),
         // label: DateFormat('dd/MM/yy').format(dt),
-        collecDate: dt,
+        collectDate: dt,
         label: DateFormat('dd/MM').format(dt),
         fullLabel: "${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}/${dt.year.toString().padLeft(4, '0')}",
         furnaceNo: chartDetail.chartGeneralDetail.furnaceNo.toString(),

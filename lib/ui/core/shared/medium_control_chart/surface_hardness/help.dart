@@ -21,6 +21,8 @@ Widget buildChartsSectionSurfaceHardness(
   required ZoomBuilder zoomBuilder,
   int? externalStart,
   int? externalWindowSize,
+  int? xAxisStart,
+  int? xAxisWinSize
 }) {
   assert(currentIndex >= 0 && currentIndex < profiles.length, 'currentIndex out of range');
 
@@ -67,6 +69,8 @@ Widget buildChartsSectionSurfaceHardness(
       searchState: searchState,
       externalStart: externalStart,
       externalWindowSize: externalWindowSize,
+      xAxisStart: xAxisStart,
+      xAxisWinSize: xAxisWinSize,
       onZoom: (ctx) {
         showDialog(
           context: ctx,
@@ -90,18 +94,22 @@ class _MediumContainer extends StatelessWidget {
     required this.onZoom,
     this.externalStart,
     this.externalWindowSize,
+    this.xAxisStart,
+    this.xAxisWinSize
   });
 
   final String title;
   final HomeContentVar settingProfile;
   final SearchState searchState;
   final void Function(BuildContext) onZoom;
-
   // parent-controlled window
   final int? externalStart;
   final int? externalWindowSize;
+  final int? xAxisStart;
+  final int? xAxisWinSize;
 
-  static const int _defaultWindow = 24;
+
+  static const int _defaultWindow = 30;
 
   List<T> _slice<T>(List<T> full) {
     if (full.isEmpty) return full;
@@ -262,6 +270,7 @@ Widget _buildSingleChart({
           frozenDataPoints: List<ChartDataPoint>.from(visiblePoints),
           frozenStats: searchState.controlChartStats!,
           frozenStatus: searchState.status,
+          xTick: searchState.controlChartStats?.xTick,
         ),
       ),
     ),
