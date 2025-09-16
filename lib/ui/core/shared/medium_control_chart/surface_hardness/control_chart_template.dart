@@ -134,12 +134,12 @@ Widget _buildFromData({
 
     // print('in Parent ${start?.millisecondsSinceEpoch}');
 
-    // optional fallback: from data if caller didn’t provide
-    if ((start == null || end == null) && dataPoints.isNotEmpty) {
-      dataPoints.sort((a, b) => a.collectDate.compareTo(b.collectDate));
-      start ??= dataPoints.first.collectDate;
-      end   ??= dataPoints.last.collectDate;
-    }
+    // // optional fallback: from data if caller didn’t provide
+    // if ((start == null || end == null) && dataPoints.isNotEmpty) {
+    //   dataPoints.sort((a, b) => a.collectDate.compareTo(b.collectDate));
+    //   start ??= dataPoints.first.collectDate;
+    //   end   ??= dataPoints.last.collectDate;
+    // }
 
     if (start == null || end == null) {
       return const Center(child: Text('ช่วงเวลาไม่ถูกต้อง'));
@@ -185,7 +185,7 @@ Widget _buildFromData({
             border: Border.all(color: Colors.grey.shade300),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(0, 0, legendRightPad, 0),
+            padding: const EdgeInsets.fromLTRB(16, 0, legendRightPad, 8),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

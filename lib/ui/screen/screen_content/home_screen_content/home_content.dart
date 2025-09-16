@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:developer' as dev;
 import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
+import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/large_control_chart/surface_hardness/help.dart' as sh_large;
+import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/help.dart';
 // import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/help.dart' as cde_cdt;
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/help.dart' as sh_medium;
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
@@ -34,6 +36,8 @@ class _HomeContentState extends State<HomeContent> {
   int _winStart = 0;     // index เริ่มของหน้าต่างใน labels
   int _winMaxStart = 0;  // ค่าสูงสุดที่เลื่อนได้
   int _winSize = 6;      // = xTick เสมอ
+  static late final List<DateTime?> baseStartDates;
+  static late final List<DateTime?> baseEndDates;
 
   // ---------- Logging ----------
   void _logIncomingProfiles(String tag) {
@@ -58,6 +62,8 @@ class _HomeContentState extends State<HomeContent> {
     super.initState();
     _controller = PageController();
     _logIncomingProfiles('initState');
+    baseStartDates = widget.profiles.map((p) => p.startDate).toList();
+    baseEndDates   = widget.profiles.map((p) => p.endDate).toList();
 
     if (widget.profiles.isNotEmpty) {
       _logSlide('initState', 0);
@@ -211,19 +217,19 @@ class _HomeContentState extends State<HomeContent> {
           final h = constraints.maxHeight;
 
           return BlocBuilder<SearchBloc, SearchState>(
-            builder: (context, st) {
-              if (st.status == SearchStatus.loading) {
+            builder: (context, searchState) {
+              if (searchState.status == SearchStatus.loading) {
                 return const Center(child: CircularProgressIndicator());
               }
-              if (st.status == SearchStatus.failure) {
-                return Center(child: Text('Error: ${st.errorMessage}'));
+              if (searchState.status == SearchStatus.failure) {
+                return Center(child: Text('Error: ${searchState.errorMessage}'));
               }
 
               // STEP 1: คำนวณหน้าต่างจาก labels + xTick
-              _recalcWindowByLabels(st);
+              _recalcWindowByLabels(searchState);
 
               // STEP 2: เอาช่วง (ซ้าย-ขวา) ของหน้าต่าง label มา “สวม” ลงโปรไฟล์
-              final (left, right) = _currentLabelWindowRange(st);
+              final (left, right) = _currentLabelWindowRange(searchState);
               final qWindow = _applyRangeToProfile(q, left, right);
 
               return Column(
@@ -239,7 +245,7 @@ class _HomeContentState extends State<HomeContent> {
                               child: sh_medium.buildChartsSectionSurfaceHardness(
                                 [qWindow], // << ส่งโปรไฟล์ที่ถูกสวมช่วงเวลาแล้ว
                                 0,
-                                st,
+                                searchState,
                                 // externalStart/externalWindowSize ยังส่งไว้ให้กลไกเดิม (ถ้า builder ใช้)
                                 externalStart: _winStart,
                                 externalWindowSize: _winSize,
@@ -251,7 +257,7 @@ class _HomeContentState extends State<HomeContent> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _buildLabelWindowSliderSingle(st), // สไลเดอร์อิง labels
+                  _buildLabelWindowSliderSingle(searchState), // สไลเดอร์อิง labels
                   const SizedBox(height: 8),
                 ],
               );
@@ -277,19 +283,19 @@ class _HomeContentState extends State<HomeContent> {
             itemBuilder: (ctx, i) => LayoutBuilder(
               builder: (context, constraints) {
                 return BlocBuilder<SearchBloc, SearchState>(
-                  builder: (context, st) {
-                    if (st.status == SearchStatus.loading) {
+                  builder: (context, searchState) {
+                    if (searchState.status == SearchStatus.loading) {
                       return const Center(child: CircularProgressIndicator());
                     }
-                    if (st.status == SearchStatus.failure) {
-                      return Center(child: Text('Error: ${st.errorMessage}'));
+                    if (searchState.status == SearchStatus.failure) {
+                      return Center(child: Text('Error: ${searchState.errorMessage}'));
                     }
 
                     // STEP 1
-                    _recalcWindowByLabels(st);
+                    _recalcWindowByLabels(searchState);
 
                     // STEP 2
-                    final (left, right) = _currentLabelWindowRange(st);
+                    final (left, right) = _currentLabelWindowRange(searchState);
                     final q = profiles[i];
                     final qWindow = _applyRangeToProfile(q, left, right);
 
@@ -309,18 +315,55 @@ class _HomeContentState extends State<HomeContent> {
                                             .toList()
                                             ..[i] = qWindow, // ใส่โปรไฟล์ที่สวมช่วงเวลาแล้ว ณ index นี้
                                         i,
-                                        st,
+                                        searchState,
                                         externalStart: _winStart,
                                         externalWindowSize: _winSize,
+                                        baseStart: baseStartDates[i],
+                                        baseEnd: baseEndDates[i],
+                                      //   zoomBuilder: (ctx, profileAtIndex, st) =>
+                                      //       buildChartsSectionSurfaceHardnessLarge(
+                                      //         profileAtIndex,
+                                      //         st,
+                                      //         onClose: () => Navigator.of(ctx).maybePop(),
+                                      //       ),
                                       ),
                                     ),
                                   ),
                                 ),
+                                
                                 const SizedBox(width: 16),
+
+                                // CDE/CDT (hide if NA)
+                                Visibility(
+                                  visible: searchState.controlChartStats?.secondChartSelected !=
+                                      SecondChartSelected.na,
+                                  child: Expanded(
+                                    child: SizedBox(
+                                      height: constraints.maxHeight - (8 + 16),
+                                      child: _ChartFillBox(
+                                        child: buildChartsSectionCdeCdt(
+                                          profiles
+                                              .toList()
+                                              ..[i] = qWindow, // ใส่โปรไฟล์ที่สวมช่วงเวลาแล้ว ณ index นี้
+                                          i,
+                                          searchState,
+                                          externalStart: _winStart,
+                                          externalWindowSize: _winSize,
+                                        //   zoomBuilder: (ctx, profileAtIndex, st) =>
+                                        //       buildChartsSectionSurfaceHardnessLarge(
+                                        //         profileAtIndex,
+                                        //         st,
+                                        //         onClose: () => Navigator.of(ctx).maybePop(),
+                                        //       ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
-                          _buildLabelWindowSliderCarousel(profiles.length, st),
+                          _buildLabelWindowSliderCarousel(profiles.length, searchState),
                         ],
                       ),
                     );

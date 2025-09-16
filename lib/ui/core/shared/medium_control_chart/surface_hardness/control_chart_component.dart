@@ -138,7 +138,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     final double tol  = step * 0.49; // tolerance to snap to nearest tick
 
     // ✅ ensure unique strings per build
-    final shownLabels = <String>{};
+    // final shownLabels = <String>{};
 
     Widget bottomLabel(double value, TitleMeta meta) {
       // find nearest precomputed tick
@@ -154,7 +154,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
       final text = df.format(dt);
 
       // ✅ skip duplicate strings
-      if (!shownLabels.add(text)) return const SizedBox.shrink();
+      // if (!shownLabels.add(text)) return const SizedBox.shrink();
 
       return SideTitleWidget(
         meta: meta,
@@ -203,27 +203,19 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
       DateTime.fromMicrosecondsSinceEpoch(hi.round(), isUtc: true),
     ];
 
-    final raw = controlChartStats?.xAxisMediumLabel;
-    if (raw! is List) {
+    final raw = controlChartStats!.xAxisMediumLabel;
       for (final e in raw) {
         DateTime? dt;
-        if (e is DateTime) {
-          dt = e;
-        } else if (e is String) {
-          // ✅ parse the ISO string directly (no .toIso8601String() on String)
-          try { dt = DateTime.parse(e.toIso8601String()); } catch (_) {}
-        }
-        if (dt == null) continue;
+        dt = e;
 
         final us = dt.microsecondsSinceEpoch.toDouble();
         if (us >= lo && us <= hi) {
           candidates.add(dt.toUtc());
         }
-      }
     }
 
     // Dedup by the *text label* you actually show
-    final fmt = DateFormat('dd-MM'); // change if you format differently
+    final fmt = DateFormat('dd/MM'); // change if you format differently
     candidates.sort((a, b) => a.compareTo(b));
 
     final seen = <String>{};

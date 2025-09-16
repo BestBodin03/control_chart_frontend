@@ -22,7 +22,9 @@ Widget buildChartsSectionSurfaceHardness(
   int? externalStart,
   int? externalWindowSize,
   int? xAxisStart,
-  int? xAxisWinSize
+  int? xAxisWinSize,
+  DateTime? baseStart,
+  DateTime? baseEnd
 }) {
   assert(currentIndex >= 0 && currentIndex < profiles.length, 'currentIndex out of range');
 
@@ -52,8 +54,8 @@ Widget buildChartsSectionSurfaceHardness(
   }
 
   // 3) Date (แสดงเมื่อมี start & end ครบ)
-  final s = current.startDate;
-  final e = current.endDate;
+  final s = baseStart;
+  final e = baseEnd;
   if (s != null && e != null) {
     parts.add('Date ${fmtDate(s)} - ${fmtDate(e)}');
   }
@@ -131,8 +133,10 @@ class _MediumContainer extends StatelessWidget {
     const sectionLabelH = 20.0;
     const gapV = 8.0;
 
+    final allPoints = searchState.chartDataPoints;
+
     // windowed (visible) data used by both charts
-    final visiblePoints = _slice<ChartDataPoint>(state.chartDataPoints);
+    // final visiblePoints = _slice<ChartDataPoint>(state.chartDataPoints);
 
     if (state.status == SearchStatus.loading) {
       return const Center(
@@ -199,7 +203,7 @@ class _MediumContainer extends StatelessWidget {
                         settingProfile: settingProfile,
                         searchState: state,
                         height: eachChartH,
-                        visiblePoints: visiblePoints,
+                        visiblePoints: allPoints,
                         isMovingRange: false,
                       ),
 
@@ -227,7 +231,7 @@ class _MediumContainer extends StatelessWidget {
                         settingProfile: settingProfile,
                         searchState: state,
                         height: eachChartH,
-                        visiblePoints: visiblePoints,
+                        visiblePoints: allPoints,
                         isMovingRange: true,
                       ),
                     ],
@@ -249,6 +253,8 @@ Widget _buildSingleChart({
   required double height,
   required List<ChartDataPoint> visiblePoints,
 }) {
+
+  final allPoints = searchState.chartDataPoints;
   final q = settingProfile;
   final uniqueKey = '${q.startDate?.microsecondsSinceEpoch}-'
       '${q.endDate?.microsecondsSinceEpoch}-'
@@ -269,7 +275,7 @@ Widget _buildSingleChart({
           isMovingRange: isMovingRange,
           height: height,
           // freeze same window for both charts
-          frozenDataPoints: List<ChartDataPoint>.from(visiblePoints),
+          frozenDataPoints: List<ChartDataPoint>.from(allPoints),
           frozenStats: searchState.controlChartStats!,
           frozenStatus: searchState.status,
           // xTick: searchState.controlChartStats?.xTick,

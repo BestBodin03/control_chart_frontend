@@ -7,28 +7,30 @@ import '../search_bloc.dart';
 extension SearchStateExtension on SearchState {
   /// Surface Hardness points (unchanged)
   List<ChartDataPoint> get chartDataPoints {
-    final mrValues = controlChartStats?.mrChartSpots ?? const <double>[];
+    final stats = controlChartStats;
+    if (stats == null) return const <ChartDataPoint>[];
 
-    return chartDetails.asMap().entries.map((entry) {
-      final index       = entry.key;
-      final chartDetail = entry.value;
+    final values   = stats.surfaceHardnessChartSpots ?? const <double>[];
+    final mrValues = stats.mrChartSpots             ?? const <double>[];
 
-      final dt = chartDetail.chartGeneralDetail.collectedDate;
-      final mrValue = (index < mrValues.length) ? mrValues[index] : 0.0;
+    // Loop by the values length (source of truth)
+    return List.generate(values.length, (index) {
+      final detail = (index < chartDetails.length) ? chartDetails[index] : null;
+      final dt = detail?.chartGeneralDetail.collectedDate ?? DateTime.now();
 
       return ChartDataPoint(
-        // label: DateFormat('MM/dd/yy').format(dt),
-        // label: DateFormat('dd/MM/yy').format(dt),
         collectDate: dt,
         label: DateFormat('dd/MM').format(dt),
-        fullLabel:"${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year.toString().padLeft(4, '0')}",
-        furnaceNo: chartDetail.chartGeneralDetail.furnaceNo.toString(),
-        matNo: chartDetail.cpNo,
-        value: chartDetail.machanicDetail.surfaceHardnessMean,
-        mrValue: mrValue,
+        fullLabel:
+            "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year.toString().padLeft(4, '0')}",
+        furnaceNo: detail?.chartGeneralDetail.furnaceNo.toString() ?? "-",
+        matNo: detail?.cpNo ?? "-",
+        value: values[index],
+        mrValue: (index < mrValues.length) ? mrValues[index] : 0.0,
       );
-    }).toList();
+    });
   }
+
 
   /// CDE/CDT/Compound Layer points, driven by `secondChartSelected`
   List<ChartDataPointCdeCdt> get chartDataPointsCdeCdt {
