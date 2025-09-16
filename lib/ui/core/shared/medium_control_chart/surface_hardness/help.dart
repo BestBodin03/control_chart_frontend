@@ -18,7 +18,7 @@ Widget buildChartsSectionSurfaceHardness(
   List<HomeContentVar> profiles,
   int currentIndex,
   SearchState searchState, {
-  required ZoomBuilder zoomBuilder,
+  ZoomBuilder? zoomBuilder,
   int? externalStart,
   int? externalWindowSize,
   int? xAxisStart,
@@ -78,7 +78,7 @@ Widget buildChartsSectionSurfaceHardness(
             insetPadding: const EdgeInsets.all(24),
             clipBehavior: Clip.antiAlias,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: zoomBuilder(ctx, current, searchState),
+            child: zoomBuilder!(ctx, current, searchState),
           ),
         );
       },
@@ -250,10 +250,12 @@ Widget _buildSingleChart({
   required List<ChartDataPoint> visiblePoints,
 }) {
   final q = settingProfile;
-  final uniqueKey = '${q.startDate?.millisecondsSinceEpoch}-'
-      '${q.endDate?.millisecondsSinceEpoch}-'
+  final uniqueKey = '${q.startDate?.microsecondsSinceEpoch}-'
+      '${q.endDate?.microsecondsSinceEpoch}-'
       '${q.furnaceNo}-'
       '${q.materialNo}-';
+
+  // print('in help ${q.startDate!.millisecondsSinceEpoch}');
 
   return SizedBox(
     width: double.infinity,
@@ -270,7 +272,9 @@ Widget _buildSingleChart({
           frozenDataPoints: List<ChartDataPoint>.from(visiblePoints),
           frozenStats: searchState.controlChartStats!,
           frozenStatus: searchState.status,
-          xTick: searchState.controlChartStats?.xTick,
+          // xTick: searchState.controlChartStats?.xTick,
+          xStart: settingProfile.startDate,
+          xEnd: settingProfile.endDate,
         ),
       ),
     ),

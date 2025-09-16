@@ -5,6 +5,7 @@ import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_component.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/mr_chart_component.dart';
+import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -27,6 +28,9 @@ class ControlChartTemplate extends StatefulWidget {
   /// Parent-controlled windowing
   final int? externalStart;
   final int? externalWindowSize;
+  final DateTime? xStart;
+  final DateTime? xEnd;
+  final int? xTick;
 
   const ControlChartTemplate({
     super.key,
@@ -41,7 +45,10 @@ class ControlChartTemplate extends StatefulWidget {
     this.frozenDataPoints,
     this.frozenStatus,
     this.externalStart,
-    this.externalWindowSize, int? xTick,
+    this.externalWindowSize,
+    this.xStart,
+    this.xEnd,
+    this.xTick
   });
 
   @override
@@ -111,88 +118,96 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
     );
   }
 
-  Widget _buildFromData({
-    required List<ChartDataPoint> dataPoints,
-    required ControlChartStats stats,
-    required SearchStatus status,
-  }) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final w = widget.width ?? constraints.maxWidth;
-        final h = widget.height ?? constraints.maxHeight;
+Widget _buildFromData({
+  required List<ChartDataPoint> dataPoints,
+  required ControlChartStats stats,
+  required SearchStatus status,
+}) {
+  return LayoutBuilder(
+    builder: (context, constraints) {
+    final w = widget.width ?? constraints.maxWidth;
+    final h = widget.height ?? constraints.maxHeight;
 
-        // Components receive only the visible window
-        final useI = ControlChartComponent(
-          dataPoints: dataPoints,
-          controlChartStats: stats,
-          dataLineColor: widget.dataLineColor,
-          backgroundColor: widget.backgroundColor,
-          height: h,
-          width: w,
-        );
-        final useMr = MrChartComponent(
-          dataPoints: dataPoints,
-          controlChartStats: stats,
-          dataLineColor: widget.dataLineColor,
-          backgroundColor: widget.backgroundColor,
-          height: h,
-          width: w,
-        );
+    // prefer the explicit range from the widget
+    DateTime? start = widget.xStart;
+    DateTime? end   = widget.xEnd;
+
+    // print('in Parent ${start?.millisecondsSinceEpoch}');
+
+    // optional fallback: from data if caller didn’t provide
+    if ((start == null || end == null) && dataPoints.isNotEmpty) {
+      dataPoints.sort((a, b) => a.collectDate.compareTo(b.collectDate));
+      start ??= dataPoints.first.collectDate;
+      end   ??= dataPoints.last.collectDate;
+    }
+
+    if (start == null || end == null) {
+      return const Center(child: Text('ช่วงเวลาไม่ถูกต้อง'));
+    }
+
+    final useI = ControlChartComponent(
+      dataPoints: dataPoints,
+      controlChartStats: stats,
+      dataLineColor: widget.dataLineColor,
+      backgroundColor: widget.backgroundColor,
+      height: h,
+      width: w,
+      xStart: start,   // ✅ real range
+      xEnd: end,       // ✅ real range
+    );
+
+      // ❌ Comment MR part out
+      final useMr = MrChartComponent(
+        dataPoints: dataPoints,
+        controlChartStats: stats,
+        dataLineColor: widget.dataLineColor,
+        backgroundColor: widget.backgroundColor,
+        height: h,
+        width: w,
+        xStart: start,   // ✅ real range
+        xEnd: end, 
+      );
+
         final ChartComponent selectedWidget =
             widget.isMovingRange ? useMr : useI;
 
-        const legendRightPad = 24.0;
-        const legendHeight = 32.0;
-        const gapLegendToChart = 4.0;
+      const legendRightPad = 24.0;
+      const legendHeight = 32.0;
+      const gapLegendToChart = 4.0;
 
-        return SizedBox(
-          width: w,
-          height: h,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: widget.backgroundColor ?? Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(0, 0, legendRightPad, 0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Legend
-                  SizedBox(
-                    height: legendHeight,
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: selectedWidget.buildLegend(),
-                    ),
+      return SizedBox(
+        width: w,
+        height: h,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: widget.backgroundColor ?? Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(0, 0, legendRightPad, 0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Legend
+                SizedBox(
+                  height: legendHeight,
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: selectedWidget.buildLegend(),
                   ),
-                  const SizedBox(height: gapLegendToChart),
+                ),
+                const SizedBox(height: gapLegendToChart),
 
-                  // Chart
-                  Expanded(
-                    child: LineChart(
-                      LineChartData(
-                        gridData: selectedWidget.buildGridData(),
-                        extraLinesData: selectedWidget.buildControlLines(),
-                        titlesData: selectedWidget.buildTitlesData(),
-                        borderData: selectedWidget.buildBorderData(),
-                        lineBarsData: selectedWidget.buildLineBarsData(),
-                        minX: 0,
-                        maxX: (dataPoints.length - 1).toDouble(),
-                        minY: selectedWidget.getMinY(),
-                        maxY: selectedWidget.getMaxY(),
-                        lineTouchData: selectedWidget.buildTouchData(),
-                        clipData: FlClipData.none(),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                // ✅ Use the component directly (it already has LineChart inside)
+                Expanded(child: selectedWidget as Widget),
+              ],
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
+
 }

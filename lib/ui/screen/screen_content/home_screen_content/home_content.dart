@@ -2,11 +2,10 @@ import 'dart:async';
 import 'dart:developer' as dev;
 import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
-import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
-import 'package:control_chart/ui/core/shared/large_control_chart/surface_hardness/help.dart';
-import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/help.dart';
-import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/help.dart';
+import 'package:control_chart/ui/core/shared/large_control_chart/surface_hardness/help.dart' as sh_large;
+// import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/help.dart' as cde_cdt;
+import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/help.dart' as sh_medium;
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -27,24 +26,16 @@ class _HomeContentState extends State<HomeContent> {
   int _index = 0;
   Timer? _timer;
 
-  /// DATA ORDER
-  ///
-  /// If your incoming data lists are **oldest -> latest** (ascending chronology),
-  /// keep [_isAscendingChrono] = true. If you switch to **latest -> oldest**,
-  /// set it to false and the slider logic will auto-reverse.
-  final bool _isAscendingChrono = true; // <-- set to false if list is latest->oldest
-  bool _hasUserMovedSlider = false; // ผู้ใช้ขยับสไลเดอร์แล้วหรือยัง
-  bool _didRightSnap = false;       // snap ไปขวาสุดไปแล้วหรือยัง (กัน snap ซ้ำ)
+  /// ทิศทางเวลา (ใช้เฉพาะตอน auto-snap ไปขวาสุด)
+  final bool _isAscendingChrono = true;
+  bool _hasUserMovedSlider = false;
 
+  /// หน้าต่างอิง "labels" (xAxisMediumLabel) ไม่ใช่จำนวนจุด
+  int _winStart = 0;     // index เริ่มของหน้าต่างใน labels
+  int _winMaxStart = 0;  // ค่าสูงสุดที่เลื่อนได้
+  int _winSize = 6;      // = xTick เสมอ
 
-
-  /// Window selection over data lists. We always want to *show latest 30*.
-  int _winStart = 0;    // index start of window
-  int _winMaxStart = 0; // max start we can slide to (len - winSize)
-  int _winSize = 30;    // window size (30 latest points)
-  final bool _showSlider = true;
-
-  // ---------- Logging helpers ----------
+  // ---------- Logging ----------
   void _logIncomingProfiles(String tag) {
     if (!kDebugMode) return;
     dev.log('[$tag] profiles.length = ${widget.profiles.length}');
@@ -57,18 +48,9 @@ class _HomeContentState extends State<HomeContent> {
     if (!kDebugMode) return;
     if (i < 0 || i >= widget.profiles.length) return;
     final p = widget.profiles[i];
-    final uniqueKey = '${p.startDate?.millisecondsSinceEpoch ?? 0}-${p.endDate?.millisecondsSinceEpoch ?? 0}-${p.furnaceNo ?? ''}-${p.materialNo ?? ''}-';
+    final uniqueKey =
+        '${p.startDate?.microsecondsSinceEpoch ?? 0}-${p.endDate?.microsecondsSinceEpoch ?? 0}-${p.furnaceNo ?? ''}-${p.materialNo ?? ''}-';
     dev.log('[$tag] slide=$i  uniqueKey=$uniqueKey  payload=$p');
-  }
-
-  /// Compute base values when data length changes.
-  /// If ascending (oldest->latest), start = len - winSize (latest window).
-  /// If descending (latest->oldest), start = 0 (latest at index 0).
-  void _recomputeWindow(List<dynamic> data) {
-    final total = data.length;
-    _winSize = total < 30 ? total : 30;
-    _winMaxStart = (total - _winSize).clamp(0, total);
-    _winStart = _isAscendingChrono ? _winMaxStart : 0;
   }
 
   @override
@@ -88,7 +70,8 @@ class _HomeContentState extends State<HomeContent> {
   void didUpdateWidget(covariant HomeContent oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (!listEquals(oldWidget.profiles, widget.profiles) && widget.profiles.isNotEmpty) {
+    if (!listEquals(oldWidget.profiles, widget.profiles) &&
+        widget.profiles.isNotEmpty) {
       _timer?.cancel();
       _index = 0;
       _controller.jumpToPage(0);
@@ -103,7 +86,7 @@ class _HomeContentState extends State<HomeContent> {
 
   void _dispatchQuery(HomeContentVar p) {
     dev.log('[dispatch] $p');
-    _hasUserMovedSlider = false; // follow right edge until user moves
+    _hasUserMovedSlider = false; // ติดขอบขวาจนกว่าผู้ใช้จะขยับเอง
     context.read<SearchBloc>().add(
       LoadFilteredChartData(
         startDate: p.startDate,
@@ -113,8 +96,6 @@ class _HomeContentState extends State<HomeContent> {
       ),
     );
   }
-
-
 
   void _startTimerForIndex(int i) {
     _timer?.cancel();
@@ -137,33 +118,75 @@ class _HomeContentState extends State<HomeContent> {
     });
   }
 
-  /// Recompute window bounds based on the longer of the two charts so the slider
-  /// controls both consistently. Keep winStart valid and winSize clamped to <=30.
-  void _recalcWindowBounds(SearchState st) {
-    final lenA = st.chartDataPoints.length;
-    final lenB = st.chartDataPointsCdeCdt.length;
-    final longest = lenA > lenB ? lenA : lenB;
+  // ---------------- STEP 1: คิดหน้าต่างจาก labels + xTick ----------------
 
-    _winSize = longest < 30 ? longest : 30;
+  /// แปลง labels จาก state เป็น List<DateTime> (local)
+  List<DateTime> _labelsFromState(SearchState st) {
+    final raw = st.controlChartStats?.xAxisMediumLabel ?? const[];
+    if (raw is List<DateTime>) {
+      return raw.map((d) => d.toLocal()).toList();
+    }
+    if (raw is List) {
+      return raw
+          .map((e) {
+            if (e is DateTime) return e.toLocal();
+            if (e is String) {
+              try { return DateTime.parse(e.toIso8601String()).toLocal(); } catch (_) {}
+            }
+            return null;
+          })
+          .whereType<DateTime>()
+          .toList();
+    }
+    return const <DateTime>[];
+  }
 
-    if (longest <= 0) {
+  /// คำนวณหน้าต่าง “ตาม label”
+  void _recalcWindowByLabels(SearchState st) {
+    final labels = _labelsFromState(st);
+    final labelCount = labels.length;
+
+    final int xTick = (st.controlChartStats?.xTick ?? 6).clamp(1, 100);
+    _winSize = labelCount > 0 ? xTick.clamp(1, labelCount) : xTick;
+
+    if (labelCount <= 0) {
       _winMaxStart = 0;
       _winStart = 0;
       return;
     }
 
-    _winMaxStart = longest > _winSize ? (longest - _winSize) : 0;
-
-    // ⭐ Keep snapping to the latest as long as the user hasn't moved the slider
+    _winMaxStart = (labelCount - _winSize).clamp(0, labelCount);
     if (!_hasUserMovedSlider) {
+      // เกาะขวาสุด (แสดง label ล่าสุดตาม xTick)
       _winStart = _isAscendingChrono ? _winMaxStart : 0;
     }
-
     if (_winStart > _winMaxStart) _winStart = _winMaxStart;
     if (_winStart < 0) _winStart = 0;
   }
 
+  /// คืนช่วงวันที่ (ซ้าย-ขวา) ของ “หน้าต่าง label ปัจจุบัน”
+  (DateTime?, DateTime?) _currentLabelWindowRange(SearchState st) {
+    final labels = _labelsFromState(st);
+    if (labels.isEmpty) return (null, null);
 
+    final int s = _winStart.clamp(0, labels.length - 1);
+    final int e = (_winStart + _winSize - 1).clamp(0, labels.length - 1);
+    return (labels[s], labels[e]);
+  }
+
+  // ---------------- STEP 2: สวมช่วงเวลา (xStart/xEnd) ลงในโปรไฟล์ที่จะส่งเข้ากราฟ ----------------
+
+  HomeContentVar _applyRangeToProfile(HomeContentVar base, DateTime? start, DateTime? end) {
+    // ถ้าไม่มี label ให้ fallback เป็นช่วงเดิมของโปรไฟล์
+    final DateTime effStart = start ?? base.startDate ?? DateTime.now().toLocal();
+    final DateTime effEnd   = end   ?? base.endDate   ?? effStart.add(const Duration(hours: 1));
+
+    // ถ้ามี copyWith ก็ใช้ copyWith; ถ้าไม่มี สร้างใหม่แทน
+    return base.copyWith(
+      startDate: effStart,
+      endDate: effEnd,
+    );
+  }
 
   @override
   void dispose() {
@@ -174,12 +197,13 @@ class _HomeContentState extends State<HomeContent> {
 
   @override
   Widget build(BuildContext context) {
-    final profiles = widget.profiles; // your query presets
+    final profiles = widget.profiles;
 
-    // ----- Single page mode -----
+    // ----- Single page -----
     if (profiles.length <= 1) {
       final q = profiles.isNotEmpty ? profiles.first : const HomeContentVar();
-      final uniqueKey = '${q.startDate?.millisecondsSinceEpoch ?? 0}-${q.endDate?.millisecondsSinceEpoch ?? 0}-${q.furnaceNo ?? ''}-${q.materialNo ?? ''}-';
+      final uniqueKey =
+          '${q.startDate?.microsecondsSinceEpoch ?? 0}-${q.endDate?.microsecondsSinceEpoch ?? 0}-${q.furnaceNo ?? ''}-${q.materialNo ?? ''}-';
 
       return LayoutBuilder(
         key: ValueKey(uniqueKey),
@@ -187,63 +211,47 @@ class _HomeContentState extends State<HomeContent> {
           final h = constraints.maxHeight;
 
           return BlocBuilder<SearchBloc, SearchState>(
-            builder: (context, searchState) {
-              if (searchState.status == SearchStatus.loading) {
+            builder: (context, st) {
+              if (st.status == SearchStatus.loading) {
                 return const Center(child: CircularProgressIndicator());
               }
-              if (searchState.status == SearchStatus.failure) {
-                return Center(child: Text('Error: ${searchState.errorMessage}'));
+              if (st.status == SearchStatus.failure) {
+                return Center(child: Text('Error: ${st.errorMessage}'));
               }
 
-              // keep slider bounds fresh
-              _recalcWindowBounds(searchState);
+              // STEP 1: คำนวณหน้าต่างจาก labels + xTick
+              _recalcWindowByLabels(st);
+
+              // STEP 2: เอาช่วง (ซ้าย-ขวา) ของหน้าต่าง label มา “สวม” ลงโปรไฟล์
+              final (left, right) = _currentLabelWindowRange(st);
+              final qWindow = _applyRangeToProfile(q, left, right);
 
               return Column(
                 children: [
                   Expanded(
                     child: Row(
                       children: [
-                        // left: Surface Hardness
+                        // Surface Hardness only
                         Expanded(
                           child: SizedBox(
                             height: h,
                             child: _ChartFillBox(
-                              child: buildChartsSectionSurfaceHardness(
-                                [q],
+                              child: sh_medium.buildChartsSectionSurfaceHardness(
+                                [qWindow], // << ส่งโปรไฟล์ที่ถูกสวมช่วงเวลาแล้ว
                                 0,
-                                searchState,
+                                st,
+                                // externalStart/externalWindowSize ยังส่งไว้ให้กลไกเดิม (ถ้า builder ใช้)
                                 externalStart: _winStart,
                                 externalWindowSize: _winSize,
-                                zoomBuilder: (ctx, profileAtIndex, st) =>
-                                    buildChartsSectionSurfaceHardnessLarge(
-                                      profileAtIndex,
-                                      st,
-                                      onClose: () => Navigator.of(ctx).maybePop(),
-                                    ),
                               ),
-                            ),
-                          ),
-                        ),
-
-                        // right: CDE/CDT
-                        Expanded(
-                          child: _ChartFillBox(
-                            child: buildChartsSectionCdeCdt(
-                              q,
-                              searchState,
-                              _winStart,
-                              _winSize,
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 8),
-
-                  _buildDotsAndRightSlider(profiles.length, searchState),
-
+                  _buildLabelWindowSliderSingle(st), // สไลเดอร์อิง labels
                   const SizedBox(height: 8),
                 ],
               );
@@ -269,71 +277,50 @@ class _HomeContentState extends State<HomeContent> {
             itemBuilder: (ctx, i) => LayoutBuilder(
               builder: (context, constraints) {
                 return BlocBuilder<SearchBloc, SearchState>(
-                  builder: (context, searchState) {
-                    if (searchState.status == SearchStatus.loading) {
+                  builder: (context, st) {
+                    if (st.status == SearchStatus.loading) {
                       return const Center(child: CircularProgressIndicator());
                     }
-                    if (searchState.status == SearchStatus.failure) {
-                      return Center(child: Text('Error: ${searchState.errorMessage}'));
+                    if (st.status == SearchStatus.failure) {
+                      return Center(child: Text('Error: ${st.errorMessage}'));
                     }
 
-                    // keep slider bounds fresh
-                    _recalcWindowBounds(searchState);
+                    // STEP 1
+                    _recalcWindowByLabels(st);
+
+                    // STEP 2
+                    final (left, right) = _currentLabelWindowRange(st);
+                    final q = profiles[i];
+                    final qWindow = _applyRangeToProfile(q, left, right);
 
                     return Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                       child: Column(
                         children: [
-                          // charts row
                           Expanded(
                             child: Row(
                               children: [
-                                // Surface Hardness
                                 Expanded(
                                   child: SizedBox(
                                     height: constraints.maxHeight - (8 + 16),
                                     child: _ChartFillBox(
-                                      child: buildChartsSectionSurfaceHardness(
-                                        profiles,
+                                      child: sh_medium.buildChartsSectionSurfaceHardness(
+                                        profiles
+                                            .toList()
+                                            ..[i] = qWindow, // ใส่โปรไฟล์ที่สวมช่วงเวลาแล้ว ณ index นี้
                                         i,
-                                        searchState,
+                                        st,
                                         externalStart: _winStart,
                                         externalWindowSize: _winSize,
-                                        zoomBuilder: (ctx, profileAtIndex, st) =>
-                                            buildChartsSectionSurfaceHardnessLarge(
-                                              profileAtIndex,
-                                              st,
-                                              onClose: () => Navigator.of(ctx).maybePop(),
-                                            ),
                                       ),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 16),
-
-                                // CDE/CDT (hide if NA)
-                                Visibility(
-                                  visible: searchState.controlChartStats?.secondChartSelected !=
-                                      SecondChartSelected.na,
-                                  child: Expanded(
-                                    child: SizedBox(
-                                      height: constraints.maxHeight - (8 + 16),
-                                      child: _ChartFillBox(
-                                        child: buildChartsSectionCdeCdt(
-                                          profiles[i],
-                                          searchState,
-                                          _winStart,
-                                          _winSize,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
                               ],
                             ),
                           ),
-
-                          _buildDotsAndRightSlider(profiles.length, searchState),
+                          _buildLabelWindowSliderCarousel(profiles.length, st),
                         ],
                       ),
                     );
@@ -347,64 +334,78 @@ class _HomeContentState extends State<HomeContent> {
     );
   }
 
-  /// Dots centered + right-aligned slider toggle.
-  /// Slider width scales with visible data (window), and the row height is fixed by the caller.
-  // constants for consistent layout
+  // ---------------- Slider (อิง labels) ----------------
+
   static const double _rowH = 40.0;
-  static const double _iconW = 40.0;   // exact width we reserve for the IconButton
-  static const double _gap   = 8.0;
+  static const double _gap = 8.0;
 
-  Widget _buildDotsAndRightSlider(int profilesLength, SearchState searchState) {
-    final lenA = searchState.chartDataPoints.length;
-    final lenB = searchState.chartDataPointsCdeCdt.length;
-    final longest = lenA > lenB ? lenA : lenB;
+  String _formatDateRange(DateTime? a, DateTime? b) {
+    final df = DateFormat('d MMM');
+    final left = (a != null) ? df.format(a) : '';
+    final right = (b != null) ? df.format(b) : '';
+    return '$left - $right';
+  }
 
-    // ✅ แสดงสไลเดอร์เมื่อมีอะไรให้เลื่อนจริงๆ
-    final bool showSliderNeeded = longest > _winSize;
+  Widget _buildLabelWindowSliderSingle(SearchState st) {
+    final labels = _labelsFromState(st);
+    final bool showSliderNeeded = labels.length > _winSize;
 
-    final int visibleCount = (longest <= 0) ? 0 : _winSize.clamp(1, longest).toInt();
+    final (l, r) = _currentLabelWindowRange(st);
+    final labelText = _formatDateRange(l, r);
 
+    return SizedBox(
+      height: _rowH,
+      child: Row(
+        children: [
+          SizedBox(
+            width: showSliderNeeded ? (200 + _gap) : 0.0,
+            child: showSliderNeeded
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(labelText, style: const TextStyle(fontSize: 12)),
+                      Slider(
+                        min: 0,
+                        max: _winMaxStart.toDouble(),
+                        divisions: _winMaxStart > 0 ? _winMaxStart : null,
+                        value: _winStart.toDouble(),
+                        onChanged: (v) => setState(() {
+                          _hasUserMovedSlider = true;
+                          _winStart = v.round().clamp(0, _winMaxStart);
+                        }),
+                      ),
+                    ],
+                  )
+                : null,
+          ),
+          const Expanded(child: SizedBox()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLabelWindowSliderCarousel(int profilesLength, SearchState st) {
+    final labels = _labelsFromState(st);
+    final bool showSliderNeeded = labels.length > _winSize;
+
+    // ความกว้างสไลเดอร์ (ดีไซน์เดิม)
     double sliderWidthForVisible(int count) {
       const double perItem = 8.0;
       const double minW = 140.0;
       const double maxW = 320.0;
       return (count * perItem).clamp(minW, maxW);
     }
-
-    final sliderWidth = sliderWidthForVisible(visibleCount);
-
-    // ถ้าไม่ใช้ปุ่มไอคอนแล้ว ไม่ต้องเผื่อ _iconW
-    final all = searchState.chartDataPoints;
+    final sliderWidth = sliderWidthForVisible(_winSize);
     final reservedLeftWidth = showSliderNeeded ? (sliderWidth + _gap) : 0.0;
-        final DateTime? startDate = 
-        (all.isNotEmpty && _winStart < all.length) 
-            ? all[_winStart].collectDate 
-            : null;
 
-    final DateTime? endDate = 
-        (all.isNotEmpty && (_winStart + _winSize - 1) < all.length) 
-            ? all[_winStart + _winSize - 1].collectDate 
-            : null;
-
-    // ฟอร์แมตวันที่
-    final df = DateFormat('d MMM'); // เช่น 1 Jan
-    final String labelText = 
-        '${startDate != null ? df.format(startDate) : ''}'
-        ' - '
-        '${endDate != null ? df.format(endDate) : ''}';
-
-    final double sliderValue = _isAscendingChrono
-        ? _winStart.toDouble()
-        : (_winMaxStart - _winStart).toDouble();
-
+    // dots กลางจอ (ดีไซน์เดิม)
     Widget dots() => Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
             (profilesLength <= 6) ? profilesLength : 6,
             (dot) {
-              final start = (profilesLength <= 6)
-                  ? 0
-                  : (_index - 3).clamp(0, profilesLength - 6);
+              final start =
+                  (profilesLength <= 6) ? 0 : (_index - 3).clamp(0, profilesLength - 6);
               final realIndex = start + dot;
               final isActive = realIndex == _index;
 
@@ -434,46 +435,26 @@ class _HomeContentState extends State<HomeContent> {
               SizedBox(
                 width: reservedLeftWidth,
                 child: showSliderNeeded
-                    ? Row(
-                        children: [
-                          // ✅ แก้ Visibility เงื่อนไขให้โชว์เมื่อยาวกว่า window
-                          Visibility(
-                            visible: showSliderNeeded,
-                            child: SizedBox(
-                              width: sliderWidth,
-                              child: IgnorePointer(
-                                ignoring: !_showSlider,
-                                child: AnimatedOpacity(
-                                  opacity: _showSlider ? 1.0 : 0.0,
-                                  duration: const Duration(milliseconds: 200),
-                                  curve: Curves.easeInOut,
-                                  child: SliderTheme(
-                                    data: SliderTheme.of(context).copyWith(
-                                      thumbColor: AppColors.colorBrand,
-                                      activeTrackColor: AppColors.colorBrandTp,
-                                      trackHeight: 2,
-                                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                                    ),                         
-                                    child: Slider(
-  min: 0,
-  max: _winMaxStart.toDouble(),
-  divisions: _winMaxStart > 0 ? _winMaxStart : null,
-  value: _isAscendingChrono ? _winStart.toDouble()
-                            : (_winMaxStart - _winStart).toDouble(),
-  onChanged: (v) => setState(() {
-    _hasUserMovedSlider = true; // stop auto-following
-    final raw = v.round().clamp(0, _winMaxStart);
-    _winStart = _isAscendingChrono ? raw : (_winMaxStart - raw);
-  }),
-)
-
-                                  ),
-                                ),
-                              ),
-                            ),
+                    ? SizedBox(
+                        width: sliderWidth,
+                        child: SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            thumbColor: AppColors.colorBrand,
+                            activeTrackColor: AppColors.colorBrandTp,
+                            trackHeight: 2,
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                           ),
-                          const SizedBox(width: _gap),
-                        ],
+                          child: Slider(
+                            min: 0,
+                            max: _winMaxStart.toDouble(),
+                            divisions: _winMaxStart > 0 ? _winMaxStart : null,
+                            value: _winStart.toDouble(),
+                            onChanged: (v) => setState(() {
+                              _hasUserMovedSlider = true;
+                              _winStart = v.round().clamp(0, _winMaxStart);
+                            }),
+                          ),
+                        ),
                       )
                     : null,
               ),
@@ -484,10 +465,8 @@ class _HomeContentState extends State<HomeContent> {
       ),
     );
   }
-
 }
 
-/// Forces child to fill and clips overflow
 class _ChartFillBox extends StatelessWidget {
   const _ChartFillBox({required this.child});
   final Widget child;

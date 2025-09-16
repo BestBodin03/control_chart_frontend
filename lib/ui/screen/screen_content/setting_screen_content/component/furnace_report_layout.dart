@@ -59,9 +59,9 @@ class FurnaceReportLayout extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Expanded(child: buildChartsSectionSurfaceHardness(searchState)),
-                          SizedBox(width: 16),
-                          Expanded(child: buildChartsSectionCdeCdt(searchState)),
+                          // Expanded(child: buildChartsSectionSurfaceHardness(searchState)),
+                          // SizedBox(width: 16),
+                          // Expanded(child: buildChartsSectionCdeCdt(searchState)),
                         ],
                       ),
                     ],

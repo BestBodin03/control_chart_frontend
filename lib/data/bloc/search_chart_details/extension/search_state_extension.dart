@@ -21,8 +21,7 @@ extension SearchStateExtension on SearchState {
         // label: DateFormat('dd/MM/yy').format(dt),
         collectDate: dt,
         label: DateFormat('dd/MM').format(dt),
-        fullLabel:
-            "${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}/${dt.year.toString().padLeft(4, '0')}",
+        fullLabel:"${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year.toString().padLeft(4, '0')}",
         furnaceNo: chartDetail.chartGeneralDetail.furnaceNo.toString(),
         matNo: chartDetail.cpNo,
         value: chartDetail.machanicDetail.surfaceHardnessMean,
@@ -72,7 +71,7 @@ extension SearchStateExtension on SearchState {
         // label: DateFormat('dd/MM/yy').format(dt),
         collectDate: dt,
         label: DateFormat('dd/MM').format(dt),
-        fullLabel: "${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}/${dt.year.toString().padLeft(4, '0')}",
+        fullLabel: "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year.toString().padLeft(4, '0')}",
         furnaceNo: chartDetail.chartGeneralDetail.furnaceNo.toString(),
         matNo: chartDetail.cpNo,
         value: value,

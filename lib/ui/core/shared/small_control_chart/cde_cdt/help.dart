@@ -1,280 +1,280 @@
-// Modified to accept SearchState parameter
-import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
-import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
-import 'package:control_chart/domain/extension/map.dart';
-import 'package:control_chart/ui/core/design_system/app_color.dart';
-import 'package:control_chart/ui/core/design_system/app_typography.dart';
-import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/control_chart_template_small_cde_cdt.dart';
-// import 'package:control_chart/ui/core/shared/small_control_chart/surface_hardness/control_chart_template_small.dart';
+// // Modified to accept SearchState parameter
+// import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
+// import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
+// import 'package:control_chart/domain/extension/map.dart';
+// import 'package:control_chart/ui/core/design_system/app_color.dart';
+// import 'package:control_chart/ui/core/design_system/app_typography.dart';
+// import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/control_chart_template_small_cde_cdt.dart';
+// // import 'package:control_chart/ui/core/shared/small_control_chart/surface_hardness/control_chart_template_small.dart';
 
-import 'package:flutter/material.dart';
+// import 'package:flutter/material.dart';
 
-Widget buildChartsSectionCdeCdt(SearchState searchState) {
-  String cdeOrCdtLabel(num? cde, num? cdt) {
-    final a = (cde ?? 0).toDouble();
-    final b = (cdt ?? 0).toDouble();
-    return a > b ? 'CDE' : b > a ? 'CDT' : 'N/A';
-  }
+// Widget buildChartsSectionCdeCdt(SearchState searchState) {
+//   String cdeOrCdtLabel(num? cde, num? cdt) {
+//     final a = (cde ?? 0).toDouble();
+//     final b = (cdt ?? 0).toDouble();
+//     return a > b ? 'CDE' : b > a ? 'CDT' : 'N/A';
+//   }
 
-  return Row(
-    children: [
-      Expanded(
-        child: _buildChartContainerCdeCdt(
-          searchState: searchState,
-          title: searchState.controlChartStats?.secondChartSelected?.label ?? '',
-        ),
-      ),
-    ],
-  );
-}
+//   return Row(
+//     children: [
+//       Expanded(
+//         child: _buildChartContainerCdeCdt(
+//           searchState: searchState,
+//           title: searchState.controlChartStats?.secondChartSelected?.label ?? '',
+//         ),
+//       ),
+//     ],
+//   );
+// }
 
-Widget _buildChartContainerCdeCdt({
-  required String title,
-  required SearchState searchState,
-}) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-            Padding(
-        padding: const EdgeInsets.fromLTRB(0,0,0,8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              title,
-              style: AppTypography.textBody2BBold),
-          ],
-        ),
-      ),
-      // Outer bordered card
-      SizedBox(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-              color: AppColors.colorBrandTp.withValues(alpha: 0.15), // pale blue tint
-              border: Border.all(color: AppColors.colorBrandTp.withValues(alpha: 0.35), width: 1),
-              borderRadius: BorderRadius.circular(8.0),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Chart type label
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text(
-                    "Individual", 
-                    style: AppTypography.textBody3BBold,
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+// Widget _buildChartContainerCdeCdt({
+//   required String title,
+//   required SearchState searchState,
+// }) {
+//   return Column(
+//     crossAxisAlignment: CrossAxisAlignment.start,
+//     children: [
+//             Padding(
+//         padding: const EdgeInsets.fromLTRB(0,0,0,8),
+//         child: Row(
+//           mainAxisAlignment: MainAxisAlignment.center,
+//           children: [
+//             Text(
+//               title,
+//               style: AppTypography.textBody2BBold),
+//           ],
+//         ),
+//       ),
+//       // Outer bordered card
+//       SizedBox(
+//         child: DecoratedBox(
+//           decoration: BoxDecoration(
+//               color: AppColors.colorBrandTp.withValues(alpha: 0.15), // pale blue tint
+//               border: Border.all(color: AppColors.colorBrandTp.withValues(alpha: 0.35), width: 1),
+//               borderRadius: BorderRadius.circular(8.0),
+//           ),
+//           child: Padding(
+//             padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.stretch,
+//               children: [
+//                 // Chart type label
+//                 const Padding(
+//                   padding: EdgeInsets.symmetric(vertical: 8.0),
+//                   child: Text(
+//                     "Individual", 
+//                     style: AppTypography.textBody3BBold,
+//                     textAlign: TextAlign.center,
+//                   ),
+//                 ),
 
-                // Individual Chart container
-                _buildSingleChartCdeCdt(
-                  searchState: searchState,
-                  // chartType: chartType,
-                  isMovingRange: false,
-                ),
+//                 // Individual Chart container
+//                 _buildSingleChartCdeCdt(
+//                   searchState: searchState,
+//                   // chartType: chartType,
+//                   isMovingRange: false,
+//                 ),
 
-                // Chart type label
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text(
-                    "Moving Range", 
-                    style: AppTypography.textBody3BBold,
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+//                 // Chart type label
+//                 const Padding(
+//                   padding: EdgeInsets.symmetric(vertical: 8.0),
+//                   child: Text(
+//                     "Moving Range", 
+//                     style: AppTypography.textBody3BBold,
+//                     textAlign: TextAlign.center,
+//                   ),
+//                 ),
 
-                // Moving Range Chart container
-                _buildMrChartCdeCdt(
-                  searchState: searchState,
-                  // chartType: chartType,
-                  isMovingRange: true,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ],
-  );
-}
+//                 // Moving Range Chart container
+//                 _buildMrChartCdeCdt(
+//                   searchState: searchState,
+//                   // chartType: chartType,
+//                   isMovingRange: true,
+//                 ),
+//               ],
+//             ),
+//           ),
+//         ),
+//       ),
+//     ],
+//   );
+// }
 
-Widget _buildSingleChartCdeCdt({
-  required SearchState searchState,
-  // required ChartType chartType,
-  required bool isMovingRange,
-}) {
-  return SizedBox(
-    width: double.infinity,
-    // width: 100.0,
-    height: 144.0,
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50, // Changed from black26 to light background
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: _buildChartContentCdeCdt(
-        searchState: searchState,
-        // chartType: chartType,
-        isMovingRange: isMovingRange,
-      ),
-    ),
-  );
-}
+// Widget _buildSingleChartCdeCdt({
+//   required SearchState searchState,
+//   // required ChartType chartType,
+//   required bool isMovingRange,
+// }) {
+//   return SizedBox(
+//     width: double.infinity,
+//     // width: 100.0,
+//     height: 144.0,
+//     child: DecoratedBox(
+//       decoration: BoxDecoration(
+//         color: Colors.grey.shade50, // Changed from black26 to light background
+//         borderRadius: BorderRadius.circular(8),
+//       ),
+//       child: _buildChartContentCdeCdt(
+//         searchState: searchState,
+//         // chartType: chartType,
+//         isMovingRange: isMovingRange,
+//       ),
+//     ),
+//   );
+// }
 
-Widget _buildMrChartCdeCdt({
-  required SearchState searchState,
-  // required ChartType chartType,
-  required bool isMovingRange,
-}) {
-  return SizedBox(
-    width: double.infinity,
-    // width: 100.0,
-    height: 144.0,
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50, // Changed from black26 to light background
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: _buildMrChartContentCdeCdt(
-        searchState: searchState,
-        // chartType: chartType,
-        isMovingRange: true,
-      ),
-    ),
-  );
-}
+// Widget _buildMrChartCdeCdt({
+//   required SearchState searchState,
+//   // required ChartType chartType,
+//   required bool isMovingRange,
+// }) {
+//   return SizedBox(
+//     width: double.infinity,
+//     // width: 100.0,
+//     height: 144.0,
+//     child: DecoratedBox(
+//       decoration: BoxDecoration(
+//         color: Colors.grey.shade50, // Changed from black26 to light background
+//         borderRadius: BorderRadius.circular(8),
+//       ),
+//       child: _buildMrChartContentCdeCdt(
+//         searchState: searchState,
+//         // chartType: chartType,
+//         isMovingRange: true,
+//       ),
+//     ),
+//   );
+// }
 
-Widget _buildChartContentCdeCdt({
-  required SearchState searchState,
-  // required ChartType chartType,
-  required bool isMovingRange,
-}) {
-  // Handle loading state
-  if (searchState.status == SearchStatus.loading) {
-    return const Center(
-      child: SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      ),
-    );
-  }
+// Widget _buildChartContentCdeCdt({
+//   required SearchState searchState,
+//   // required ChartType chartType,
+//   required bool isMovingRange,
+// }) {
+//   // Handle loading state
+//   if (searchState.status == SearchStatus.loading) {
+//     return const Center(
+//       child: SizedBox(
+//         width: 20,
+//         height: 20,
+//         child: CircularProgressIndicator(strokeWidth: 2),
+//       ),
+//     );
+//   }
   
-  // Handle error state
-  if (searchState.status == SearchStatus.failure) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 16, color: Colors.red),
-          SizedBox(height: 4),
-          Text(
-            'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
-            style: TextStyle(fontSize: 10, color: Colors.red),
-          ),
-        ],
-      ),
-    );
-  }
+//   // Handle error state
+//   if (searchState.status == SearchStatus.failure) {
+//     return Center(
+//       child: Column(
+//         mainAxisAlignment: MainAxisAlignment.center,
+//         children: [
+//           Icon(Icons.error_outline, size: 16, color: Colors.red),
+//           SizedBox(height: 4),
+//           Text(
+//             'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
+//             style: TextStyle(fontSize: 10, color: Colors.red),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
   
-  // Handle empty data
-  if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
-    return Center(
-      child: Text(
-        'ไม่มีข้อมูล',
-        style: TextStyle(fontSize: 12, color: Colors.red),
-      ),
-    );
-  }
+//   // Handle empty data
+//   if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
+//     return Center(
+//       child: Text(
+//         'ไม่มีข้อมูล',
+//         style: TextStyle(fontSize: 12, color: Colors.red),
+//       ),
+//     );
+//   }
 
-  // Generate unique key for chart
-  final query = searchState.currentQuery;
-  final uniqueKey = '${query.startDate?.day}-'
-      '${query.endDate?.millisecondsSinceEpoch}-'
-      '${query.furnaceNo}-'
-      '${query.materialNo}-';
-  final dataPoints = searchState.chartDataPointsCdeCdt;
+//   // Generate unique key for chart
+//   final query = searchState.currentQuery;
+//   final uniqueKey = '${query.startDate?.day}-'
+//       '${query.endDate?.millisecondsSinceEpoch}-'
+//       '${query.furnaceNo}-'
+//       '${query.materialNo}-';
+//   final dataPoints = searchState.chartDataPointsCdeCdt;
 
-  return ClipRRect(
-    borderRadius: BorderRadius.circular(4),
-    child: ControlChartTemplateSmallCdeCdt(
-      key: ValueKey(uniqueKey.hashCode.toString()),
-      dataPoints: dataPoints,
-      controlChartStats: searchState.controlChartStats!,
-      dataLineColor: AppColors.colorBrand,
-      width: double.infinity,
-      // width: 100.0,
-      height: 144.0, 
-      isMovingRange: false,
-    ),
-  );
-}
+//   return ClipRRect(
+//     borderRadius: BorderRadius.circular(4),
+//     child: ControlChartTemplateSmallCdeCdt(
+//       key: ValueKey(uniqueKey.hashCode.toString()),
+//       dataPoints: dataPoints,
+//       controlChartStats: searchState.controlChartStats!,
+//       dataLineColor: AppColors.colorBrand,
+//       width: double.infinity,
+//       // width: 100.0,
+//       height: 144.0, 
+//       isMovingRange: false,
+//     ),
+//   );
+// }
 
-Widget _buildMrChartContentCdeCdt({
-  required SearchState searchState,
-  // required ChartType chartType,
-  required bool isMovingRange,
-}) {
-  // Handle loading state
-  if (searchState.status == SearchStatus.loading) {
-    return const Center(
-      child: SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      ),
-    );
-  }
+// Widget _buildMrChartContentCdeCdt({
+//   required SearchState searchState,
+//   // required ChartType chartType,
+//   required bool isMovingRange,
+// }) {
+//   // Handle loading state
+//   if (searchState.status == SearchStatus.loading) {
+//     return const Center(
+//       child: SizedBox(
+//         width: 20,
+//         height: 20,
+//         child: CircularProgressIndicator(strokeWidth: 2),
+//       ),
+//     );
+//   }
   
-  // Handle error state
-  if (searchState.status == SearchStatus.failure) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 16, color: Colors.red),
-          SizedBox(height: 4),
-          Text(
-            'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
-            style: TextStyle(fontSize: 12, color: Colors.red),
-          ),
-        ],
-      ),
-    );
-  }
+//   // Handle error state
+//   if (searchState.status == SearchStatus.failure) {
+//     return Center(
+//       child: Column(
+//         mainAxisAlignment: MainAxisAlignment.center,
+//         children: [
+//           Icon(Icons.error_outline, size: 16, color: Colors.red),
+//           SizedBox(height: 4),
+//           Text(
+//             'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
+//             style: TextStyle(fontSize: 12, color: Colors.red),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
   
-  // Handle empty data
-  if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
-    return Center(
-      child: Text(
-        'ไม่มีข้อมูล',
-        style: TextStyle(fontSize: 12, color: Colors.red),
-      ),
-    );
-  }
+//   // Handle empty data
+//   if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
+//     return Center(
+//       child: Text(
+//         'ไม่มีข้อมูล',
+//         style: TextStyle(fontSize: 12, color: Colors.red),
+//       ),
+//     );
+//   }
 
-  // Generate unique key for chart
-  final query = searchState.currentQuery;
-  final uniqueKey = '${query.startDate?.day}-'
-      '${query.endDate?.millisecondsSinceEpoch}-'
-      '${query.furnaceNo}-'
-      '${query.materialNo}-';
-  final dataPoints = searchState.chartDataPointsCdeCdt;
+//   // Generate unique key for chart
+//   final query = searchState.currentQuery;
+//   final uniqueKey = '${query.startDate?.day}-'
+//       '${query.endDate?.millisecondsSinceEpoch}-'
+//       '${query.furnaceNo}-'
+//       '${query.materialNo}-';
+//   final dataPoints = searchState.chartDataPointsCdeCdt;
 
-  return ClipRRect(
-    borderRadius: BorderRadius.circular(4),
-    child: ControlChartTemplateSmallCdeCdt(
-      key: ValueKey(uniqueKey.hashCode.toString()),
-      dataPoints: dataPoints,
-      controlChartStats: searchState.controlChartStats!,
-      dataLineColor: AppColors.colorBrand,
-      width: double.infinity,
-      // width: 100.0,
-      height: 144.0, 
-      isMovingRange: true,
-    ),
-  );
-}
+//   return ClipRRect(
+//     borderRadius: BorderRadius.circular(4),
+//     child: ControlChartTemplateSmallCdeCdt(
+//       key: ValueKey(uniqueKey.hashCode.toString()),
+//       dataPoints: dataPoints,
+//       controlChartStats: searchState.controlChartStats!,
+//       dataLineColor: AppColors.colorBrand,
+//       width: double.infinity,
+//       // width: 100.0,
+//       height: 144.0, 
+//       isMovingRange: true,
+//     ),
+//   );
+// }

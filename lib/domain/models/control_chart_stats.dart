@@ -56,8 +56,8 @@ class ControlChartStats {
 
   /// NEW: ตัวเลือกกราฟที่สองจาก backend ("CDE","CDT","COMPOUND LAYER","NA")
   final SecondChartSelected? secondChartSelected;
-  final List<DateTime>? xAxisMediumLabel;
-  final List<DateTime>? xAxisLargeLabel;
+  final List<DateTime> xAxisMediumLabel;
+  final List<DateTime> xAxisLargeLabel;
   final int xTick;
 
   const ControlChartStats({
@@ -94,8 +94,8 @@ class ControlChartStats {
     this.yAxisRange,
     this.controlChartSpots,
     this.secondChartSelected,
-    this.xAxisMediumLabel,
-    this.xAxisLargeLabel,
+    required this.xAxisMediumLabel,
+    required this.xAxisLargeLabel,
     required this.xTick
 
   });
