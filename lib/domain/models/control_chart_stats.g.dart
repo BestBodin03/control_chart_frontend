@@ -11,6 +11,7 @@ ControlChartStats _$ControlChartStatsFromJson(
 ) => ControlChartStats(
   numberOfSpots: (json['numberOfSpots'] as num?)?.toInt(),
   average: (json['average'] as num?)?.toDouble(),
+  periodType: $enumDecodeNullable(_$PeriodTypeEnumMap, json['periodType']),
   compoundLayerAverage: (json['compoundLayerAverage'] as num?)?.toDouble(),
   cdeAverage: (json['cdeAverage'] as num?)?.toDouble(),
   cdtAverage: (json['cdtAverage'] as num?)?.toDouble(),
@@ -155,6 +156,7 @@ Map<String, dynamic> _$ControlChartStatsToJson(ControlChartStats instance) =>
     <String, dynamic>{
       'numberOfSpots': instance.numberOfSpots,
       'average': instance.average,
+      'periodType': _$PeriodTypeEnumMap[instance.periodType],
       'compoundLayerAverage': instance.compoundLayerAverage,
       'cdeAverage': instance.cdeAverage,
       'cdtAverage': instance.cdtAverage,
@@ -195,6 +197,15 @@ Map<String, dynamic> _$ControlChartStatsToJson(ControlChartStats instance) =>
           instance.xAxisLargeLabel.map((e) => e.toIso8601String()).toList(),
       'xTick': instance.xTick,
     };
+
+const _$PeriodTypeEnumMap = {
+  PeriodType.ONE_MONTH: 'ONE_MONTH',
+  PeriodType.THREE_MONTHS: 'THREE_MONTHS',
+  PeriodType.SIX_MONTHS: 'SIX_MONTHS',
+  PeriodType.ONE_YEAR: 'ONE_YEAR',
+  PeriodType.CUSTOM: 'CUSTOM',
+  PeriodType.LIFETIME: 'LIFETIME',
+};
 
 const _$SecondChartSelectedEnumMap = {
   SecondChartSelected.cde: 'CDE',

@@ -1,10 +1,12 @@
 import 'dart:math' as math;
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
+import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/dashed_line_painter.dart' show DashedLinePainter;
+import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/help.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -42,14 +44,14 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
   List<ChartDataPoint> get _pointsInWindow {
     final src = dataPoints ?? const <ChartDataPoint>[];
     if (src.isEmpty) return const <ChartDataPoint>[];
-    final startUs = xStart.microsecondsSinceEpoch;
-    final endUs = xEnd.microsecondsSinceEpoch;
+    final startUs = xStart.millisecondsSinceEpoch;
+    final endUs = xEnd.millisecondsSinceEpoch;
     final lo = math.min(startUs, endUs).toDouble();
     final hi = math.max(startUs, endUs).toDouble();
 
     return src
         .where((p) {
-          final t = p.collectDate.microsecondsSinceEpoch.toDouble();
+          final t = p.collectDate.millisecondsSinceEpoch.toDouble();
           return t >= lo && t <= hi;
         })
         .toList();
@@ -63,8 +65,8 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     // }
 
     // ช่วงเวลา (µs)
-    final double minXv = xStart.microsecondsSinceEpoch.toDouble();
-    final double maxXv = xEnd.microsecondsSinceEpoch.toDouble();
+    final double minXv = xStart.millisecondsSinceEpoch.toDouble();
+    final double maxXv = xEnd.millisecondsSinceEpoch.toDouble();
     final double safeRange = (maxXv - minXv).abs().clamp(1.0, double.infinity);
 
     // จำนวน tick ที่ต้องการโชว์ (อย่างน้อย 2 จะมีหัว-ท้าย, ถ้าน้อยกว่านั้นบังคับเป็น 2)
@@ -124,36 +126,23 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
     );
   }
 
+
   @override
   FlTitlesData buildTitlesData(double? minX, double? maxX, double? tickInterval) {
-    final double minXv = minX ?? xStart.microsecondsSinceEpoch.toDouble();
-    final double maxXv = maxX ?? xEnd.microsecondsSinceEpoch.toDouble();
-    final double range = (maxXv - minXv).abs().clamp(1.0, double.infinity);
+    final double minXv = minX ?? xStart.millisecondsSinceEpoch.toDouble();
+    final double maxXv = maxX ?? xEnd.millisecondsSinceEpoch.toDouble();
+    final PeriodType periodType = controlChartStats?.periodType ?? PeriodType.ONE_MONTH;
+    // final double range = (maxXv - minXv).abs().clamp(1.0, double.infinity);
+    final df = DateFormat('dd/MM');
 
-    final ticks = _labelEpochsInWindow(minXv, maxXv);
-    final df = DateFormat('dd-MM');
+    // final int desiredTick = (controlChartStats?.xTick ?? 6).clamp(2, 24);
+    final double step = getXInterval(periodType, minXv, maxXv);
 
-    final int desiredTick = (controlChartStats?.xTick ?? 6).clamp(2, 24);
-    final double step = (tickInterval ?? (range / (desiredTick - 1))).abs();
-    final double tol  = step * 0.49; // tolerance to snap to nearest tick
-
-    // ✅ ensure unique strings per build
     // final shownLabels = <String>{};
 
     Widget bottomLabel(double value, TitleMeta meta) {
-      // find nearest precomputed tick
-      double? nearest;
-      double best = double.infinity;
-      for (final t in ticks) {
-        final d = (value - t).abs();
-        if (d < best) { best = d; nearest = t; }
-      }
-      if (nearest == null || best > tol) return const SizedBox.shrink();
-
-      final dt = DateTime.fromMicrosecondsSinceEpoch(nearest.round(), isUtc: true);
+      final dt = DateTime.fromMillisecondsSinceEpoch(value.round(), isUtc: true);
       final text = df.format(dt);
-
-      // ✅ skip duplicate strings
       // if (!shownLabels.add(text)) return const SizedBox.shrink();
 
       return SideTitleWidget(
@@ -161,9 +150,11 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
         space: 8,
         child: Transform.rotate(
           angle: -30 * math.pi / 180,
-          child: Text(text,
+          child: Text(
+            text,
             style: const TextStyle(fontSize: 8, color: Colors.black54),
-            overflow: TextOverflow.ellipsis),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       );
     }
@@ -183,7 +174,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 32,
+          reservedSize: 24,
           interval: step,
           getTitlesWidget: bottomLabel,
         ),
@@ -192,43 +183,6 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
       rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
     );
   }
-
-
-  List<double> _labelEpochsInWindow(double minXv, double maxXv) {
-    final double lo = math.min(minXv, maxXv);
-    final double hi = math.max(minXv, maxXv);
-
-    final List<DateTime> candidates = [
-      DateTime.fromMicrosecondsSinceEpoch(lo.round(), isUtc: true),
-      DateTime.fromMicrosecondsSinceEpoch(hi.round(), isUtc: true),
-    ];
-
-    final raw = controlChartStats!.xAxisMediumLabel;
-      for (final e in raw) {
-        DateTime? dt;
-        dt = e;
-
-        final us = dt.microsecondsSinceEpoch.toDouble();
-        if (us >= lo && us <= hi) {
-          candidates.add(dt.toUtc());
-        }
-    }
-
-    // Dedup by the *text label* you actually show
-    final fmt = DateFormat('dd/MM'); // change if you format differently
-    candidates.sort((a, b) => a.compareTo(b));
-
-    final seen = <String>{};
-    final out = <double>[];
-    for (final dt in candidates) {
-      final key = fmt.format(dt);     // label string
-      if (seen.add(key)) {
-        out.add(dt.microsecondsSinceEpoch.toDouble());
-      }
-    }
-    return out;
-  }
-
 
   @override
   FlBorderData buildBorderData() {
@@ -297,12 +251,12 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
       ];
     }
 
-    final minXv = xStart.microsecondsSinceEpoch.toDouble();
-    final maxXv = xEnd.microsecondsSinceEpoch.toDouble();
+    final minXv = xStart.millisecondsSinceEpoch.toDouble();
+    final maxXv = xEnd.millisecondsSinceEpoch.toDouble();
 
     final spots = pts
         .map((p) => FlSpot(
-              p.collectDate.microsecondsSinceEpoch.toDouble(),
+              p.collectDate.millisecondsSinceEpoch.toDouble(),
               p.value,
             ))
         .where((s) => s.x >= math.min(minXv, maxXv) && s.x <= math.max(minXv, maxXv))
@@ -349,7 +303,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
   LineTouchData buildTouchData() {
     final points = _pointsInWindow;
     final Map<double, ChartDataPoint> map = {
-      for (final p in points) p.collectDate.microsecondsSinceEpoch.toDouble(): p
+      for (final p in points) p.collectDate.millisecondsSinceEpoch.toDouble(): p
     };
 
     return LineTouchData(

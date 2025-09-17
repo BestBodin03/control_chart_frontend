@@ -1,6 +1,7 @@
 import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart';
+import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_template.dart';
@@ -111,19 +112,19 @@ class _MediumContainer extends StatelessWidget {
   final int? xAxisWinSize;
 
 
-  static const int _defaultWindow = 30;
+  // static const int _defaultWindow = 30;
 
-  List<T> _slice<T>(List<T> full) {
-    if (full.isEmpty) return full;
+  // List<T> _slice<T>(List<T> full) {
+  //   if (full.isEmpty) return full;
 
-    final win = externalWindowSize ?? _defaultWindow;
-    if (full.length <= win) return full;
+  //   final win = externalWindowSize ?? _defaultWindow;
+  //   if (full.length <= win) return full;
 
-    final maxStart = full.length - win;
-    final start = (externalStart ?? maxStart).clamp(0, maxStart);
-    final end = (start + win).clamp(0, full.length);
-    return full.sublist(start, end);
-  }
+  //   final maxStart = full.length - win;
+  //   final start = (externalStart ?? maxStart).clamp(0, maxStart);
+  //   final end = (start + win).clamp(0, full.length);
+  //   return full.sublist(start, end);
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -154,7 +155,7 @@ class _MediumContainer extends StatelessWidget {
       color: Colors.transparent,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV) * 2 - 40) / 2)
+          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV) * 2 - 72) / 2)
               .clamp(0.0, double.infinity);
 
           return Column(
@@ -166,6 +167,14 @@ class _MediumContainer extends StatelessWidget {
                   Expanded(
                     child: Center(child: Text(title, style: AppTypography.textBody3BBold)),
                   ),
+                  // if (onZoom != null) ...[
+                  //   // const SizedBox(width: 8),
+                  //   IconButton(
+                  //     tooltip: 'Zoom',
+                  //     icon: const Icon(Icons.fullscreen, size: 18),
+                  //     onPressed: () => onZoom(context),
+                  //   ),
+                  // ],
                 ],
               ),
 
@@ -182,17 +191,51 @@ class _MediumContainer extends StatelessWidget {
                     children: [
                       // Header Top
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Expanded(
-                            child: Center(
-                              child: Text(
-                                "Surface Hardness | Control Chart",
-                                style: AppTypography.textBody3B,
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Beyond Spec Limit",
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 12
+                                ),
+                                textAlign: TextAlign.center
+                                ),
+                              Text(
+                                "Beyond Control Limit",
+                                style: TextStyle(
+                                  color: Colors.orange,
+                                  fontSize: 12
+                                ),
+                                textAlign: TextAlign.center
+                                ),
+                              Text(
+                                "Trend",
+                                style: TextStyle(
+                                  color: Colors.teal,
+                                  fontSize: 12
+                                ),
+                                textAlign: TextAlign.center
+                                )
+                            ],
                           ),
+                          Text(
+                            "Surface Hardness | Control Chart",
+                            style: AppTypography.textBody3B,
+                            textAlign: TextAlign.center,
+                          ),
+
                           // const SizedBox(width: 20),
+                          if (onZoom != null) ...[
+                            IconButton(
+                              tooltip: 'Zoom',
+                              icon: const Icon(Icons.fullscreen, size: 18),
+                              onPressed: () => onZoom!(context),
+                            ),
+                          ],
                         ],
                       ),
 
@@ -256,8 +299,8 @@ Widget _buildSingleChart({
 
   final allPoints = searchState.chartDataPoints;
   final q = settingProfile;
-  final uniqueKey = '${q.startDate?.microsecondsSinceEpoch}-'
-      '${q.endDate?.microsecondsSinceEpoch}-'
+  final uniqueKey = '${q.startDate?.millisecondsSinceEpoch}-'
+      '${q.endDate?.millisecondsSinceEpoch}-'
       '${q.furnaceNo}-'
       '${q.materialNo}-';
 
@@ -309,3 +352,26 @@ class _SmallNoData extends StatelessWidget {
   Widget build(BuildContext context) =>
       const Center(child: Text('No Data', style: TextStyle(fontSize: 12, color: Colors.grey)));
 }
+
+  double getXInterval(PeriodType periodType, double startMs, double endMs) {
+    const double dayMs = 86400000.0;
+
+    int stepDays;
+    switch (periodType) {
+      case PeriodType.ONE_MONTH:
+        stepDays = 7;
+        break;
+      case PeriodType.THREE_MONTHS:
+        stepDays = 14;
+        break;
+      case PeriodType.SIX_MONTHS:
+        stepDays = 30;
+        break;
+      case PeriodType.ONE_YEAR:
+      default:
+        stepDays = 60;
+        break;
+    }
+    // interval ของแกน X (หน่วย ms)
+    return stepDays * dayMs;
+  }

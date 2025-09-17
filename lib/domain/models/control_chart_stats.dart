@@ -1,3 +1,4 @@
+import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/domain/models/y_axis_range.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -9,6 +10,7 @@ class ControlChartStats {
   final int? numberOfSpots;
 
   final double? average;
+  final PeriodType? periodType;
   final double? compoundLayerAverage;
   final double? cdeAverage;
   final double? cdtAverage;
@@ -63,6 +65,7 @@ class ControlChartStats {
   const ControlChartStats({
     this.numberOfSpots,
     this.average,
+    this.periodType,
     this.compoundLayerAverage,
     this.cdeAverage,
     this.cdtAverage,
@@ -104,6 +107,7 @@ class ControlChartStats {
   const ControlChartStats.empty(this.yAxisRange)
       : numberOfSpots = 0,
         average = 0.0,
+        periodType = PeriodType.ONE_MONTH,
         compoundLayerAverage = 0.0,
         cdeAverage = 0.0,
         cdtAverage = 0.0,

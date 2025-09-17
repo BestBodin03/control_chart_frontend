@@ -1,11 +1,10 @@
+import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
+import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../domain/models/chart_data_point.dart';
-import '../search_bloc.dart';
-
 extension SearchStateExtension on SearchState {
-  /// Surface Hardness points (unchanged)
+  /// Surface Hardness points (refactored to be like CdeCdt)
   List<ChartDataPoint> get chartDataPoints {
     final stats = controlChartStats;
     if (stats == null) return const <ChartDataPoint>[];
@@ -13,24 +12,29 @@ extension SearchStateExtension on SearchState {
     final values   = stats.surfaceHardnessChartSpots ?? const <double>[];
     final mrValues = stats.mrChartSpots             ?? const <double>[];
 
-    // Loop by the values length (source of truth)
-    return List.generate(values.length, (index) {
-      final detail = (index < chartDetails.length) ? chartDetails[index] : null;
-      final dt = detail?.chartGeneralDetail.collectedDate ?? DateTime.now();
+    // Map chartDetails to points; guard out-of-range indexes
+    return chartDetails.asMap().entries.map((entry) {
+      final index       = entry.key;
+      final chartDetail = entry.value;
+
+      final dt = chartDetail.chartGeneralDetail.collectedDate;
+      final value   = (index < values.length)   ? values[index]   : 0.0;
+      final mrValue = (index < mrValues.length) ? mrValues[index] : 0.0;
 
       return ChartDataPoint(
         collectDate: dt,
         label: DateFormat('dd/MM').format(dt),
         fullLabel:
-            "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year.toString().padLeft(4, '0')}",
-        furnaceNo: detail?.chartGeneralDetail.furnaceNo.toString() ?? "-",
-        matNo: detail?.cpNo ?? "-",
-        value: values[index],
-        mrValue: (index < mrValues.length) ? mrValues[index] : 0.0,
+            "${dt.day.toString().padLeft(2, '0')}/"
+            "${dt.month.toString().padLeft(2, '0')}/"
+            "${dt.year.toString().padLeft(4, '0')}",
+        furnaceNo: chartDetail.chartGeneralDetail.furnaceNo.toString(),
+        matNo: chartDetail.cpNo,
+        value: value,
+        mrValue: mrValue,
       );
-    });
+    }).toList();
   }
-
 
   /// CDE/CDT/Compound Layer points, driven by `secondChartSelected`
   List<ChartDataPointCdeCdt> get chartDataPointsCdeCdt {
@@ -59,7 +63,7 @@ extension SearchStateExtension on SearchState {
         return const <ChartDataPointCdeCdt>[]; // not shown
     }
 
-    // Map chartDetails to points; guard out-of-range indexes
+    // Map chartDetails to points
     return chartDetails.asMap().entries.map((entry) {
       final index       = entry.key;
       final chartDetail = entry.value;
@@ -69,17 +73,17 @@ extension SearchStateExtension on SearchState {
       final mrValue = (index < mrValues.length) ? mrValues[index] : 0.0;
 
       return ChartDataPointCdeCdt(
-        // label: DateFormat('MM/dd/yy').format(dt),
-        // label: DateFormat('dd/MM/yy').format(dt),
         collectDate: dt,
         label: DateFormat('dd/MM').format(dt),
-        fullLabel: "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year.toString().padLeft(4, '0')}",
+        fullLabel:
+            "${dt.day.toString().padLeft(2, '0')}/"
+            "${dt.month.toString().padLeft(2, '0')}/"
+            "${dt.year.toString().padLeft(4, '0')}",
         furnaceNo: chartDetail.chartGeneralDetail.furnaceNo.toString(),
         matNo: chartDetail.cpNo,
         value: value,
         mrValue: mrValue,
       );
-
     }).toList();
   }
 }

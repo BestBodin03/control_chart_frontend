@@ -41,17 +41,7 @@ class _SearchingFormState extends State<SearchingForm> {
       value: _settingBloc,
       child: MultiBlocListener(
         listeners: [
-          // Notifications
-          BlocListener<SettingBloc, SettingState>(
-            listener: (context, state) {
-              if (state.isSaved) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('บันทึกข้อมูลเรียบร้อยแล้ว'), backgroundColor: Colors.green),
-                );
-              }
-            },
-          ),
-          // Bridge SettingBloc dates -> SearchBloc
+
           BlocListener<SettingBloc, SettingState>(
             listenWhen: (prev, curr) =>
                 prev.formState.startDate != curr.formState.startDate ||
@@ -117,12 +107,11 @@ class _SearchingFormState extends State<SearchingForm> {
                                     padding: const EdgeInsets.all(8),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   ),
-                                  child: SvgPicture.asset(
-                                    'assets/icons/refresh.svg',
-                                    width: 24,
-                                    height: 24,
-                                    colorFilter: const ColorFilter.mode(AppColors.colorBrand, BlendMode.srcIn),
-                                  ),
+                                    child: const Icon(
+                                      Icons.refresh_rounded, // or Icons.autorenew_rounded
+                                      size: 24,
+                                      color: AppColors.colorBrand,
+                                    ),
                                 )
                             ],
                           ),
@@ -190,57 +179,57 @@ class _SearchingFormState extends State<SearchingForm> {
                             ],
                           ),
 
-                          const SizedBox(height: 16),
+                          // const SizedBox(height: 16),
 
-                          // Furnace
-                          buildSectionTitle('หมายเลขเตา'),
-                          const SizedBox(height: 8),
-                          BlocBuilder<SearchBloc, SearchState>(
-                            builder: (context, searchState) {
-                              return buildDropdownField(
-                                context: context,
-                                value: searchState.currentQuery.furnaceNo ?? form.selectedItem,
-                                items: _getFurnaceNumbers(furnaces),
-                                hint: "เลือกเตา",
-                                onChanged: (selected) {
-                                  final val = selected == "0" ? "" : selected;
-                                  _dispatchSearchWith(
-                                    context,
-                                    start: form.startDate ?? searchState.currentQuery.startDate,
-                                    end:   form.endDate   ?? searchState.currentQuery.endDate,
-                                    furnace: val,
-                                    material: searchState.currentQuery.materialNo,
-                                  );
-                                },
-                              );
-                            },
-                          ),
+                          // // Furnace
+                          // buildSectionTitle('หมายเลขเตา'),
+                          // const SizedBox(height: 8),
+                          // BlocBuilder<SearchBloc, SearchState>(
+                          //   builder: (context, searchState) {
+                          //     return buildDropdownField(
+                          //       context: context,
+                          //       value: searchState.currentQuery.furnaceNo ?? form.selectedItem,
+                          //       items: _getFurnaceNumbers(furnaces),
+                          //       hint: "All Furnaces",
+                          //       onChanged: (selected) {
+                          //         final val = selected == "0" ? "" : selected;
+                          //         _dispatchSearchWith(
+                          //           context,
+                          //           start: form.startDate ?? searchState.currentQuery.startDate,
+                          //           end:   form.endDate   ?? searchState.currentQuery.endDate,
+                          //           furnace: val,
+                          //           material: searchState.currentQuery.materialNo,
+                          //         );
+                          //       },
+                          //     );
+                          //   },
+                          // ),
 
-                          const SizedBox(height: 16),
+                          // const SizedBox(height: 16),
 
-                          // Material
-                          buildSectionTitle('Material No.'),
-                          const SizedBox(height: 8),
-                          BlocBuilder<SearchBloc, SearchState>(
-                            builder: (context, searchState) {
-                              return buildDropdownField(
-                                context: context,
-                                value: searchState.currentQuery.materialNo,
-                                items: _getMatNumbers(matNumbers),
-                                hint: "เลือกเลขแมต",
-                                onChanged: (selected) {
-                                  final val = selected == "เลือกเลขแมต" ? "" : selected;
-                                  _dispatchSearchWith(
-                                    context,
-                                    start: form.startDate ?? searchState.currentQuery.startDate,
-                                    end:   form.endDate   ?? searchState.currentQuery.endDate,
-                                    furnace: searchState.currentQuery.furnaceNo,
-                                    material: val,
-                                  );
-                                },
-                              );
-                            },
-                          )
+                          // // Material
+                          // buildSectionTitle('Material No.'),
+                          // const SizedBox(height: 8),
+                          // BlocBuilder<SearchBloc, SearchState>(
+                          //   builder: (context, searchState) {
+                          //     return buildDropdownField(
+                          //       context: context,
+                          //       value: searchState.currentQuery.materialNo,
+                          //       items: _getMatNumbers(matNumbers),
+                          //       hint: "All Material No.",
+                          //       onChanged: (selected) {
+                          //         final val = selected == "All Material No." ? "" : selected;
+                          //         _dispatchSearchWith(
+                          //           context,
+                          //           start: form.startDate ?? searchState.currentQuery.startDate,
+                          //           end:   form.endDate   ?? searchState.currentQuery.endDate,
+                          //           furnace: searchState.currentQuery.furnaceNo,
+                          //           material: val,
+                          //         );
+                          //       },
+                          //     );
+                          //   },
+                          // )
                         ],
                       ),
                     ),
@@ -337,6 +326,8 @@ class _SearchingFormState extends State<SearchingForm> {
     final q = searchState.currentQuery;
     final newStart = isStartDate ? picked : (q.startDate ?? picked);
     final newEnd   = isStartDate ? (q.endDate ?? picked) : picked;
+
+    if(!context.mounted) return;
 
     context.read<SettingBloc>().add(UpdatePeriodS('กำหนดเอง'));
     context.read<SettingBloc>()

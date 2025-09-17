@@ -127,6 +127,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = searchState;
+    state.controlChartStats?.controlChartSpots?.surfaceHardness
 
     // Guards
     if (state.status == SearchStatus.loading) {
@@ -159,7 +160,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
         builder: (context, constraints) {
           const sectionLabelH = 20.0;
           const gapV = 8.0;
-          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV) * 2 - 40) / 2)
+          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV) * 2 - 72) / 2)
               .clamp(0.0, double.infinity);
 
           return Column(
@@ -172,7 +173,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                     child: Center(child: Text(title, style: AppTypography.textBody3BBold)),
                   ),
                   // if (onZoom != null) ...[
-                  //   const SizedBox(width: 8),
+                  //   // const SizedBox(width: 8),
                   //   IconButton(
                   //     tooltip: 'Zoom',
                   //     icon: const Icon(Icons.fullscreen, size: 18),
@@ -195,19 +196,51 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                     children: [
                       // Header Top
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Expanded(
-                            child: Center(
-                              child: Text(
-                                "$selectedLabel | Control Chart",
-                                style: AppTypography.textBody3B,
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Beyond Spec Limit",
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 12
+                                ),
+                                textAlign: TextAlign.center
+                                ),
+                              Text(
+                                "Beyond Control Limit",
+                                style: TextStyle(
+                                  color: Colors.orange,
+                                  fontSize: 12
+                                ),
+                                textAlign: TextAlign.center
+                                ),
+                              Text(
+                                "Trend",
+                                style: TextStyle(
+                                  color: Colors.teal,
+                                  fontSize: 12
+                                ),
+                                textAlign: TextAlign.center
+                                )
+                            ],
                           ),
+                          Text(
+                            "$selectedLabel | Control Chart",
+                            style: AppTypography.textBody3B,
+                            textAlign: TextAlign.center,
+                          ),
+                          if (onZoom != null) ...[
+                            IconButton(
+                              tooltip: 'Zoom',
+                              icon: const Icon(Icons.fullscreen, size: 18),
+                              onPressed: () => onZoom!(context),
+                            ),
+                          ],
                         ],
                       ),
-
                       const SizedBox(height: 4),
 
                       // Control Chart (Surface-like: pass explicit time window)
@@ -312,3 +345,87 @@ class _SmallNoData extends StatelessWidget {
   Widget build(BuildContext context) =>
       const Center(child: Text('No Data', style: TextStyle(fontSize: 12, color: Colors.grey)));
 }
+
+class _ViolationRow extends StatelessWidget {
+  const _ViolationRow({
+    required this.label,
+    required this.labelColor,
+    required this.wrongIconColor,
+    required this.correctIconColor,
+    required this.count,
+  });
+
+  final String label;
+  final Color labelColor;
+  final Color wrongIconColor;
+  final Color correctIconColor;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, style: TextStyle(color: labelColor, fontSize: 12)),
+        const SizedBox(width: 8),
+        // wrong / correct circles
+        Icon(Icons.circle, size: 10, color: wrongIconColor),
+        const SizedBox(width: 4),
+        Icon(Icons.circle, size: 10, color: correctIconColor),
+        const SizedBox(width: 8),
+        // count pill
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.06),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            '$count',
+            style: const TextStyle(
+              fontSize: 11,
+              color: Colors.black87,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TrendIconsRow extends StatelessWidget {
+  const _TrendIconsRow({
+    required this.label,
+    required this.labelColor,
+    required this.iconColor,
+    this.showActiveHint = false,
+  });
+
+  final String label;
+  final Color labelColor;
+  final Color iconColor;
+  final bool showActiveHint;
+
+  @override
+  Widget build(BuildContext context) {
+    // slightly emphasize the first icon when trend exists
+    final Color firstColor = showActiveHint
+        ? iconColor.withOpacity(0.95)
+        : iconColor.withOpacity(0.65);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label, style: TextStyle(color: labelColor, fontSize: 12)),
+        const SizedBox(width: 8),
+        Icon(Icons.trending_up_rounded, size: 14, color: firstColor),
+        const SizedBox(width: 4),
+        Icon(Icons.show_chart_rounded, size: 14, color: iconColor.withOpacity(0.85)),
+      ],
+    );
+  }
+}
+
+
+

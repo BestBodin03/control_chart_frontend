@@ -65,11 +65,10 @@ class AppDrawer extends StatelessWidget {
                             onTap: () => Navigator.pop(context),
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
-                              child: SvgPicture.asset(
-                                'assets/icons/collapse_sidebar.svg',
-                                width: 24,
-                                height: 24,
-                                colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                              child: const Icon(
+                                Icons.chevron_left, // or Icons.menu_open_rounded
+                                size: 24,
+                                color: Colors.white,
                               ),
                             ),
                           ),
@@ -80,26 +79,30 @@ class AppDrawer extends StatelessWidget {
                 ),
             ),
       
-            _buildTile(context, 'assets/icons/tv_monitoring.svg', 'Home', 0),
-            _buildTile(context, 'assets/icons/searching.svg', 'Search', 1),
-            _buildTile(context, 'assets/icons/setting.svg', 'Setting', 2),
-            _buildTile(context, 'assets/icons/chart_detail.svg', 'Chart Detail', 3),
+            _buildTile(context, Icons.tv,            'Home',         0),
+            _buildTile(context, Icons.search_rounded,'Search',       1),
+            _buildTile(context, Icons.settings_rounded,'Setting',    2),
+            _buildTile(context, Icons.show_chart,    'Chart Detail', 3),
+
           ],
         ),
       );
     }
 
-  Widget _buildTile(BuildContext context, String iconPath, String title, int index) {
+  Widget _buildTile(BuildContext context, IconData icon, String title, int index) {
+    final bool isSelected = selectedIndex == index;
+    final Color fg = isSelected ? const Color.fromARGB(255, 15, 1, 201) : AppColors.colorBrand;
+
     return ListTile(
-      leading: SvgPicture.asset(iconPath),
-      title: Text(title,
-                  style: AppTypography.textBody2BBold),
-      selected: selectedIndex == index,
+      leading: Icon(icon, size: 24, color: fg),
+      title: Text(
+        title,
+        style: AppTypography.textBody2BBold.copyWith(color: fg),
+      ),
+      selected: isSelected,
       selectedTileColor: AppColors.colorBrandTp,
       onTap: () {
-        if (selectedIndex != index) {
-          onItemTapped(index);
-        }
+        if (!isSelected) onItemTapped(index);
       },
     );
   }

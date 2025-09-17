@@ -1,8 +1,5 @@
 
-// import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
-// import 'package:control_chart/data/bloc/setting/setting_bloc.dart';
-// import 'package:control_chart/data/cubit/setting_cubit.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/help.dart';
 import 'package:control_chart/ui/core/shared/small_control_chart/surface_hardness/help.dart';
@@ -17,7 +14,7 @@ class FurnaceReportLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     // Single BlocBuilder at the top level to share state
     return BlocBuilder<SearchBloc, SearchState>(
-      builder: (context, searchState) {
+      builder: (context, smallSearchState) {
         return Padding(
           padding: const EdgeInsets.all(16.0),
           child: Center(
@@ -36,32 +33,32 @@ class FurnaceReportLayout extends StatelessWidget {
                       children: [
                         buildHeaderTable(),
                         // Pass searchState to data table instead of nested BlocBuilder
-                        _buildDataSection(context, searchState),
+                        _buildDataSection(context, smallSearchState),
                       ],
                     ),
                   ),
                   
                   const SizedBox(height: 16),
                   // buildPagination(),
-                  const SizedBox(height: 16),
+                  // const SizedBox(height: 16),
                   
-                  // Use shared searchState
-                  Text(
-                    'Furnace No. ${searchState.currentQuery.furnaceNo?.isNotEmpty == true ? searchState.currentQuery.furnaceNo : '-'}, '
-                    'Material No. ${searchState.currentQuery.materialNo?.isNotEmpty == true ? searchState.currentQuery.materialNo : '-'}',
-                    style: AppTypography.textBody1BBold
-                  ),
+                  // // Use shared searchState
+                  // Text(
+                  //   'Furnace No. ${smallSearchState.currentQuery.furnaceNo?.isNotEmpty == true ? smallSearchState.currentQuery.furnaceNo : '-'}, '
+                  //   'Material No. ${smallSearchState.currentQuery.materialNo?.isNotEmpty == true ? smallSearchState.currentQuery.materialNo : '-'}',
+                  //   style: AppTypography.textBody1BBold
+                  // ),
                   
-                  const SizedBox(height: 16),
+                  // const SizedBox(height: 16),
 
                   Flex(
                     direction: Axis.vertical,
                     children: [
                       Row(
                         children: [
-                          // Expanded(child: buildChartsSectionSurfaceHardness(searchState)),
-                          // SizedBox(width: 16),
-                          // Expanded(child: buildChartsSectionCdeCdt(searchState)),
+                          Expanded(child: buildChartsSectionSurfaceHardnessSmall(smallSearchState)),
+                          SizedBox(width: 16),
+                          Expanded(child: buildChartsSectionCdeCdtSmall(smallSearchState)),
                         ],
                       ),
                     ],

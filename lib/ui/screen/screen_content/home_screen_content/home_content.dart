@@ -36,8 +36,8 @@ class _HomeContentState extends State<HomeContent> {
   int _winStart = 0;     // index เริ่มของหน้าต่างใน labels
   int _winMaxStart = 0;  // ค่าสูงสุดที่เลื่อนได้
   int _winSize = 6;      // = xTick เสมอ
-  static late final List<DateTime?> baseStartDates;
-  static late final List<DateTime?> baseEndDates;
+  late final List<DateTime?> baseStartDates;
+  late final List<DateTime?> baseEndDates;
 
   // ---------- Logging ----------
   void _logIncomingProfiles(String tag) {
@@ -53,7 +53,7 @@ class _HomeContentState extends State<HomeContent> {
     if (i < 0 || i >= widget.profiles.length) return;
     final p = widget.profiles[i];
     final uniqueKey =
-        '${p.startDate?.microsecondsSinceEpoch ?? 0}-${p.endDate?.microsecondsSinceEpoch ?? 0}-${p.furnaceNo ?? ''}-${p.materialNo ?? ''}-';
+        '${p.startDate?.millisecondsSinceEpoch ?? 0}-${p.endDate?.millisecondsSinceEpoch ?? 0}-${p.furnaceNo ?? ''}-${p.materialNo ?? ''}-';
     dev.log('[$tag] slide=$i  uniqueKey=$uniqueKey  payload=$p');
   }
 
@@ -209,7 +209,7 @@ class _HomeContentState extends State<HomeContent> {
     if (profiles.length <= 1) {
       final q = profiles.isNotEmpty ? profiles.first : const HomeContentVar();
       final uniqueKey =
-          '${q.startDate?.microsecondsSinceEpoch ?? 0}-${q.endDate?.microsecondsSinceEpoch ?? 0}-${q.furnaceNo ?? ''}-${q.materialNo ?? ''}-';
+          '${q.startDate?.millisecondsSinceEpoch ?? 0}-${q.endDate?.millisecondsSinceEpoch ?? 0}-${q.furnaceNo ?? ''}-${q.materialNo ?? ''}-';
 
       return LayoutBuilder(
         key: ValueKey(uniqueKey),
@@ -419,7 +419,7 @@ class _HomeContentState extends State<HomeContent> {
                       ),
                     ],
                   )
-                : null,
+                : widget,
           ),
           const Expanded(child: SizedBox()),
         ],
