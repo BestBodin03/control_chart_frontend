@@ -20,6 +20,21 @@ extension SearchStateExtension on SearchState {
       final dt = chartDetail.chartGeneralDetail.collectedDate;
       final value   = (index < values.length)   ? values[index]   : 0.0;
       final mrValue = (index < mrValues.length) ? mrValues[index] : 0.0;
+      final isViolatedR3 = (index < stats.controlChartSpots!.surfaceHardness.length)
+          ? stats.controlChartSpots!.surfaceHardness[index].isViolatedR3
+          : false;
+      final isViolatedR1BeyondLCL = (index < stats.controlChartSpots!.surfaceHardness.length)
+          ? stats.controlChartSpots!.surfaceHardness[index].isViolatedR1BeyondLCL
+          : false;
+      final isViolatedR1BeyondUCL = (index < stats.controlChartSpots!.surfaceHardness.length)
+          ? stats.controlChartSpots!.surfaceHardness[index].isViolatedR1BeyondUCL
+          : false;
+      final isViolatedR1BeyondLSL = (index < stats.controlChartSpots!.surfaceHardness.length)
+          ? stats.controlChartSpots!.surfaceHardness[index].isViolatedR1BeyondLSL
+          : false;
+      final isViolatedR1BeyondUSL = (index < stats.controlChartSpots!.surfaceHardness.length)
+          ? stats.controlChartSpots!.surfaceHardness[index].isViolatedR1BeyondUSL
+          : false;
 
       return ChartDataPoint(
         collectDate: dt,
@@ -32,6 +47,11 @@ extension SearchStateExtension on SearchState {
         matNo: chartDetail.cpNo,
         value: value,
         mrValue: mrValue,
+        isViolatedR3: isViolatedR3,
+        isViolatedR1BeyondLCL: isViolatedR1BeyondLCL,
+        isViolatedR1BeyondUCL: isViolatedR1BeyondUCL,
+        isViolatedR1BeyondLSL: isViolatedR1BeyondLSL,
+        isViolatedR1BeyondUSL: isViolatedR1BeyondUSL,
       );
     }).toList();
   }
@@ -71,6 +91,9 @@ extension SearchStateExtension on SearchState {
       final dt = chartDetail.chartGeneralDetail.collectedDate;
       final value   = (index < values.length)   ? values[index]   : 0.0;
       final mrValue = (index < mrValues.length) ? mrValues[index] : 0.0;
+      // final isViolatedR3 = (index < stats.controlChartSpots.)
+      //     ? stats.surfaceHardnessNelsonRules[index].isViolatedR3
+      //     : false;
 
       return ChartDataPointCdeCdt(
         collectDate: dt,
@@ -83,6 +106,7 @@ extension SearchStateExtension on SearchState {
         matNo: chartDetail.cpNo,
         value: value,
         mrValue: mrValue,
+        isViolatedR3: false,
       );
     }).toList();
   }

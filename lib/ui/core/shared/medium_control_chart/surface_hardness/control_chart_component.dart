@@ -241,98 +241,162 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
   // ---------------------------------------------------------------------------
   // LINE & TOUCH
   // ---------------------------------------------------------------------------
+@override
+List<LineChartBarData> buildLineBarsData() {
+  final pts = _pointsInWindow;
+  if (pts.isEmpty) {
+    return [LineChartBarData(spots: const [], color: dataLineColor, barWidth: 2)];
+  }
 
-  @override
-  List<LineChartBarData> buildLineBarsData() {
-    final pts = _pointsInWindow;
-    if (pts.isEmpty) {
-      return [
-        LineChartBarData(spots: const [], color: dataLineColor, barWidth: 2),
-      ];
+  final minXv = xStart.millisecondsSinceEpoch.toDouble();
+  final maxXv = xEnd.millisecondsSinceEpoch.toDouble();
+
+  // จุดสำหรับวาด (กรองช่วงเวลา + sort)
+  final spots = pts
+      .where((p) => p.collectDate != null)
+      .map((p) => FlSpot(p.collectDate!.millisecondsSinceEpoch.toDouble(), p.value))
+      .where((s) => s.x >= math.min(minXv, maxXv) && s.x <= math.max(minXv, maxXv))
+      .toList()
+    ..sort((a, b) => a.x.compareTo(b.x));
+
+  // หา R3 segments
+  final List<List<FlSpot>> r3Segments = [];
+  var cur = <FlSpot>[];
+  for (final p in pts) {
+    final dt = p.collectDate;
+    if (dt == null) continue;
+    final s = FlSpot(dt.millisecondsSinceEpoch.toDouble(), p.value);
+    if (p.isViolatedR3 == true) {
+      cur.add(s);
+    } else {
+      if (cur.isNotEmpty) {
+        r3Segments.add(cur);
+        cur = <FlSpot>[];
+      }
     }
-
-    final minXv = xStart.millisecondsSinceEpoch.toDouble();
-    final maxXv = xEnd.millisecondsSinceEpoch.toDouble();
-
-    final spots = pts
-        .map((p) => FlSpot(
-              p.collectDate.millisecondsSinceEpoch.toDouble(),
-              p.value,
-            ))
-        .where((s) => s.x >= math.min(minXv, maxXv) && s.x <= math.max(minXv, maxXv))
-        .toList()
-      ..sort((a, b) => a.x.compareTo(b.x));
-
-    return [
-      LineChartBarData(
-        spots: spots,
-        isCurved: false,
-        color: dataLineColor,
-        barWidth: 2,
-        isStrokeCapRound: true,
-        dotData: FlDotData(
-          show: true,
-          getDotPainter: (spot, _, __, ___) {
-            final v = spot.y;
-            Color dotColor = dataLineColor ?? AppColors.colorBrand;
-            final upperSpec = controlChartStats?.specAttribute?.surfaceHardnessUpperSpec ?? 0.0;
-            final lowerSpec = controlChartStats?.specAttribute?.surfaceHardnessLowerSpec ?? 0.0;
-            final ucl = controlChartStats?.controlLimitIChart?.ucl ?? 0.0;
-            final lcl = controlChartStats?.controlLimitIChart?.lcl ?? 0.0;
-
-            if ((upperSpec > 0 && v > upperSpec) || (lowerSpec > 0 && v < lowerSpec)) {
-              dotColor = Colors.red;
-            } else if ((ucl > 0 && v > ucl) || (lcl > 0 && v < lcl)) {
-              dotColor = Colors.orange;
-            }
-
-            return FlDotCirclePainter(
-              radius: 3.5,
-              color: dotColor.withValues(alpha: 0.7),
-              strokeWidth: 1,
-              strokeColor: Colors.white,
-            );
-          },
-        ),
-        belowBarData: BarAreaData(show: false),
-      ),
-    ];
   }
+  if (cur.isNotEmpty) r3Segments.add(cur);
 
-  @override
-  LineTouchData buildTouchData() {
-    final points = _pointsInWindow;
-    final Map<double, ChartDataPoint> map = {
-      for (final p in points) p.collectDate.millisecondsSinceEpoch.toDouble(): p
-    };
+  // lookup: x(epoch ms double) -> DataPoint (ใช้กับ dotPainter)
+  final Map<double, ChartDataPoint> dpByX = {
+    for (final p in pts.where((e) => e.collectDate != null))
+      p.collectDate!.millisecondsSinceEpoch.toDouble(): p
+  };
 
-    return LineTouchData(
-      handleBuiltInTouches: true,
-      touchTooltipData: LineTouchTooltipData(
-        maxContentWidth: 150,
-        getTooltipColor: (_) => AppColors.colorBrand.withValues(alpha: 0.9),
-        tooltipBorderRadius: BorderRadius.circular(8),
-        fitInsideHorizontally: true,
-        fitInsideVertically: true,
-        tooltipMargin: 8,
-        getTooltipItems: (spots) {
-          return spots.map((barSpot) {
-            final p = map[barSpot.x];
-            if (p == null) return null;
+  final baseColor = dataLineColor ?? AppColors.colorBrand;
 
-            return LineTooltipItem(
-              "วันที่: ${p.fullLabel}\n"
-              "ค่า: ${barSpot.y.toStringAsFixed(3)}\n"
-              "เตา: ${p.furnaceNo}\n"
-              "เลขแมต: ${p.matNo}",
-              AppTypography.textBody3W,
-              textAlign: TextAlign.left,
-            );
-          }).whereType<LineTooltipItem>().toList();
-        },
-      ),
-    );
-  }
+  // เส้น base — วาดจุดพร้อมสีตาม rule (ชมพู > แดง > ส้ม > default)
+  final baseLine = LineChartBarData(
+    spots: spots,
+    isCurved: false,
+    color: baseColor,
+    barWidth: 2,
+    isStrokeCapRound: true,
+    dotData: FlDotData(
+      show: true,
+      getDotPainter: (spot, __, ___, ____) {
+        final dp = dpByX[spot.x]; // จุดเดียวกัน
+        final v = spot.y;
+
+        // ขีดจำกัด (ถ้าต้องใช้จากค่าแทน flag)
+        final upperSpec = controlChartStats?.specAttribute?.surfaceHardnessUpperSpec ?? 0.0;
+        final lowerSpec = controlChartStats?.specAttribute?.surfaceHardnessLowerSpec ?? 0.0;
+        final ucl       = controlChartStats?.controlLimitIChart?.ucl ?? 0.0;
+        final lcl       = controlChartStats?.controlLimitIChart?.lcl ?? 0.0;
+
+        // เลือกสีแบบ flag ก่อน ถ้าไม่มี flag ใช้เงื่อนไขค่าแทนได้
+        Color dotColor;
+        if (dp?.isViolatedR3 == true) {
+          dotColor = Colors.pinkAccent;                           // Trend
+        } else if (dp?.isViolatedR1BeyondUSL == true || dp?.isViolatedR1BeyondLSL == true ||
+                  ((upperSpec > 0 && v > upperSpec) || (lowerSpec > 0 && v < lowerSpec))) {
+          dotColor = Colors.red;                                   // Spec
+        } else if (dp?.isViolatedR1BeyondUCL == true || dp?.isViolatedR1BeyondLCL == true ||
+                  ((ucl > 0 && v > ucl) || (lcl > 0 && v < lcl))) {
+          dotColor = Colors.orange;                                // Control
+        } else {
+          dotColor = baseColor;                                    // Default
+        }
+
+        return FlDotCirclePainter(
+          radius: 3.5,
+          color: dotColor,
+          strokeWidth: 1,
+          strokeColor: Colors.white, // ขอบขาว
+        );
+      },
+    ),
+    belowBarData: BarAreaData(show: false),
+  );
+
+  // เส้น overlay R3 (ขอบขาว + สีจริง), ปิด tooltip และไม่วาดจุด
+  final r3Lines = r3Segments
+      .where((seg) => seg.length >= 2)
+      .expand((seg) => [
+            // ขอบขาว
+            LineChartBarData(
+              spots: seg,
+              isCurved: false,
+              color: Colors.white,
+              barWidth: 5,
+              isStrokeCapRound: true,
+              dotData: const FlDotData(show: false),
+              belowBarData: BarAreaData(show: false),
+              showingIndicators: const [], // ไม่ร่วม tooltip
+            ),
+            // สีชมพูจริง
+            LineChartBarData(
+              spots: seg,
+              isCurved: false,
+              color: Colors.pinkAccent,
+              barWidth: 3,
+              isStrokeCapRound: true,
+              dotData: const FlDotData(show: false), // จุดใช้จาก baseLine แล้ว
+              belowBarData: BarAreaData(show: false),
+              showingIndicators: const [], // ไม่ร่วม tooltip
+            ),
+          ])
+      .toList();
+
+  return [baseLine, ...r3Lines];
+}
+
+@override
+LineTouchData buildTouchData() {
+  final points = _pointsInWindow;
+  final Map<double, ChartDataPoint> map = {
+    for (final p in points.where((e) => e.collectDate != null))
+      p.collectDate!.millisecondsSinceEpoch.toDouble(): p,
+  };
+
+  return LineTouchData(
+    handleBuiltInTouches: true,
+    touchTooltipData: LineTouchTooltipData(
+      maxContentWidth: 160,
+      getTooltipColor: (_) => AppColors.colorBrand.withValues(alpha: 0.9),
+      tooltipBorderRadius: BorderRadius.circular(8),
+      fitInsideHorizontally: true,
+      fitInsideVertically: true,
+      tooltipMargin: 8,
+      getTooltipItems: (spots) {
+        // ตอนนี้ overlay ถูกตัดออกแล้ว จึงมาจาก baseLine ชุดเดียว
+        return spots.map((barSpot) {
+          final p = map[barSpot.x];
+          if (p == null) return null;
+          return LineTooltipItem(
+            "วันที่: ${p.fullLabel}\n"
+            "ค่า: ${barSpot.y.toStringAsFixed(3)}\n"
+            "เตา: ${p.furnaceNo}\n"
+            "เลขแมต: ${p.matNo}",
+            AppTypography.textBody3W,
+            textAlign: TextAlign.left,
+          );
+        }).whereType<LineTooltipItem>().toList();
+      },
+    ),
+  );
+}
+
 
   // ---------------------------------------------------------------------------
   // LEGEND

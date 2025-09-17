@@ -5,6 +5,7 @@ import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/control_chart_template.dart';
+import 'package:control_chart/ui/core/shared/violationRow.dart';
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/material.dart';
@@ -127,7 +128,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = searchState;
-    state.controlChartStats?.controlChartSpots?.surfaceHardness
+    // state.controlChartStats?.controlChartSpots?.surfaceHardness
 
     // Guards
     if (state.status == SearchStatus.loading) {
@@ -198,6 +199,12 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          Text(
+                            "$selectedLabel | Control Chart",
+                            style: AppTypography.textBody3B,
+                            textAlign: TextAlign.center,
+                          ),
+
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -227,11 +234,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                                 )
                             ],
                           ),
-                          Text(
-                            "$selectedLabel | Control Chart",
-                            style: AppTypography.textBody3B,
-                            textAlign: TextAlign.center,
-                          ),
+
                           if (onZoom != null) ...[
                             IconButton(
                               tooltip: 'Zoom',

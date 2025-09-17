@@ -5,6 +5,7 @@ import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_template.dart';
+import 'package:control_chart/ui/core/shared/violationRow.dart';
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/material.dart';
@@ -155,7 +156,7 @@ class _MediumContainer extends StatelessWidget {
       color: Colors.transparent,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV) * 2 - 72) / 2)
+          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV) * 2 - 80) / 2)
               .clamp(0.0, double.infinity);
 
           return Column(
@@ -193,49 +194,49 @@ class _MediumContainer extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Beyond Spec Limit",
-                                style: TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 12
-                                ),
-                                textAlign: TextAlign.center
-                                ),
-                              Text(
-                                "Beyond Control Limit",
-                                style: TextStyle(
-                                  color: Colors.orange,
-                                  fontSize: 12
-                                ),
-                                textAlign: TextAlign.center
-                                ),
-                              Text(
-                                "Trend",
-                                style: TextStyle(
-                                  color: Colors.teal,
-                                  fontSize: 12
-                                ),
-                                textAlign: TextAlign.center
-                                )
-                            ],
-                          ),
-                          Text(
-                            "Surface Hardness | Control Chart",
-                            style: AppTypography.textBody3B,
-                            textAlign: TextAlign.center,
+
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: Text(
+                              "Surface Hardness | Control Chart",
+                              style: AppTypography.textBody3BBold,
+                              textAlign: TextAlign.center,
+                            ),
                           ),
 
-                          // const SizedBox(width: 20),
-                          if (onZoom != null) ...[
-                            IconButton(
-                              tooltip: 'Zoom',
-                              icon: const Icon(Icons.fullscreen, size: 18),
-                              onPressed: () => onZoom!(context),
-                            ),
-                          ],
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8), // margin เดิม
+                                child: SizedBox(
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: Colors.transparent,
+                                      border: Border.all(color: Colors.grey.shade400),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12), // padding เดิม
+                                      child: ViolationsRow(
+                                        beyondControlLimit: state.controlChartStats?.surfaceHardnessViolations?.beyondControlLimit ?? 0,
+                                        beyondSpecLimit: state.controlChartStats?.surfaceHardnessViolations?.beyondSpecLimit ?? 0,
+                                        trend: state.controlChartStats?.surfaceHardnessViolations?.trend ?? 0,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              if (onZoom != null) ...[
+                                IconButton(
+                                  tooltip: 'Zoom',
+                                  icon: const Icon(Icons.fullscreen, size: 18),
+                                  onPressed: () => onZoom(context),
+                                ),
+                              ],
+                            ],
+                          ),
                         ],
                       ),
 

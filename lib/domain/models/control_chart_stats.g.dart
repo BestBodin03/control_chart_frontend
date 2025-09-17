@@ -10,6 +10,26 @@ ControlChartStats _$ControlChartStatsFromJson(
   Map<String, dynamic> json,
 ) => ControlChartStats(
   numberOfSpots: (json['numberOfSpots'] as num?)?.toInt(),
+  surfaceHardnessViolations:
+      json['surfaceHardnessViolations'] == null
+          ? null
+          : Violations.fromJson(
+            json['surfaceHardnessViolations'] as Map<String, dynamic>,
+          ),
+  compoundLayerViolations:
+      json['compoundLayerViolations'] == null
+          ? null
+          : Violations.fromJson(
+            json['compoundLayerViolations'] as Map<String, dynamic>,
+          ),
+  cdeViolations:
+      json['cdeViolations'] == null
+          ? null
+          : Violations.fromJson(json['cdeViolations'] as Map<String, dynamic>),
+  cdtViolations:
+      json['cdtViolations'] == null
+          ? null
+          : Violations.fromJson(json['cdtViolations'] as Map<String, dynamic>),
   average: (json['average'] as num?)?.toDouble(),
   periodType: $enumDecodeNullable(_$PeriodTypeEnumMap, json['periodType']),
   compoundLayerAverage: (json['compoundLayerAverage'] as num?)?.toDouble(),
@@ -155,6 +175,10 @@ ControlChartStats _$ControlChartStatsFromJson(
 Map<String, dynamic> _$ControlChartStatsToJson(ControlChartStats instance) =>
     <String, dynamic>{
       'numberOfSpots': instance.numberOfSpots,
+      'surfaceHardnessViolations': instance.surfaceHardnessViolations?.toJson(),
+      'compoundLayerViolations': instance.compoundLayerViolations?.toJson(),
+      'cdeViolations': instance.cdeViolations?.toJson(),
+      'cdtViolations': instance.cdtViolations?.toJson(),
       'average': instance.average,
       'periodType': _$PeriodTypeEnumMap[instance.periodType],
       'compoundLayerAverage': instance.compoundLayerAverage,
@@ -226,6 +250,19 @@ Map<String, dynamic> _$ControlLimitIChartToJson(ControlLimitIChart instance) =>
       'CL': instance.cl,
       'UCL': instance.ucl,
       'LCL': instance.lcl,
+    };
+
+Violations _$ViolationsFromJson(Map<String, dynamic> json) => Violations(
+  beyondControlLimit: (json['beyondControlLimit'] as num?)?.toInt(),
+  beyondSpecLimit: (json['beyondSpecLimit'] as num?)?.toInt(),
+  trend: (json['trend'] as num?)?.toInt(),
+);
+
+Map<String, dynamic> _$ViolationsToJson(Violations instance) =>
+    <String, dynamic>{
+      'beyondControlLimit': instance.beyondControlLimit,
+      'beyondSpecLimit': instance.beyondSpecLimit,
+      'trend': instance.trend,
     };
 
 SigmaIChart _$SigmaIChartFromJson(Map<String, dynamic> json) => SigmaIChart(
@@ -301,6 +338,10 @@ Map<String, dynamic> _$SpecAttributeToJson(SpecAttribute instance) =>
 
 DataPoint _$DataPointFromJson(Map<String, dynamic> json) => DataPoint(
   value: (json['value'] as num).toDouble(),
+  collectDate:
+      json['collectDate'] == null
+          ? null
+          : DateTime.parse(json['collectDate'] as String),
   isViolatedR1BeyondLCL: json['isViolatedR1BeyondLCL'] as bool? ?? false,
   isViolatedR1BeyondUCL: json['isViolatedR1BeyondUCL'] as bool? ?? false,
   isViolatedR1BeyondLSL: json['isViolatedR1BeyondLSL'] as bool? ?? false,
@@ -310,6 +351,7 @@ DataPoint _$DataPointFromJson(Map<String, dynamic> json) => DataPoint(
 
 Map<String, dynamic> _$DataPointToJson(DataPoint instance) => <String, dynamic>{
   'value': instance.value,
+  'collectDate': instance.collectDate?.toIso8601String(),
   'isViolatedR1BeyondLCL': instance.isViolatedR1BeyondLCL,
   'isViolatedR1BeyondUCL': instance.isViolatedR1BeyondUCL,
   'isViolatedR1BeyondLSL': instance.isViolatedR1BeyondLSL,

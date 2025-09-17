@@ -9,6 +9,11 @@ part 'control_chart_stats.g.dart';
 class ControlChartStats {
   final int? numberOfSpots;
 
+  final Violations? surfaceHardnessViolations;
+  final Violations? compoundLayerViolations;
+  final Violations? cdeViolations;
+  final Violations? cdtViolations;
+
   final double? average;
   final PeriodType? periodType;
   final double? compoundLayerAverage;
@@ -64,6 +69,10 @@ class ControlChartStats {
 
   const ControlChartStats({
     this.numberOfSpots,
+    this.surfaceHardnessViolations,
+    this.compoundLayerViolations,
+    this.cdeViolations,
+    this.cdtViolations,
     this.average,
     this.periodType,
     this.compoundLayerAverage,
@@ -107,6 +116,10 @@ class ControlChartStats {
   const ControlChartStats.empty(this.yAxisRange)
       : numberOfSpots = 0,
         average = 0.0,
+        surfaceHardnessViolations = const Violations(),
+        compoundLayerViolations = const Violations(),
+        cdeViolations = const Violations(),
+        cdtViolations = const Violations(),
         periodType = PeriodType.ONE_MONTH,
         compoundLayerAverage = 0.0,
         cdeAverage = 0.0,
@@ -160,6 +173,21 @@ class ControlLimitIChart {
   factory ControlLimitIChart.fromJson(Map<String, dynamic> json) =>
       _$ControlLimitIChartFromJson(json);
   Map<String, dynamic> toJson() => _$ControlLimitIChartToJson(this);
+}
+
+
+/// ==================== Violations ====================
+@JsonSerializable()
+class Violations{
+  final int? beyondControlLimit;
+  final int? beyondSpecLimit;
+  final int? trend;
+
+  const Violations({this.beyondControlLimit, this.beyondSpecLimit, this.trend});
+
+  factory Violations.fromJson(Map<String, dynamic> json) =>
+      _$ViolationsFromJson(json);
+  Map<String, dynamic> toJson() => _$ViolationsToJson(this);
 }
 
 @JsonSerializable()
@@ -241,6 +269,7 @@ class SpecAttribute {
 class DataPoint {
   /// ค่าจุดบน I-Chart
   final double value;
+  final DateTime? collectDate;
 
   /// Nelson Rule 1 (เกิน LCL/UCL/LSL/USL)
   @JsonKey(defaultValue: false) final bool isViolatedR1BeyondLCL;
@@ -253,6 +282,7 @@ class DataPoint {
 
   const DataPoint({
     required this.value,
+    required this.collectDate,
     this.isViolatedR1BeyondLCL = false,
     this.isViolatedR1BeyondUCL = false,
     this.isViolatedR1BeyondLSL = false,
