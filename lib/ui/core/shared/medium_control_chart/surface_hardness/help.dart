@@ -5,10 +5,11 @@ import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_template.dart';
-import 'package:control_chart/ui/core/shared/violationRow.dart';
+import 'package:control_chart/ui/core/shared/violations_component.dart';
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 typedef ZoomBuilder = Widget Function(
   BuildContext context,
@@ -59,7 +60,7 @@ Widget buildChartsSectionSurfaceHardness(
   final s = baseStart;
   final e = baseEnd;
   if (s != null && e != null) {
-    parts.add('Date ${fmtDate(s)} - ${fmtDate(e)}');
+    parts.add('Date ${DateFormat('dd/MM').format(s)} - ${DateFormat('dd/MM').format(e)}');
   }
 
   // ผลลัพธ์: จะมีเฉพาะส่วนที่มีข้อมูลจริง และคั่นด้วย " | "
@@ -130,6 +131,19 @@ class _MediumContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = searchState;
+    final spotCount = state.controlChartStats?.numberOfSpots;
+
+    final violations = state.controlChartStats?.surfaceHardnessViolations;
+    final bgColor = _getViolationBgColor(
+      violations?.beyondControlLimit ?? 0,
+      violations?.beyondSpecLimit ?? 0,
+      violations?.trend ?? 0,
+    );
+    final borderColor = _getViolationBorderColor(
+      violations?.beyondControlLimit ?? 0,
+      violations?.beyondSpecLimit ?? 0,
+      violations?.trend ?? 0,
+    );
 
 // used only for proportions inside layout
     const sectionLabelH = 20.0;
@@ -156,7 +170,7 @@ class _MediumContainer extends StatelessWidget {
       color: Colors.transparent,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV) * 2 - 80) / 2)
+          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV) * 2 - 108) / 2)
               .clamp(0.0, double.infinity);
 
           return Column(
@@ -182,8 +196,8 @@ class _MediumContainer extends StatelessWidget {
               // Card
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: AppColors.colorBrandTp.withValues(alpha: 0.15),
-                  border: Border.all(color: AppColors.colorBrandTp.withValues(alpha: 0.35), width: 1),
+                  color: bgColor,
+                  border: Border.all(color: borderColor, width: 1),
                   borderRadius: BorderRadius.circular(8.0),
                 ),
                 child: Padding(
@@ -192,33 +206,47 @@ class _MediumContainer extends StatelessWidget {
                     children: [
                       // Header Top
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
 
                           Padding(
                             padding: const EdgeInsets.only(left: 8.0),
-                            child: Text(
-                              "Surface Hardness | Control Chart",
-                              style: AppTypography.textBody3BBold,
-                              textAlign: TextAlign.center,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Surface Hardness | Control Chart",
+                                  style: AppTypography.textBody3B,
+                                  textAlign: TextAlign.center,
+                                ),
+                                Text(
+                                  "$spotCount Records",
+                                  style: AppTypography.textBody3B,
+                                  textAlign: TextAlign.center,
+                                ),
+
+                              ],
                             ),
                           ),
 
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8), // margin เดิม
+                                padding: const EdgeInsets.only(bottom: 4), // margin เดิม
                                 child: SizedBox(
+                                  width: 220,
                                   child: DecoratedBox(
                                     decoration: BoxDecoration(
-                                      color: Colors.transparent,
+                                      color: const Color.fromARGB(0, 0, 0, 0),
                                       border: Border.all(color: Colors.grey.shade400),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Padding(
-                                      padding: const EdgeInsets.all(12), // padding เดิม
-                                      child: ViolationsRow(
+                                      padding: const EdgeInsets.all(8),
+                                      child: ViolationsColumn(
                                         beyondControlLimit: state.controlChartStats?.surfaceHardnessViolations?.beyondControlLimit ?? 0,
                                         beyondSpecLimit: state.controlChartStats?.surfaceHardnessViolations?.beyondSpecLimit ?? 0,
                                         trend: state.controlChartStats?.surfaceHardnessViolations?.trend ?? 0,
@@ -226,14 +254,21 @@ class _MediumContainer extends StatelessWidget {
                                     ),
                                   ),
                                 ),
+
                               ),
 
                               if (onZoom != null) ...[
-                                IconButton(
-                                  tooltip: 'Zoom',
-                                  icon: const Icon(Icons.fullscreen, size: 18),
-                                  onPressed: () => onZoom(context),
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(), // removes min size 48x48
+                                    tooltip: 'Zoom',
+                                    icon: const Icon(Icons.fullscreen, size: 18),
+                                    onPressed: () => onZoom(context),
+                                  ),
                                 ),
+
                               ],
                             ],
                           ),
@@ -289,6 +324,31 @@ class _MediumContainer extends StatelessWidget {
     );
   }
 }
+
+// Decide background color based on violation hierarchy
+Color _getViolationBgColor(int beyondControl, int beyondSpec, int trend) {
+  if (trend > 0) {
+    return Colors.pink.shade200.withValues(alpha: 0.15);
+  } else if (beyondSpec > 0) {
+    return Colors.red.shade200.withValues(alpha: 0.15);
+  } else if (beyondControl > 0) {
+    return Colors.orange.shade200.withValues(alpha: 0.15);
+  }
+  return AppColors.colorBrandTp.withValues(alpha: 0.15);
+}
+
+// Decide border color in same hierarchy
+Color _getViolationBorderColor(int beyondControl, int beyondSpec, int trend) {
+  if (trend > 0) {
+    return Colors.pinkAccent.withValues(alpha: 0.35);
+  } else if (beyondSpec > 0) {
+    return Colors.red.withValues(alpha: 0.35);
+  } else if (beyondControl > 0) {
+    return Colors.orange.withValues(alpha: 0.35);
+  }
+  return AppColors.colorBrandTp.withValues(alpha: 0.35);
+}
+
 
 Widget _buildSingleChart({
   required HomeContentVar settingProfile,

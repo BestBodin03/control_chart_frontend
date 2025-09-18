@@ -39,6 +39,11 @@ class AppTypography {
   static const textBody3BBold = TextStyle(fontSize: 14.0, color: AppColors.colorBlack, fontWeight: FontWeight.bold);
   static const textBody3WBold = TextStyle(fontSize: 14.0, color: AppColors.colorBg, fontWeight: FontWeight.bold);
 
+  static const textBody4B = TextStyle(fontSize: 12.0, color: AppColors.colorBlack);
+  static const textBody4W = TextStyle(fontSize: 12.0, color: AppColors.colorBg);
+  static const textBody4BBold = TextStyle(fontSize: 12.0, color: AppColors.colorBlack, fontWeight: FontWeight.bold);
+  static const textBody4WBold = TextStyle(fontSize: 12.0, color: AppColors.colorBg, fontWeight: FontWeight.bold);
+
 
 }
 

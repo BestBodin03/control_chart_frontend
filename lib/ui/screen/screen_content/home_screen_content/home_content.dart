@@ -176,7 +176,7 @@ class _HomeContentState extends State<HomeContent> {
     if (labels.isEmpty) return (null, null);
 
     final int s = _winStart.clamp(0, labels.length - 1);
-    final int e = (_winStart + _winSize - 1).clamp(0, labels.length - 1);
+    final int e = (_winStart + (_winSize) - 1).clamp(0, labels.length - 1);
     return (labels[s], labels[e]);
   }
 

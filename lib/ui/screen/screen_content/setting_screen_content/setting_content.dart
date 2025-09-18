@@ -57,9 +57,6 @@ class _SettingContentState extends State<SettingContent> {
 
   }
 
-  
-
-
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
@@ -121,15 +118,23 @@ class _SettingContentState extends State<SettingContent> {
                   },
                 ),
                 TabKey.importData => ImportPage(
-                  fileName: _fileName,
-                  onPickFile: () {
-                    setState(() => _fileName = 'sample-data.csv (ตัวอย่าง)');
+                  fileName: null,
+                  onPickFile: () {},
+                  dropdown1: 'x',
+                  onDropdown1: (v) {},
+                  dropdown2: 'y',
+                  onDropdown2: (v) {},
+
+                  // ฟอร์มด้านล่าง
+                  nameValue: '',                   // จาก state
+                  onNameChanged: (v) => '',
+                  onConfirm: () {
+                    // ทำงานเมื่อกด "ยืนยัน"
+                    // เช่น: context.read<SettingProfileBloc>().add(SubmitImport(...));
                   },
-                  dropdown1: _dropdown1,
-                  onDropdown1: (v) => setState(() => _dropdown1 = v),
-                  dropdown2: _dropdown2,
-                  onDropdown2: (v) => setState(() => _dropdown2 = v),
-                ),
+                  isSubmitting: false,
+                )
+
               },
             ),
           ),

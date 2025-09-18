@@ -1,33 +1,111 @@
 import 'package:control_chart/domain/models/setting.dart';
-enum SubmitStatus { idle, submitting, success, failure }
-// ถ้าไม่ได้ใช้ PeriodTypeReq ในที่อื่น แนะนำลบออกเพื่อลดสับสน
-// enum PeriodTypeReq { ONE_MONTH, THREE_MONTHS, SIX_MONTHS, ONE_YEAR, CUSTOM, LIFETIME }
 
-class RuleSelected {
-  final int? ruleId;
-  final String? ruleName;
-  final bool? isUsed;
+class SettingFormState {
+  final String profileId;
+  final String settingProfileName;
+  final bool isUsed;
+  final DisplayType displayType;
+  final int chartChangeInterval;
+  final List<RuleSelected> ruleSelected;
+  final List<SpecificSettingState> specifics;
+  final SubmitStatus status;
+  final String? error;
 
-  const RuleSelected({this.ruleId , this.ruleName, this.isUsed});
+  // Global period settings (shared by all specifics)
+  final PeriodType? globalPeriodType;
+  final DateTime? globalStartDate;
+  final DateTime? globalEndDate;
 
-  RuleSelected copyWith({int? ruleId, String? ruleName, bool? isUsed}) {
-    return RuleSelected(
-      ruleId: ruleId ?? this.ruleId,
-      ruleName: ruleName ?? this.ruleName,
-      isUsed: isUsed ?? this.isUsed,
-    );
+  // Dynamic dropdown (per index)
+  final bool dropdownLoading;
+  final Map<int, List<String>> furnaceOptionsByIndex;
+  final Map<int, List<String>> cpOptionsByIndex;
+
+  const SettingFormState({
+    this.profileId = '',
+    this.settingProfileName = '',
+    this.isUsed = true,
+    this.displayType = DisplayType.FURNACE_CP,
+    this.chartChangeInterval = 45,
+    this.ruleSelected = const [],
+    this.specifics = const [],
+    this.status = SubmitStatus.idle,
+    this.error,
+    // Global period defaults
+    this.globalPeriodType,
+    this.globalStartDate,
+    this.globalEndDate,
+    // Dropdown
+    this.dropdownLoading = false,
+    this.furnaceOptionsByIndex = const {},
+    this.cpOptionsByIndex = const {},
+  });
+
+  bool get isValid {
+    if (settingProfileName.trim().isEmpty) return false;
+    if (chartChangeInterval <= 10) return false;
+    if (specifics.isEmpty) return false;
+    
+    // Check global period settings
+    if (globalPeriodType == null || globalStartDate == null || globalEndDate == null) return false;
+
+    for (final sp in specifics) {
+      if (displayType == DisplayType.FURNACE || displayType == DisplayType.FURNACE_CP) {
+        if (sp.furnaceNo == null) return false;
+      }
+      if (displayType == DisplayType.CP || displayType == DisplayType.FURNACE_CP) {
+        if ((sp.cpNo ?? '').trim().isEmpty) return false;
+      }
+    }
+    return true;
   }
 
-  factory RuleSelected.fromNelson(NelsonRule n) {
-    return RuleSelected(
-      ruleId: n.ruleId,
-      ruleName: n.ruleName,
-      isUsed: n.isUsed,
+  SettingFormState copyWith({
+    String? profileId,
+    String? settingProfileName,
+    bool? isUsed,
+    DisplayType? displayType,
+    int? chartChangeInterval,
+    List<RuleSelected>? ruleSelected,
+    List<SpecificSettingState>? specifics,
+    SubmitStatus? status,
+    String? error,
+    // Global period fields
+    PeriodType? globalPeriodType,
+    DateTime? globalStartDate,
+    DateTime? globalEndDate,
+    // Dropdown fields
+    bool? dropdownLoading,
+    Map<int, List<String>>? furnaceOptionsByIndex,
+    Map<int, List<String>>? cpOptionsByIndex,
+  }) {
+    return SettingFormState(
+      profileId: profileId ?? this.profileId,
+      settingProfileName: settingProfileName ?? this.settingProfileName,
+      isUsed: isUsed ?? this.isUsed,
+      displayType: displayType ?? this.displayType,
+      chartChangeInterval: chartChangeInterval ?? this.chartChangeInterval,
+      ruleSelected: ruleSelected ?? this.ruleSelected,
+      specifics: specifics ?? this.specifics,
+      status: status ?? this.status,
+      error: error ?? this.error,
+      globalPeriodType: globalPeriodType ?? this.globalPeriodType,
+      globalStartDate: globalStartDate ?? this.globalStartDate,
+      globalEndDate: globalEndDate ?? this.globalEndDate,
+      dropdownLoading: dropdownLoading ?? this.dropdownLoading,
+      furnaceOptionsByIndex: furnaceOptionsByIndex ?? this.furnaceOptionsByIndex,
+      cpOptionsByIndex: cpOptionsByIndex ?? this.cpOptionsByIndex,
     );
   }
 
   @override
-  String toString() => 'RuleSelected(ruleId: $ruleId, ruleName: $ruleName, isUsed: $isUsed)';
+  String toString() => 'SettingFormState('
+      'profileId: $profileId, settingProfileName: $settingProfileName, isUsed: $isUsed, displayType: $displayType, '
+      'chartChangeInterval: $chartChangeInterval, ruleSelected: $ruleSelected, specifics: $specifics, '
+      'globalPeriodType: $globalPeriodType, globalStartDate: $globalStartDate, globalEndDate: $globalEndDate, '
+      'status: $status, error: $error, dropdownLoading: $dropdownLoading, '
+      'furnaceOptionsByIndex: $furnaceOptionsByIndex, cpOptionsByIndex: $cpOptionsByIndex'
+      ')';
 }
 
 class SpecificSettingState {
@@ -90,90 +168,33 @@ class SpecificSettingState {
   }
 }
 
-class SettingFormState {
-  final String profileId;
-  final String settingProfileName;
-  final bool isUsed;
-  final DisplayType displayType;
-  final int chartChangeInterval;
-  final List<RuleSelected> ruleSelected;
-  final List<SpecificSettingState> specifics;
-  final SubmitStatus status;
-  final String? error;
+enum SubmitStatus { idle, submitting, success, failure }
+// ถ้าไม่ได้ใช้ PeriodTypeReq ในที่อื่น แนะนำลบออกเพื่อลดสับสน
+// enum PeriodTypeReq { ONE_MONTH, THREE_MONTHS, SIX_MONTHS, ONE_YEAR, CUSTOM, LIFETIME }
 
-  // ✅ dynamic dropdown (ต่อ index)
-  final bool dropdownLoading;
-  final Map<int, List<String>> furnaceOptionsByIndex; // index -> [furnaceNo...]
-  final Map<int, List<String>> cpOptionsByIndex;       // index -> [cpNo...]
+class RuleSelected {
+  final int? ruleId;
+  final String? ruleName;
+  final bool? isUsed;
 
-  const SettingFormState({
-    this.profileId = '',
-    this.settingProfileName = '',
-    this.isUsed = true,
-    this.displayType = DisplayType.FURNACE_CP,
-    this.chartChangeInterval = 45,
-    this.ruleSelected = const [],
-    this.specifics = const [],
-    this.status = SubmitStatus.idle,
-    this.error,
-    this.dropdownLoading = false,
-    this.furnaceOptionsByIndex = const {},
-    this.cpOptionsByIndex = const {},
-  });
+  const RuleSelected({this.ruleId , this.ruleName, this.isUsed});
 
-  bool get isValid {
-    if (settingProfileName.trim().isEmpty) return false;
-    if (chartChangeInterval <= 10) return false;
-    if (specifics.isEmpty) return false;
-
-    for (final sp in specifics) {
-      if (sp.periodType == null || sp.startDate == null || sp.endDate == null) return false;
-
-      if (displayType == DisplayType.FURNACE || displayType == DisplayType.FURNACE_CP) {
-        if (sp.furnaceNo == null) return false;
-      }
-      if (displayType == DisplayType.CP || displayType == DisplayType.FURNACE_CP) {
-        if ((sp.cpNo ?? '').trim().isEmpty) return false;
-      }
-    }
-    return true;
+  RuleSelected copyWith({int? ruleId, String? ruleName, bool? isUsed}) {
+    return RuleSelected(
+      ruleId: ruleId ?? this.ruleId,
+      ruleName: ruleName ?? this.ruleName,
+      isUsed: isUsed ?? this.isUsed,
+    );
   }
 
-  SettingFormState copyWith({
-    String? profileId,
-    String? settingProfileName,
-    bool? isUsed,
-    DisplayType? displayType,
-    int? chartChangeInterval,
-    List<RuleSelected>? ruleSelected,
-    List<SpecificSettingState>? specifics,
-    SubmitStatus? status,
-    String? error,
-    bool? dropdownLoading,
-    Map<int, List<String>>? furnaceOptionsByIndex,
-    Map<int, List<String>>? cpOptionsByIndex,
-  }) {
-    return SettingFormState(
-      profileId: profileId ?? this.profileId,
-      settingProfileName: settingProfileName ?? this.settingProfileName,
-      isUsed: isUsed ?? this.isUsed,
-      displayType: displayType ?? this.displayType,
-      chartChangeInterval: chartChangeInterval ?? this.chartChangeInterval,
-      ruleSelected: ruleSelected ?? this.ruleSelected,
-      specifics: specifics ?? this.specifics,
-      status: status ?? this.status,
-      error: error ?? this.error,
-      dropdownLoading: dropdownLoading ?? this.dropdownLoading,
-      furnaceOptionsByIndex: furnaceOptionsByIndex ?? this.furnaceOptionsByIndex,
-      cpOptionsByIndex: cpOptionsByIndex ?? this.cpOptionsByIndex,
+  factory RuleSelected.fromNelson(NelsonRule n) {
+    return RuleSelected(
+      ruleId: n.ruleId,
+      ruleName: n.ruleName,
+      isUsed: n.isUsed,
     );
   }
 
   @override
-  String toString() => 'SettingFormState('
-      'profileId: $profileId, settingProfileName: $settingProfileName, isUsed: $isUsed, displayType: $displayType, '
-      'chartChangeInterval: $chartChangeInterval, ruleSelected: $ruleSelected, specifics: $specifics, '
-      'status: $status, error: $error, dropdownLoading: $dropdownLoading, '
-      'furnaceOptionsByIndex: $furnaceOptionsByIndex, cpOptionsByIndex: $cpOptionsByIndex'
-      ')';
+  String toString() => 'RuleSelected(ruleId: $ruleId, ruleName: $ruleName, isUsed: $isUsed)';
 }

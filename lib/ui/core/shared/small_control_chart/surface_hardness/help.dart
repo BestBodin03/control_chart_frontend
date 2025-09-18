@@ -169,10 +169,10 @@ Widget _buildChartContent({
         children: [
           Icon(Icons.error_outline, size: 16, color: Colors.red),
           SizedBox(height: 4),
-          Text(
-            'จำนวนข้อมูลไม่เพียงพอ',
-            style: TextStyle(fontSize: 10, color: Colors.red),
-          ),
+            Text(
+              'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
+              style: TextStyle(fontSize: 14, color: Colors.red),
+            ),
         ],
       ),
     );
@@ -181,9 +181,8 @@ Widget _buildChartContent({
   // Handle empty data
   if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
     return Center(
-      child: Text(
-        'No Data',
-        style: TextStyle(fontSize: 12, color: Colors.grey),
+      child: Center(
+        child: Text('ไม่มีข้อมูล', style: TextStyle(fontSize: 12, color: Colors.red)),
       ),
     );
   }
@@ -235,10 +234,10 @@ Widget _buildMrChartContent({
         children: [
           Icon(Icons.error_outline, size: 16, color: Colors.red),
           SizedBox(height: 4),
-          Text(
-            'จำนวนข้อมูลไม่เพียงพอ',
-            style: TextStyle(fontSize: 10, color: Colors.red),
-          ),
+            Text(
+              'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
+              style: TextStyle(fontSize: 14, color: Colors.red),
+            ),
         ],
       ),
     );
@@ -247,9 +246,8 @@ Widget _buildMrChartContent({
   // Handle empty data
   if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
     return Center(
-      child: Text(
-        'No Data',
-        style: TextStyle(fontSize: 12, color: Colors.grey),
+      child: Center(
+        child: Text('ไม่มีข้อมูล', style: TextStyle(fontSize: 12, color: Colors.red)),
       ),
     );
   }

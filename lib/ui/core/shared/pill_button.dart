@@ -6,6 +6,7 @@ class PillButton extends StatelessWidget {
     super.key,
     required this.label,
     this.labelSize,
+    this.pillWidth,
     this.leading,
     this.selected = false,
     this.solid = false,
@@ -18,6 +19,7 @@ class PillButton extends StatelessWidget {
   final String label;
   final double? labelSize;
   final IconData? leading;
+  final double? pillWidth;
   final bool selected;
   final bool solid;
   final Color? bg;
@@ -60,12 +62,14 @@ class PillButton extends StatelessWidget {
                   Icon(leading, size: 18, color: fgColor),
                   const SizedBox(width: 8),
                 ],
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: labelSize ?? 13,
-                    fontWeight: FontWeight.w600,
-                    color: fgColor,
+                SizedBox(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: labelSize ?? 14,
+                      fontWeight: FontWeight.w600,
+                      color: fgColor,
+                    ),
                   ),
                 ),
               ],

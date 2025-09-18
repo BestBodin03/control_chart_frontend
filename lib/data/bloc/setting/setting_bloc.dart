@@ -30,7 +30,6 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
 
 
 
-  // Form event handlers
   Future<void> _onInitializeForm(
     InitializeForm event,
     Emitter<SettingState> emit,
@@ -38,7 +37,6 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
     emit(state.copyWith(status: () => SettingStatus.loading));
 
     try {
-      // Load initial data
       final results = await Future.wait([
         _settingApis.getAllFurnaces(),
         _settingApis.getAllMatNo(),
@@ -47,23 +45,27 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
       final furnaces = results[0] as List<Furnace>;
       final matNumbers = results[1] as List<CustomerProduct>;
 
-      // Initialize form with default values and calculate initial dates
-      final initialFormState = FormState.initial();
-      final dateRanges = DateAutoComplete.calculateDateRange(initialFormState.periodValue);
-      
-      final updatedFormState = initialFormState.copyWith(
-        startDate: dateRanges['startDate']!.date,
-        endDate: dateRanges['endDate']!.date,
-        startDateLabel: DateAutoComplete.formatDateLabel(dateRanges['startDate']!.date, true),
-        endDateLabel: DateAutoComplete.formatDateLabel(dateRanges['endDate']!.date, false),
+      // === Force default date range: now - 1 month → now ===
+      final now = DateTime.now();
+      final start = DateTime(now.year, now.month - 1, now.day); // ลบ 1 เดือนจากวันนี้
+      final end = now;
+
+      final startLabel = DateAutoComplete.formatDateLabel(start, true);
+      final endLabel   = DateAutoComplete.formatDateLabel(end, false);
+
+      final initialFormState = FormState.initial().copyWith(
+        startDate: start,
+        endDate: end,
+        startDateLabel: startLabel,
+        endDateLabel: endLabel,
       );
 
       emit(state.copyWith(
         status: () => SettingStatus.formInitialized,
-        formState: () => updatedFormState,
+        formState: () => initialFormState,
         furnaces: () => furnaces,
         matNumbers: () => matNumbers,
-        errorMessage: () => null, // Clear any previous errors
+        errorMessage: () => null,
       ));
     } catch (e) {
       emit(state.copyWith(
@@ -72,6 +74,7 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
       ));
     }
   }
+
 
   // Form update event handlers
   Future<void> _onUpdatePeriodS(
@@ -98,7 +101,6 @@ class SettingBloc extends Bloc<SettingEvent, SettingState> {
         startDateLabel: DateAutoComplete.formatDateLabel(startDate, true),
         endDateLabel: DateAutoComplete.formatDateLabel(endDate, false),
       );
-
       emit(state.copyWith(formState: () => finalFormState));
     }
   }

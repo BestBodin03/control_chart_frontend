@@ -349,7 +349,7 @@ List<LineChartBarData> buildLineBarsData() {
               spots: seg,
               isCurved: false,
               color: Colors.pinkAccent,
-              barWidth: 3,
+              barWidth: 5,
               isStrokeCapRound: true,
               dotData: const FlDotData(show: false), // จุดใช้จาก baseLine แล้ว
               belowBarData: BarAreaData(show: false),
@@ -358,7 +358,7 @@ List<LineChartBarData> buildLineBarsData() {
           ])
       .toList();
 
-  return [baseLine, ...r3Lines];
+  return [...r3Lines, baseLine];
 }
 
 @override
@@ -370,32 +370,73 @@ LineTouchData buildTouchData() {
   };
 
   return LineTouchData(
+    // make hits easier to grab (optional)
+    touchSpotThreshold: 16,
     handleBuiltInTouches: true,
     touchTooltipData: LineTouchTooltipData(
-      maxContentWidth: 160,
-      getTooltipColor: (_) => AppColors.colorBrand.withValues(alpha: 0.9),
-      tooltipBorderRadius: BorderRadius.circular(8),
-      fitInsideHorizontally: true,
+      showOnTopOfTheChartBoxArea: true,              // draw above chart
+      fitInsideHorizontally: true,                   // constrain inside
       fitInsideVertically: true,
-      tooltipMargin: 8,
+      tooltipMargin: 12,                             // avoid clinging to edge (not 0)
+      maxContentWidth: 340,                          // a bit wider so it’s not too tall
+      tooltipBorderRadius: BorderRadius.circular(8),
+      getTooltipColor: (_) => AppColors.colorBrand.withValues(alpha: 0.9),
+
+      // MUST return same length as `spots` (use nulls for the ones you want to skip)
       getTooltipItems: (spots) {
-        // ตอนนี้ overlay ถูกตัดออกแล้ว จึงมาจาก baseLine ชุดเดียว
-        return spots.map((barSpot) {
-          final p = map[barSpot.x];
+        if (spots.isEmpty) return const [];
+
+        // base line is last because you return [...r3Lines, baseLine]
+        final int baseIndex = spots
+            .map((s) => s.barIndex)
+            .reduce((a, b) => a > b ? a : b);
+
+        return List<LineTooltipItem?>.generate(spots.length, (i) {
+          final s = spots[i];
+
+          // only base line shows tooltips (R3 overlays -> null)
+          if (s.barIndex != baseIndex) return null;
+
+          final p = map[s.x];
           if (p == null) return null;
+
+          // Determine violations
+          final bool beyondCL   = (p.isViolatedR1BeyondLCL == true) || (p.isViolatedR1BeyondUCL == true);
+          final bool beyondSpec = (p.isViolatedR1BeyondLSL == true) || (p.isViolatedR1BeyondUSL == true);
+          final bool trend      = (p.isViolatedR3 == true);
+
+          // Build the text
+          final buf = StringBuffer()
+            ..writeln("วันที่: ${p.fullLabel}")
+            ..writeln("ค่า: ${s.y.toStringAsFixed(3)}")
+            ..writeln("เตา: ${p.furnaceNo}")
+            ..writeln("เลขแมต: ${p.matNo}");
+
+          // Add "การละเมิด:" **only if** there is at least one violation
+            if (beyondCL || beyondSpec || trend) {
+              final violations = <String>[];
+              if (beyondCL)   violations.add("Beyond Control Limit");
+              if (beyondSpec) violations.add("Beyond Spec Limit");
+              if (trend)      violations.add("Trend");
+
+              buf.writeln("การละเมิด: ${violations.join(", ")}");
+            }
+
+
           return LineTooltipItem(
-            "วันที่: ${p.fullLabel}\n"
-            "ค่า: ${barSpot.y.toStringAsFixed(3)}\n"
-            "เตา: ${p.furnaceNo}\n"
-            "เลขแมต: ${p.matNo}",
-            AppTypography.textBody3W,
+            buf.toString().trimRight(),
+            AppTypography.textBody4W,
             textAlign: TextAlign.left,
           );
-        }).whereType<LineTooltipItem>().toList();
+        });
       },
     ),
   );
 }
+
+
+
+
 
 
   // ---------------------------------------------------------------------------
@@ -450,13 +491,16 @@ LineTouchData buildTouchData() {
           ),
         ),
         const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack)),
+        Text(label, style: const TextStyle(
+          fontSize: 10, 
+          color: AppColors.colorBlack,
+          fontWeight: FontWeight.bold)),
         const SizedBox(width: 4),
         Text(value ?? 'N/A',
             style: const TextStyle(
               fontSize: 10,
               color: AppColors.colorBlack,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.bold,
             )),
       ],
     );

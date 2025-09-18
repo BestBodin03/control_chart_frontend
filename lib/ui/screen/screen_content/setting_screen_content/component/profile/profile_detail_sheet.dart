@@ -7,6 +7,7 @@ import 'package:control_chart/ui/screen/screen_content/setting_screen_content/co
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 
 class ProfileDetailSheet extends StatelessWidget {
   const ProfileDetailSheet({
@@ -56,7 +57,13 @@ class ProfileDetailSheet extends StatelessWidget {
           // Profile details
           _buildDetailRow(context, 'ชื่อโปรไฟล์', profile.name),
           _buildDetailRow(context, 'ประเภทการแสดงผล', profile.displayType),
-          _buildDetailRow(context, 'สร้างเมื่อ', fmtDate(profile.createdAt)),
+          _buildDetailRow(
+            context,
+            'สร้างเมื่อ',
+            profile.createdAt != null
+                ? DateFormat('dd/MM').format(profile.createdAt!)
+                : "-",
+          ),
           _buildDetailRow(context, 'สถานะ', profile.active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'),
           
           if (profile.chartChangeInterval != null)
@@ -138,11 +145,14 @@ class ProfileDetailSheet extends StatelessWidget {
   String _formatSettingSpecificDetails(List<SpecificSettingState> specifics) {
     if (specifics.isEmpty) return "ไม่พบข้อมูล";
 
-    return specifics.map((s) {
-      return 'ระยะเวลา: ${fmtDate(s.startDate)} ถึง ${fmtDate(s.endDate)}'
-            ' - เตาที่: ${s.furnaceNo ?? "-"}'
-            ' - เลขแมต: ${s.cpNo ?? "-"}';
-    }).join("\n"); // 👈 join list of strings into one string
+  return specifics.map((s) {
+    final start = s.startDate != null ? DateFormat('dd/MM').format(s.startDate!) : "-";
+    final end   = s.endDate   != null ? DateFormat('dd/MM').format(s.endDate!)   : "-";
+
+    return 'ระยะเวลา: $start ถึง $end'
+          ' - เตาที่: ${s.furnaceNo ?? "-"}'
+          ' - เลขแมต: ${s.cpNo ?? "-"}';
+  }).join("\n");
   }
 
 }

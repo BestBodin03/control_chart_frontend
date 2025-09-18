@@ -112,7 +112,7 @@ Widget _buildSingleChartCdeCdt({required SearchState searchState}) {
             SizedBox(height: 4),
             Text(
               'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
-              style: TextStyle(fontSize: 10, color: Colors.red),
+              style: TextStyle(fontSize: 14, color: Colors.red),
             ),
           ],
         ),
@@ -125,7 +125,7 @@ Widget _buildSingleChartCdeCdt({required SearchState searchState}) {
     return const SizedBox(
       height: 144,
       child: Center(
-        child: Text('ไม่มีข้อมูล', style: TextStyle(fontSize: 12, color: Colors.red)),
+        child: Text('ไม่มีข้อมูล', style: TextStyle(fontSize: 14, color: Colors.red)),
       ),
     );
   }
@@ -178,7 +178,7 @@ Widget _buildMrChartCdeCdt({required SearchState searchState}) {
             SizedBox(height: 4),
             Text(
               'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
-              style: TextStyle(fontSize: 12, color: Colors.red),
+              style: TextStyle(fontSize: 14, color: Colors.red),
             ),
           ],
         ),

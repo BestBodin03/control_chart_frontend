@@ -51,9 +51,24 @@ class SettingFormCubit extends Cubit<SettingFormState> {
   }
 
   /// Update rule selection
-  void updateRuleSelected(List<RuleSelected> rules) {
+  void updateRuleSelected() {
+    // บังคับเลือกทุกกฎ
+    final rules = <RuleSelected>[
+      const RuleSelected(
+        ruleId: 1,
+        ruleName: 'Beyond Limit',
+        isUsed: true,
+      ),
+      const RuleSelected(
+        ruleId: 3,
+        ruleName: 'Trend',
+        isUsed: true,
+      ),
+    ];
+
     emit(state.copyWith(ruleSelected: rules));
   }
+
 
   /// Add or update a single rule
   void updateSingleRule(int index, RuleSelected rule) {
@@ -82,36 +97,32 @@ class SettingFormCubit extends Cubit<SettingFormState> {
     emit(state.copyWith(specifics: specifics));
   }
 
-  /// Add a new specific setting block
+  // Update existing addSpecificSetting method
   int addSpecificSetting() {
-    final now = DateTime.now();
+    // Create new setting with global period values
+    final newSetting = SpecificSettingState(
+      periodType: state.globalPeriodType ?? PeriodType.ONE_MONTH,
+      startDate: state.globalStartDate ?? DateTime.now().subtract(const Duration(days: 30)),
+      endDate: state.globalEndDate ?? DateTime.now(),
+    );
 
-    // 1) เพิ่ม specific ใหม่
-    final list = List<SpecificSettingState>.from(state.specifics)
-      ..add(SpecificSettingState(
-        periodType: PeriodType.ONE_MONTH,
-        startDate: DateTime(now.year, now.month - 1, now.day),
-        endDate: now,
-      ));
+    final list = List<SpecificSettingState>.from(state.specifics)..add(newSetting);
     final newIndex = list.length - 1;
 
-    // 2) เตรียม dropdown ต่อ index ให้ว่าง (กัน dropdown โชว์ All อย่างเดียวเพราะ map ไม่มี key)
+    // Prepare empty dropdown options for the new index
     final fBy = Map<int, List<String>>.from(state.furnaceOptionsByIndex);
     final cBy = Map<int, List<String>>.from(state.cpOptionsByIndex);
     fBy[newIndex] = <String>[];
     cBy[newIndex] = <String>[];
 
-    // 3) emit state ใหม่
     emit(state.copyWith(
       specifics: list,
       furnaceOptionsByIndex: fBy,
       cpOptionsByIndex: cBy,
     ));
 
-    // 4) บอก index ที่เพิ่ม เพื่อให้ผู้เรียกไปโหลด options ต่อ
     return newIndex;
   }
-
 
   /// Remove a specific setting block by index
   void removeSpecificSetting(int index) {
@@ -154,10 +165,10 @@ class SettingFormCubit extends Cubit<SettingFormState> {
   void updateEndDate(int index, DateTime endDate, {bool setCustom = false}) {
     final s = state.specifics[index];
     updateSpecificSetting(index, s.copyWith(
-      endDate: endDate,
+        endDate: endDate,
       periodType: setCustom ? PeriodType.CUSTOM : s.periodType,
     ));
-  }
+}
 
   /// Update furnace number for a specific setting
   void updateFurnaceNo(int index, int? furnaceNo) {
@@ -213,20 +224,34 @@ class SettingFormCubit extends Cubit<SettingFormState> {
   }
 
   void startEdit(Profile p) {
-      final specs = (p.specifics ?? const <dynamic>[])
-      .cast<SpecificSetting>()                           // 👈 บังคับเป็น SpecificSetting
-      .map<SpecificSettingState>(SpecificSettingState.fromModel)
-      .toList(growable: false);
+    final specs = (p.specifics ?? const <dynamic>[])
+        .cast<SpecificSetting>()
+        .map<SpecificSettingState>(SpecificSettingState.fromModel)
+        .toList(growable: false);
 
+    // Set global period from first specific (assuming all have same period)
+    PeriodType? globalPeriod;
+    DateTime? globalStart;
+    DateTime? globalEnd;
+    
+    if (specs.isNotEmpty) {
+      globalPeriod = specs.first.periodType;
+      globalStart = specs.first.startDate;
+      globalEnd = specs.first.endDate;
+    }
 
     emit(state.copyWith(
-      profileId: p.profileId,                       // <- เก็บ id ที่กำลังแก้
+      profileId: p.profileId,
       settingProfileName: p.name,
       displayType: p.profileDisplayType!,
       chartChangeInterval: p.chartChangeInterval!,
       ruleSelected: p.ruleSelected!,
       specifics: specs,
       isUsed: p.active,
+      // Initialize global period settings
+      globalPeriodType: globalPeriod,
+      globalStartDate: globalStart,
+      globalEndDate: globalEnd,
     ));
   }
 

@@ -5,10 +5,11 @@ import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/control_chart_template.dart';
-import 'package:control_chart/ui/core/shared/violationRow.dart';
+import 'package:control_chart/ui/core/shared/violations_component.dart';
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 /// Keep a separate typedef name to avoid clashing with Surface's ZoomBuilder.
 typedef CdeCdtZoomBuilder = Widget Function(
@@ -66,10 +67,10 @@ Widget buildChartsSectionCdeCdt(
   }
 
   // 3) Date (แสดงเมื่อมี start & end ครบ)
-  final s = current.startDate;
-  final e = current.endDate;
+  final s = current.startDate?.toUtc();
+  final e = current.endDate?.toUtc();
   if (s != null && e != null) {
-    parts.add('Date ${fmtDate(s)} - ${fmtDate(e)}');
+    parts.add('Date ${DateFormat('dd/MM').format(s)} - ${DateFormat('dd/MM').format(e)}');
   }
 
   // ผลลัพธ์: จะมีเฉพาะส่วนที่มีข้อมูลจริง และคั่นด้วย " | "

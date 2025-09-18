@@ -348,7 +348,7 @@ class _ProfilesPageState extends State<ProfilesPage> {
       ..updateSettingProfileName(profile.name)
       ..updateDisplayType(profile.profileDisplayType!)
       ..updateChartChangeInterval(profile.chartChangeInterval!)
-      ..updateRuleSelected(profile.ruleSelected!)
+      ..updateRuleSelected()
       ..updateSpecifics(profile.specifics!)
       ..updateIsUsed(profile.active);
 

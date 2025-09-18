@@ -97,24 +97,34 @@ class _SearchingFormState extends State<SearchingForm> {
                           Flex(
                             direction: Axis.horizontal,
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
                             children: [
                               buildSectionTitle('ระยะเวลา'),
-                                TextButton(
-                                  onPressed: () => context.read<SearchBloc>().add(ClearFilters()),
-                                  style: TextButton.styleFrom(
-                                    minimumSize: const Size(40, 40),
-                                    padding: const EdgeInsets.all(8),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                    child: const Icon(
-                                      Icons.refresh_rounded, // or Icons.autorenew_rounded
-                                      size: 24,
-                                      color: AppColors.colorBrand,
-                                    ),
-                                )
+                              BlocSelector<SettingBloc, SettingState, SettingStatus>(
+                                selector: (s) => s.status,
+                                builder: (context, status) {
+                                  final isBusy = status == SettingStatus.loading;
+                                  return IconButton(
+                                    tooltip: isBusy ? 'กำลังรีเฟรช…' : 'รีเฟรช',
+                                    padding: EdgeInsets.all(8),
+                                    constraints: const BoxConstraints(),
+                                    splashRadius: 16,
+                                    onPressed: isBusy
+                                        ? null
+                                        : () {
+                                            context.read<SearchBloc>().add(ClearFilters());
+                                            context.read<SettingBloc>().add(UpdatePeriodS('1 เดือน'));
+                                            // หรือ: context.read<SettingBloc>().add(InitializeForm());
+                                          },
+                                    icon: isBusy
+                                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                        : const Icon(Icons.refresh_rounded, size: 24, color: AppColors.colorBrand),
+                                  );
+                                },
+                              ),
                             ],
                           ),
+
+
                           const SizedBox(height: 8),
 
                           buildDropdownField(
@@ -179,57 +189,57 @@ class _SearchingFormState extends State<SearchingForm> {
                             ],
                           ),
 
-                          // const SizedBox(height: 16),
+                          const SizedBox(height: 16),
 
-                          // // Furnace
-                          // buildSectionTitle('หมายเลขเตา'),
-                          // const SizedBox(height: 8),
-                          // BlocBuilder<SearchBloc, SearchState>(
-                          //   builder: (context, searchState) {
-                          //     return buildDropdownField(
-                          //       context: context,
-                          //       value: searchState.currentQuery.furnaceNo ?? form.selectedItem,
-                          //       items: _getFurnaceNumbers(furnaces),
-                          //       hint: "All Furnaces",
-                          //       onChanged: (selected) {
-                          //         final val = selected == "0" ? "" : selected;
-                          //         _dispatchSearchWith(
-                          //           context,
-                          //           start: form.startDate ?? searchState.currentQuery.startDate,
-                          //           end:   form.endDate   ?? searchState.currentQuery.endDate,
-                          //           furnace: val,
-                          //           material: searchState.currentQuery.materialNo,
-                          //         );
-                          //       },
-                          //     );
-                          //   },
-                          // ),
+                          // Furnace
+                          buildSectionTitle('หมายเลขเตา'),
+                          const SizedBox(height: 8),
+                          BlocBuilder<SearchBloc, SearchState>(
+                            builder: (context, searchState) {
+                              return buildDropdownField(
+                                context: context,
+                                value: searchState.currentQuery.furnaceNo ?? form.selectedItem,
+                                items: _getFurnaceNumbers(furnaces),
+                                hint: "All Furnaces",
+                                onChanged: (selected) {
+                                  final val = selected == "0" ? "" : selected;
+                                  _dispatchSearchWith(
+                                    context,
+                                    start: form.startDate ?? searchState.currentQuery.startDate,
+                                    end:   form.endDate   ?? searchState.currentQuery.endDate,
+                                    furnace: val,
+                                    material: searchState.currentQuery.materialNo,
+                                  );
+                                },
+                              );
+                            },
+                          ),
 
-                          // const SizedBox(height: 16),
+                          const SizedBox(height: 16),
 
-                          // // Material
-                          // buildSectionTitle('Material No.'),
-                          // const SizedBox(height: 8),
-                          // BlocBuilder<SearchBloc, SearchState>(
-                          //   builder: (context, searchState) {
-                          //     return buildDropdownField(
-                          //       context: context,
-                          //       value: searchState.currentQuery.materialNo,
-                          //       items: _getMatNumbers(matNumbers),
-                          //       hint: "All Material No.",
-                          //       onChanged: (selected) {
-                          //         final val = selected == "All Material No." ? "" : selected;
-                          //         _dispatchSearchWith(
-                          //           context,
-                          //           start: form.startDate ?? searchState.currentQuery.startDate,
-                          //           end:   form.endDate   ?? searchState.currentQuery.endDate,
-                          //           furnace: searchState.currentQuery.furnaceNo,
-                          //           material: val,
-                          //         );
-                          //       },
-                          //     );
-                          //   },
-                          // )
+                          // Material
+                          buildSectionTitle('Material No.'),
+                          const SizedBox(height: 8),
+                          BlocBuilder<SearchBloc, SearchState>(
+                            builder: (context, searchState) {
+                              return buildDropdownField(
+                                context: context,
+                                value: searchState.currentQuery.materialNo,
+                                items: _getMatNumbers(matNumbers),
+                                hint: "All Material No.",
+                                onChanged: (selected) {
+                                  final val = selected == "All Material No." ? "" : selected;
+                                  _dispatchSearchWith(
+                                    context,
+                                    start: form.startDate ?? searchState.currentQuery.startDate,
+                                    end:   form.endDate   ?? searchState.currentQuery.endDate,
+                                    furnace: searchState.currentQuery.furnaceNo,
+                                    material: val,
+                                  );
+                                },
+                              );
+                            },
+                          )
                         ],
                       ),
                     ),

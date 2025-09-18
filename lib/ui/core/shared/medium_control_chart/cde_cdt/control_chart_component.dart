@@ -267,8 +267,8 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
               p.collectDate.millisecondsSinceEpoch.toDouble(),
               p.value,
             ))
-        .where((s) =>
-            s.x >= math.min(minXv, maxXv) && s.x <= math.max(minXv, maxXv))
+        // .where((s) =>
+        //     s.x >= math.min(minXv, maxXv) && s.x <= math.max(minXv, maxXv))
         .toList()
       ..sort((a, b) => a.x.compareTo(b.x));
 

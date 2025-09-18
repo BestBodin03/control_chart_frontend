@@ -1,5 +1,6 @@
 // lib/ui/screen/screen_content/setting_screen_content/component/profile/profile_card.dart
 import 'package:control_chart/data/bloc/setting_profile/setting_profile_bloc.dart';
+import 'package:control_chart/data/cubit/setting_form/extension/setting_form_cubit_global_period.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_cubit.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile.dart';
@@ -111,16 +112,18 @@ class _ProfileCardState extends State<ProfileCard> {
                       )
                     else
                       // โหมดปกติ: แสดงปุ่มแก้ไข
-                      GestureDetector(
-                        onTap: widget.onEdit,
-                        child: MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: const Padding(
-                            padding: EdgeInsets.all(4),
-                            child: Icon(Icons.edit, color: AppColors.colorBrand, size: 20),
-                          ),
-                        ),
+                    MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: IconButton(
+                        tooltip: 'Edit',
+                        padding: const EdgeInsets.all(8), // ← padding 8
+                        iconSize: 20,
+                        splashRadius: 18, // optional: smaller ripple
+                        icon: const Icon(Icons.edit, color: AppColors.colorBrand),
+                        onPressed: widget.onEdit,
                       ),
+                    )
+
                   ],
                 ),
 
@@ -175,13 +178,14 @@ class _ProfileCardState extends State<ProfileCard> {
 
                             final formCubit = context.read<SettingFormCubit>();
                             formCubit
-                              ..updateSettingProfileId(widget.profile.profileId)
-                              ..updateSettingProfileName(widget.profile.name)
-                              ..updateDisplayType(widget.profile.profileDisplayType!)
-                              ..updateChartChangeInterval(widget.profile.chartChangeInterval!)
-                              ..updateRuleSelected(widget.profile.ruleSelected!)
-                              ..updateSpecifics(widget.profile.specifics!)
-                              ..updateIsUsed(v);
+                            ..updateSettingProfileId(widget.profile.profileId)
+                            ..updateSettingProfileName(widget.profile.name)
+                            ..updateDisplayType(widget.profile.profileDisplayType ?? formCubit.state.displayType)
+                            ..updateChartChangeInterval(widget.profile.chartChangeInterval ?? formCubit.state.chartChangeInterval)
+                            ..updateRuleSelected()
+                            // ..updateGlobalPeriodType(formCubit.)
+                            ..updateSpecifics(widget.profile.specifics ?? [])
+                            ..updateIsUsed(widget.profile.active);
 
                             final success = await formCubit.saveForm(id: widget.profile.profileId);
                             if (!context.mounted) return;

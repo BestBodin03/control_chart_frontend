@@ -2,6 +2,7 @@ import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/data/bloc/setting/setting_bloc.dart';
 import 'package:control_chart/data/bloc/setting_profile/setting_profile_bloc.dart';
+import 'package:control_chart/data/cubit/setting_form/extension/setting_form_cubit_global_period.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_cubit.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
 import 'package:control_chart/domain/models/setting.dart';
@@ -172,6 +173,7 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
               if (state.specifics.isEmpty) return;
               final sp = state.specifics.first;
               if (sp.startDate == null || sp.endDate == null) return;
+              
 
               final search = context.read<SearchBloc>().state.currentQuery;
               context.read<SearchBloc>().add(
@@ -211,7 +213,8 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                         BlocBuilder<SettingFormCubit, SettingFormState>(
                           builder: (context, s) {
                             final cubit = context.read<SettingFormCubit>();
-                            debugPrint('The ID of this profile card: $s.profileId');
+                            // debugPrint('The ID of this profile card: $s.profileId');
+                            // debugPrint('In setting form ${cubit.state.specifics[0].periodType}');
 
                             if (selectedDisplayType.isEmpty) {
                               switch (s.displayType) {
@@ -226,9 +229,7 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                   break;
                               }
                             }
-
-                            // ค่าที่ถูกเลือกอยู่ตอนนี้ (ดึงจาก state.ruleSelected ที่ isUsed == true)
-                            final selectedRuleNames = s.ruleSelected
+                            s.ruleSelected
                                 .where((r) => r.isUsed == true)
                                 .map((r) => (r.ruleName ?? '').trim())
                                 .where((name) => name.isNotEmpty)
@@ -254,6 +255,7 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                   selectedValue: selectedDisplayType,
                                   itemsLabel: const ['เตา', 'เตา/เลขแมต', 'เลขแมต'],
                                   itemsValue: const ['FURNACE', 'FURNACE_CP', 'CP'],
+                                  disabled: cubit.state.profileId.isNotEmpty, // 👈 ล็อกเมื่อมี profileId
                                   onChanged: (v) {
                                     setState(() => selectedDisplayType = v);
                                     cubit.updateDisplayType(
@@ -265,33 +267,11 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                     );
                                     if (cubit.state.specifics.isEmpty) {
                                       cubit.addSpecificSetting();
+                                      cubit.updateRuleSelected();
                                     }
                                   },
                                 ),
-                                
-                                const SizedBox(height: 16),
 
-                                // -------------------- กฎแผนภูมิควบคุม --------------------
-                                buildSectionTitle('กฎแผนภูมิควบคุม'),
-                                const SizedBox(height: 8),
-                                buildMultiSelectField(
-                                  context: context,
-                                  hintText: 'เลือกกฎ',
-                                  items: ruleItems,
-                                  selectedValues: selectedRuleNames,
-                                  onChanged: (List<String> values) {
-                                    // แปลงชื่อกฎ → RuleSelected (inline)
-                                    final rules = values.map((name) {
-                                      final id = ruleIdByName[name];
-                                      return RuleSelected(
-                                        ruleId: id, // อาจเป็น null ได้ถ้า map ไม่เจอ (โอเค)
-                                        ruleName: name,
-                                        isUsed: true,
-                                      );
-                                    }).toList();
-                                    cubit.updateRuleSelected(rules);
-                                  },
-                                ),
                                 const SizedBox(height: 16),
 
                                 // -------------------- ระยะเวลาเปลี่ยนหน้าจอ --------------------
@@ -306,6 +286,125 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                     cubit.updateChartChangeInterval(parsed);
                                   },
                                 ),
+
+                                const SizedBox(height: 8),
+                                buildSectionTitle('ระยะเวลา'),
+                                const SizedBox(height: 8),
+
+                                buildDropdownField(
+                                  key: const ValueKey('global_period'),
+                                  context: context,
+                                  value: _periodTypeToLabel(cubit.state.specifics[0].periodType),
+                                  items: const ['1 เดือน','3 เดือน','6 เดือน','1 ปี','ตลอดเวลา','กำหนดเอง'],
+                                  onChanged: (value) {
+                                    if (value == null) return;
+                                    final now = DateTime.now();
+                                    DateTime? startAuto;
+                                    PeriodType period;
+
+                                    switch (value) {
+                                      case '1 เดือน': 
+                                        period = PeriodType.ONE_MONTH;   
+                                        startAuto = DateTime(now.year, now.month - 1, now.day); 
+                                        break;
+                                      case '3 เดือน': 
+                                        period = PeriodType.THREE_MONTHS; 
+                                        startAuto = DateTime(now.year, now.month - 3, now.day); 
+                                        break;
+                                      case '6 เดือน': 
+                                        period = PeriodType.SIX_MONTHS;   
+                                        startAuto = DateTime(now.year, now.month - 6, now.day); 
+                                        break;
+                                      case '1 ปี':    
+                                        period = PeriodType.ONE_YEAR;     
+                                        startAuto = DateTime(now.year - 1, now.month, now.day); 
+                                        break;
+                                      case 'ตลอดเวลา': 
+                                        period = PeriodType.LIFETIME;    
+                                        startAuto = DateTime(2024, 1, 1); 
+                                        break;
+                                      default: 
+                                        period = PeriodType.CUSTOM;       
+                                        startAuto = null;
+                                    }
+
+                                    // Update global period settings
+                                    cubit.updateGlobalPeriod(
+                                      period, 
+                                      startAuto, 
+                                      period != PeriodType.CUSTOM ? now : cubit.state.globalEndDate
+                                    );
+                                    
+                                    // Reload dropdown options for all specifics
+                                    for (int i = 0; i < cubit.state.specifics.length; i++) {
+                                      cubit.loadDropdownOptions(index: i);
+                                    }
+                                  },
+                                ),
+
+                                const SizedBox(height: 16),
+
+                                
+
+                                // ------- Global Date pickers -------
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: buildDateField(
+                                        key: const ValueKey('global_start_date'),
+                                        context: context,
+                                        value: cubit.state.globalStartDate,
+                                        label: _dateLabel(cubit.state.specifics[0].startDate) ?? 'Start Date',
+                                        date: cubit.state.globalStartDate ?? DateTime.now(),
+                                        onTap: () async {
+                                          final picked = await showDatePicker(
+                                            context: context,
+                                            initialDate: cubit.state.globalStartDate ?? DateTime.now(),
+                                            firstDate: DateTime(2020),
+                                            lastDate: DateTime(2050),
+                                          );
+                                          if (picked == null) return;
+                                          
+                                          cubit.updateGlobalStartDate(picked);
+                                          
+                                          // Reload dropdown options for all specifics
+                                          for (int i = 0; i < cubit.state.specifics.length; i++) {
+                                            cubit.loadDropdownOptions(index: i);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    const Text('ถึง', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: buildDateField(
+                                        key: const ValueKey('global_end_date'),
+                                        context: context,
+                                        value: cubit.state.globalEndDate,
+                                        label: _dateLabel(cubit.state.specifics[0].endDate) ?? 'End',
+                                        date: cubit.state.globalEndDate ?? DateTime.now(),
+                                        onTap: () async {
+                                          final picked = await showDatePicker(
+                                            context: context,
+                                            initialDate: cubit.state.globalEndDate ?? DateTime.now(),
+                                            firstDate: DateTime(2020),
+                                            lastDate: DateTime(2050),
+                                          );
+                                          if (picked == null) return;
+                                          
+                                          cubit.updateGlobalEndDate(picked);
+                                          
+                                          // Reload dropdown options for all specifics
+                                          for (int i = 0; i < cubit.state.specifics.length; i++) {
+                                            cubit.loadDropdownOptions(index: i);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
                               ],
                             );
                           },
@@ -334,126 +433,75 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           // Header + Add/Remove
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              buildSectionTitle('ระยะเวลา'),
-                                              Row(
-                                                crossAxisAlignment: CrossAxisAlignment.end,
-                                                children: [
-                                                  IconButton(
-                                                    icon: const Icon(Icons.add_circle_rounded, color: AppColors.colorBrand),
-                                                    iconSize: 24,
-                                                    onPressed: () async {
-                                                      final cubit = context.read<SettingFormCubit>();
-                                                      final newIndex = cubit.addSpecificSetting();     // ✅ ได้ index ใหม่แน่นอน
-                                                      await cubit.loadDropdownOptions(index: newIndex); // ✅ โหลดรายการของแถวนั้น
-                                                    }
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            buildSectionTitle('หน้าที่ ${i + 1}'),
+                                            SizedBox(
+                                              height: 36,
+                                              child: DecoratedBox(
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(color: Colors.grey.shade300),
+                                                ),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      // Add button
+                                                      IconButton(
+                                                        tooltip: 'เพิ่มหน้า',
+                                                        onPressed: () async {
+                                                          final cubit = context.read<SettingFormCubit>();
+                                                          final newIndex = cubit.addSpecificSetting();
+                                                          await cubit.loadDropdownOptions(index: newIndex);
+                                                        },
+                                                        padding: EdgeInsets.all(4),
+                                                        constraints: const BoxConstraints(),
+                                                        iconSize: 24,
+                                                        icon: const Icon(
+                                                          Icons.add_circle_rounded,
+                                                          color: AppColors.colorBrand,
+                                                        ),
+                                                      ),
+
+                                                      const SizedBox(width: 6),
+
+                                                      // Divider
+                                                      SizedBox(
+                                                        width: 1,
+                                                        height: 20,
+                                                        child: DecoratedBox(
+                                                          decoration: BoxDecoration(color: Colors.grey.shade300),
+                                                        ),
+                                                      ),
+
+                                                      const SizedBox(width: 6),
+                                                      // Remove button
+                                                      IconButton(
+                                                        tooltip: 'ลบหน้า',
+                                                        onPressed: state.specifics.length <= 1 
+                                                            ? null 
+                                                            : () => cubit.removeSpecificSetting(i), // ✅ Pass the index i
+                                                        padding: EdgeInsets.all(4),
+                                                        constraints: const BoxConstraints(),
+                                                        iconSize: 24,
+                                                        icon: Icon(
+                                                          Icons.remove_circle_outline_rounded,
+                                                          color: state.specifics.length <= 1
+                                                              ? Colors.grey.shade300
+                                                              : AppColors.colorAlert1,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
-                                                  const SizedBox(width: 8),
-                                                  IconButton(
-                                                    icon: const Icon(Icons.remove_circle_outline_rounded, color: AppColors.colorAlert1),
-                                                    iconSize: 24,
-                                                    onPressed: state.specifics.isEmpty ? null : () => cubit.removeSpecificSetting(i),
-                                                  ),
-                                                ],
+                                                ),
                                               ),
-                                            ],
-                                          ),
+                                            )
 
-                                          const SizedBox(height: 8),
-
-                                          // ===== ใน BlocBuilder<SettingFormCubit, SettingFormState> ด้านใน loop ของ specifics (มี index i) =====
-                                          buildDropdownField(
-                                            key: ValueKey('period_$i'),
-                                            context: context,
-                                            value: _periodTypeToLabel(sp.periodType),
-                                            items: const ['1 เดือน','3 เดือน','6 เดือน','1 ปี','ตลอดเวลา','กำหนดเอง'],
-                                            onChanged: (value) {
-                                              if (value == null) return;
-                                              final now = DateTime.now();
-                                              DateTime? startAuto;
-                                              PeriodType period;
-
-                                              switch (value) {
-                                                case '1 เดือน': period = PeriodType.ONE_MONTH;   
-                                                  startAuto = DateTime(now.year, now.month - 1, now.day); break;
-                                                case '3 เดือน': period = PeriodType.THREE_MONTHS; 
-                                                  startAuto = DateTime(now.year, now.month - 3, now.day); break;
-                                                case '6 เดือน': period = PeriodType.SIX_MONTHS;   
-                                                  startAuto = DateTime(now.year, now.month - 6, now.day); break;
-                                                case '1 ปี':    period = PeriodType.ONE_YEAR;     
-                                                  startAuto = DateTime(now.year - 1, now.month, now.day); break;
-                                                case 'ตลอดเวลา': period = PeriodType.LIFETIME;    
-                                                  startAuto = DateTime(2024, 1, 1); break;
-                                                default: period = PeriodType.CUSTOM;       
-                                                  startAuto = null;
-                                              }
-
-                                              cubit.updatePeriodType(i, period);
-                                              if (period != PeriodType.CUSTOM) {
-                                                cubit
-                                                  ..updateStartDate(i, startAuto!)
-                                                  ..updateEndDate(i, now);
-                                              }
-
-                                              cubit.loadDropdownOptions(index: i);
-                                            },
-                                          ),
-
-
-                                            const SizedBox(height: 16),
-
-                                            // ------- Date pickers -------
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: buildDateField(
-                                                    key: ValueKey('start_$i'), // ✅
-                                                    context: context,
-                                                    value: sp.startDate,
-                                                    label: _dateLabel(sp.startDate) ?? 'Select Date',
-                                                    date: sp.startDate ?? DateTime.now(),
-                                                    onTap: () async {
-                                                      final picked = await showDatePicker(
-                                                        context: context,
-                                                        initialDate: sp.startDate ?? DateTime.now(),
-                                                        firstDate: DateTime(2020),
-                                                        lastDate: DateTime(2050),
-                                                      );
-                                                      if (picked == null) return;
-                                                      cubit.updateStartDate(i, picked, setCustom: true);
-                                                      cubit.loadDropdownOptions(index: i); // ✅
-                                                    },
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 16),
-                                                const Text('ถึง', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                                                const SizedBox(width: 16),
-                                                Expanded(
-                                                  child: buildDateField(
-                                                    key: ValueKey('end_$i'), // ✅
-                                                    context: context,
-                                                    value: sp.endDate,
-                                                    label: _dateLabel(sp.endDate) ?? 'Select Date',
-                                                    date: sp.endDate ?? DateTime.now(),
-                                                    onTap: () async {
-                                                      final picked = await showDatePicker(
-                                                        context: context,
-                                                        initialDate: sp.endDate ?? DateTime.now(),
-                                                        firstDate: DateTime(2020),
-                                                        lastDate: DateTime(2050),
-                                                      );
-                                                      if (picked == null) return;
-                                                      cubit
-                                                        ..updateEndDate(i, picked, setCustom: true)
-                                                        ..updatePeriodType(i, PeriodType.CUSTOM)
-                                                        ..loadDropdownOptions(index: i);
-                                                    },
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                          ],
+                                        ),
 
                                             const SizedBox(height: 16),
 

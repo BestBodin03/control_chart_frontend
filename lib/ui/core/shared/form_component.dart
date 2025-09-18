@@ -15,6 +15,7 @@ Widget buildChoiceTabs({
   required List<String> itemsLabel,
   required List<String> itemsValue,
   ValueChanged<String>? onChanged,
+  bool disabled = false, // 👈 เพิ่มพารามิเตอร์นี้
   double height = 42,
   double gap = 8,
   BorderRadius borderRadius = const BorderRadius.all(Radius.circular(10)),
@@ -28,7 +29,6 @@ Widget buildChoiceTabs({
 
   return LayoutBuilder(
     builder: (context, constraints) {
-      // divide total width equally among buttons
       final buttonWidth =
           (constraints.maxWidth - (gap * (itemsLabel.length - 1))) /
               itemsLabel.length;
@@ -44,23 +44,36 @@ Widget buildChoiceTabs({
             width: buttonWidth,
             height: height,
             child: TextButton(
-              onPressed: () => onChanged?.call(value),
-              style: TextButton.styleFrom(
-                backgroundColor: active ? AppColors.colorBrand : inactiveBg,
-                foregroundColor: active ? Colors.white : Colors.black87,
-                shape: RoundedRectangleBorder(
-                  borderRadius: borderRadius,
-                  side: BorderSide(
-                    color: active ? activeColor : inactiveBorder,
-                  ),
+              onPressed: disabled ? null : () => onChanged?.call(value), // 👈 ปิดการคลิกเมื่อ disabled
+              style: ButtonStyle(
+                // พื้นหลัง: ถ้า active ให้เป็น activeColor เสมอ แม้ disabled
+                backgroundColor: WidgetStateProperty.resolveWith((states) {
+                  if (active) return activeColor;
+                  if (states.contains(WidgetState.disabled)) return Colors.grey.shade300;
+                }),
+                // สีตัวอักษร: active เป็นขาว, disabled ที่ไม่ active ให้จางลง
+                foregroundColor: WidgetStateProperty.resolveWith((states) {
+                  if (active) return Colors.white;
+                  if (states.contains(WidgetState.disabled)) return Colors.black38;
+                  return Colors.black87;
+                }),
+                // เส้นขอบ: active = activeColor, ถ้า disabled และไม่ active → ขอบจาง
+                side: WidgetStateProperty.resolveWith((states) {
+                  if (active) return BorderSide(color: activeColor);
+                  final base = states.contains(WidgetState.disabled)
+                      ? inactiveBorder.withValues(alpha: 0.5)
+                      : inactiveBorder;
+                  return BorderSide(color: base);
+                }),
+                shape: WidgetStateProperty.all(
+                  RoundedRectangleBorder(borderRadius: borderRadius),
                 ),
+                overlayColor: WidgetStateProperty.resolveWith((states) {
+                  if (disabled) return Colors.transparent;
+                  return AppColors.colorBrandTp.withValues(alpha: 0.5);
+                }),
               ),
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 14,
-                ),
-              ),
+              child: Text(label, style: const TextStyle(fontSize: 14)),
             ),
           );
         }),
@@ -68,6 +81,7 @@ Widget buildChoiceTabs({
     },
   );
 }
+
 
 Widget buildTextField({
   Key? key,
