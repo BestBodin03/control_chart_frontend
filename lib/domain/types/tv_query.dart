@@ -1,7 +1,6 @@
 // models/chart_filter_query.dart
 import 'dart:convert';
 
-import 'package:intl/intl.dart';
 
 class TvQuery {
   final DateTime? startDate;

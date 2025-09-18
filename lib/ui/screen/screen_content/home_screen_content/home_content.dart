@@ -129,22 +129,18 @@ class _HomeContentState extends State<HomeContent> {
   /// แปลง labels จาก state เป็น List<DateTime> (local)
   List<DateTime> _labelsFromState(SearchState st) {
     final raw = st.controlChartStats?.xAxisMediumLabel ?? const[];
-    if (raw is List<DateTime>) {
-      return raw.map((d) => d.toLocal()).toList();
-    }
-    if (raw is List) {
+    return raw.map((d) => d.toLocal()).toList();
       return raw
-          .map((e) {
-            if (e is DateTime) return e.toLocal();
-            if (e is String) {
-              try { return DateTime.parse(e.toIso8601String()).toLocal(); } catch (_) {}
-            }
-            return null;
-          })
-          .whereType<DateTime>()
-          .toList();
-    }
-    return const <DateTime>[];
+        .map((e) {
+          if (e is DateTime) return e.toLocal();
+          if (e is String) {
+            try { return DateTime.parse(e.toIso8601String()).toLocal(); } catch (_) {}
+          }
+          return null;
+        })
+        .whereType<DateTime>()
+        .toList();
+      return const <DateTime>[];
   }
 
   /// คำนวณหน้าต่าง “ตาม label”

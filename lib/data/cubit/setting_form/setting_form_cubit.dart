@@ -417,9 +417,9 @@ Future<void> loadDropdownOptions({
 
     final payload = (json['data'] is Map<String, dynamic>)
         ? json['data'] as Map<String, dynamic>
-        : json as Map<String, dynamic>;
+        : json;
 
-    List<String> _toStringList(dynamic v) {
+    List<String> toStringList(dynamic v) {
       if (v == null) return <String>[];
       if (v is List) {
         return v.map((e) => e?.toString()).whereType<String>().toList();
@@ -427,8 +427,8 @@ Future<void> loadDropdownOptions({
       return <String>[v.toString()];
     }
 
-    final furnaces = _toStringList(payload['furnaceNo']);
-    final cps      = _toStringList(payload['cpNo']);
+    final furnaces = toStringList(payload['furnaceNo']);
+    final cps      = toStringList(payload['cpNo']);
 
     // ✅ update ตาม index
     final fBy = Map<int, List<String>>.from(state.furnaceOptionsByIndex);

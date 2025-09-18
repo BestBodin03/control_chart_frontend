@@ -50,6 +50,7 @@ Widget buildChoiceTabs({
                 backgroundColor: WidgetStateProperty.resolveWith((states) {
                   if (active) return activeColor;
                   if (states.contains(WidgetState.disabled)) return Colors.grey.shade300;
+                  return null;
                 }),
                 // สีตัวอักษร: active เป็นขาว, disabled ที่ไม่ active ให้จางลง
                 foregroundColor: WidgetStateProperty.resolveWith((states) {

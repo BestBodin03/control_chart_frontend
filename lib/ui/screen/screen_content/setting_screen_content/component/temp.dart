@@ -1,6 +1,3 @@
-import 'package:control_chart/ui/core/design_system/app_color.dart';
-import 'package:control_chart/ui/core/shared/pill_button.dart';
-import 'package:control_chart/ui/screen/screen_content/setting_screen_content/setting_content.dart';
 import 'package:flutter/material.dart';
 
 class SearchBox extends StatelessWidget {

@@ -1,4 +1,3 @@
-import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
 import 'package:control_chart/domain/models/setting.dart';
 
 class SettingRequest {

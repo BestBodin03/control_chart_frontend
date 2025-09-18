@@ -31,8 +31,8 @@ class _SettingContentState extends State<SettingContent> {
   TabKey _tab = TabKey.profiles;
 
   String? _fileName;
-  String _dropdown1 = '';
-  String _dropdown2 = '';
+  final String _dropdown1 = '';
+  final String _dropdown2 = '';
 
   Profile _toProfile(Setting s) {
     const displayTypeMap = {
@@ -44,7 +44,7 @@ class _SettingContentState extends State<SettingContent> {
     return Profile(
       profileId: s.id,
       name: s.settingProfileName,
-      displayType: 'ประเภทการแสดง: ${displayTypeMap[s.displayType.name] ?? s.displayType.name}',
+      displayType: displayTypeMap[s.displayType.name] ?? s.displayType.name,
       active: s.isUsed,
       createdAt: s.createdAt,
       profileDisplayType: s.displayType,

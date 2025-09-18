@@ -1,10 +1,8 @@
 // lib/ui/screen/screen_content/setting_screen_content/component/profile/profile_card.dart
 import 'package:control_chart/data/bloc/setting_profile/setting_profile_bloc.dart';
-import 'package:control_chart/data/cubit/setting_form/extension/setting_form_cubit_global_period.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_cubit.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile.dart';
-import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -130,7 +128,7 @@ class _ProfileCardState extends State<ProfileCard> {
                 const SizedBox(height: 8),
 
                 Text(
-                  widget.profile.displayType,
+                  'ประเภทการแสดงผล: ${widget.profile.displayType}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: const Color(0xFF475569),
                         height: 1.45,

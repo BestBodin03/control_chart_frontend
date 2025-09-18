@@ -3,7 +3,6 @@ import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/control_chart_component_small.dart';
 import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/mr_chart_component_small.dart';
-import 'package:control_chart/ui/core/shared/small_control_chart/surface_hardness/control_chart_component_small.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';

@@ -7,7 +7,6 @@ import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_template.dart';
 import 'package:control_chart/ui/core/shared/violations_component.dart';
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
-import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -49,10 +48,10 @@ Widget buildChartsSectionSurfaceHardness(
   if (isReady && current.materialNo != null) {
     final partName = searchState
         .chartDetails.first.chartGeneralDetail.partName
-        ?.trim();
+        .trim();
     final mat = current.materialNo!;
     parts.add(
-      (partName != null && partName.isNotEmpty) ? '$partName - $mat' : '$mat',
+      (partName != null && partName.isNotEmpty) ? '$partName - $mat' : mat,
     );
   }
 
@@ -217,15 +216,41 @@ class _MediumContainer extends StatelessWidget {
                               children: [
                                 Text(
                                   "Surface Hardness | Control Chart",
-                                  style: AppTypography.textBody3B,
-                                  textAlign: TextAlign.center,
-                                ),
-                                Text(
-                                  "$spotCount Records",
-                                  style: AppTypography.textBody3B,
+                                  style: AppTypography.textBody3BBold,
                                   textAlign: TextAlign.center,
                                 ),
 
+                                const SizedBox(height: 8,),
+
+                                SizedBox(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.6),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(width: 1, color: Colors.grey.shade500),
+                                      // boxShadow: [
+                                      //   // BoxShadow(
+                                      //   //   color: Colors.grey.shade100,
+                                      //   //   blurRadius: 10,
+                                      //   //   spreadRadius: 0,
+                                      //   //   offset: const Offset(0, 8),
+                                      //   // ),
+                                      //   // BoxShadow(
+                                      //   //   color: Colors.white.withValues(alpha: 0.8),
+                                      //   //   // blurRadius: 12,
+                                      //   //   // spreadRadius: 6,
+                                      //   //   offset: const Offset(0, -2),
+                                      //   // ),
+                                      // ]
+                                    ),
+                                    child: Text(
+                                      '$spotCount Records',
+                                      style: AppTypography.textBody3BBold,
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                )
                               ],
                             ),
                           ),
@@ -240,9 +265,23 @@ class _MediumContainer extends StatelessWidget {
                                   width: 220,
                                   child: DecoratedBox(
                                     decoration: BoxDecoration(
-                                      color: const Color.fromARGB(0, 0, 0, 0),
-                                      border: Border.all(color: Colors.grey.shade400),
+                                      color: Colors.white.withValues(alpha: 0.2),
                                       borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(width: 1, color: Colors.grey.shade500),
+                                      boxShadow: [
+                                        // BoxShadow(
+                                        //   color: Colors.grey.shade100,
+                                        //   blurRadius: 10,
+                                        //   spreadRadius: 0,
+                                        //   offset: const Offset(0, 8),
+                                        // ),
+                                        BoxShadow(
+                                          color: Colors.white.withValues(alpha: 0.8),
+                                          // blurRadius: 12,
+                                          // spreadRadius: 6,
+                                          offset: const Offset(0, -2),
+                                        ),
+                                      ]
                                     ),
                                     child: Padding(
                                       padding: const EdgeInsets.all(8),
@@ -257,19 +296,16 @@ class _MediumContainer extends StatelessWidget {
 
                               ),
 
-                              if (onZoom != null) ...[
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 8),
-                                  child: IconButton(
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(), // removes min size 48x48
-                                    tooltip: 'Zoom',
-                                    icon: const Icon(Icons.fullscreen, size: 18),
-                                    onPressed: () => onZoom(context),
-                                  ),
-                                ),
-
-                              ],
+                            ...[
+                              IconButton(
+                                tooltip: 'Zoom',
+                                icon: const Icon(
+                                  Icons.fullscreen, 
+                                  size: 18),
+                                splashRadius: 8,
+                                onPressed: () => onZoom(context)
+                              ),
+                            ],
                             ],
                           ),
                         ],
@@ -392,7 +428,7 @@ Widget _buildSingleChart({
 }
 
 class _SmallError extends StatelessWidget {
-  const _SmallError({super.key});
+  const _SmallError();
   @override
   Widget build(BuildContext context) => const Center(
         child: Column(
@@ -408,7 +444,7 @@ class _SmallError extends StatelessWidget {
 }
 
 class _SmallNoData extends StatelessWidget {
-  const _SmallNoData({super.key});
+  const _SmallNoData();
   @override
   Widget build(BuildContext context) =>
       const Center(child: Text('No Data', style: TextStyle(fontSize: 12, color: Colors.grey)));

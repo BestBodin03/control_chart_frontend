@@ -5,8 +5,6 @@ import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_component.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/mr_chart_component.dart';
-import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../../domain/types/chart_component.dart';

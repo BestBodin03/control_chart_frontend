@@ -254,7 +254,7 @@ List<LineChartBarData> buildLineBarsData() {
   // จุดสำหรับวาด (กรองช่วงเวลา + sort)
   final spots = pts
       .where((p) => p.collectDate != null)
-      .map((p) => FlSpot(p.collectDate!.millisecondsSinceEpoch.toDouble(), p.value))
+      .map((p) => FlSpot(p.collectDate.millisecondsSinceEpoch.toDouble(), p.value))
       .where((s) => s.x >= math.min(minXv, maxXv) && s.x <= math.max(minXv, maxXv))
       .toList()
     ..sort((a, b) => a.x.compareTo(b.x));
@@ -264,7 +264,6 @@ List<LineChartBarData> buildLineBarsData() {
   var cur = <FlSpot>[];
   for (final p in pts) {
     final dt = p.collectDate;
-    if (dt == null) continue;
     final s = FlSpot(dt.millisecondsSinceEpoch.toDouble(), p.value);
     if (p.isViolatedR3 == true) {
       cur.add(s);
@@ -280,7 +279,7 @@ List<LineChartBarData> buildLineBarsData() {
   // lookup: x(epoch ms double) -> DataPoint (ใช้กับ dotPainter)
   final Map<double, ChartDataPoint> dpByX = {
     for (final p in pts.where((e) => e.collectDate != null))
-      p.collectDate!.millisecondsSinceEpoch.toDouble(): p
+      p.collectDate.millisecondsSinceEpoch.toDouble(): p
   };
 
   final baseColor = dataLineColor ?? AppColors.colorBrand;
@@ -340,7 +339,8 @@ List<LineChartBarData> buildLineBarsData() {
               color: Colors.white,
               barWidth: 5,
               isStrokeCapRound: true,
-              dotData: const FlDotData(show: false),
+              dotData: const FlDotData(
+                show: false),
               belowBarData: BarAreaData(show: false),
               showingIndicators: const [], // ไม่ร่วม tooltip
             ),
@@ -366,7 +366,7 @@ LineTouchData buildTouchData() {
   final points = _pointsInWindow;
   final Map<double, ChartDataPoint> map = {
     for (final p in points.where((e) => e.collectDate != null))
-      p.collectDate!.millisecondsSinceEpoch.toDouble(): p,
+      p.collectDate.millisecondsSinceEpoch.toDouble(): p,
   };
 
   return LineTouchData(
@@ -380,7 +380,7 @@ LineTouchData buildTouchData() {
       tooltipMargin: 12,                             // avoid clinging to edge (not 0)
       maxContentWidth: 340,                          // a bit wider so it’s not too tall
       tooltipBorderRadius: BorderRadius.circular(8),
-      getTooltipColor: (_) => AppColors.colorBrand.withValues(alpha: 0.9),
+      getTooltipColor: (_) => AppColors.colorBrand,
 
       // MUST return same length as `spots` (use nulls for the ones you want to skip)
       getTooltipItems: (spots) {
@@ -421,8 +421,6 @@ LineTouchData buildTouchData() {
 
               buf.writeln("การละเมิด: ${violations.join(", ")}");
             }
-
-
           return LineTooltipItem(
             buf.toString().trimRight(),
             AppTypography.textBody4W,

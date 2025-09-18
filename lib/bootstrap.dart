@@ -2,7 +2,6 @@ import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/shared_preference/tv_setting_profile_pref.dart';
 import 'package:control_chart/data/shared_preference/tv_setting_profile_state.dart';
 import 'package:control_chart/domain/models/setting.dart';
-import 'package:flutter/foundation.dart';
 
 Future<TvSettingProfileState> bootstrap({
   required TvSettingProfilePref prefs,

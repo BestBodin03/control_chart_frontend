@@ -1,7 +1,6 @@
 import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/data/bloc/setting/setting_bloc.dart';
-import 'package:control_chart/data/bloc/setting_profile/setting_profile_bloc.dart';
 import 'package:control_chart/data/cubit/setting_form/extension/setting_form_cubit_global_period.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_cubit.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
@@ -11,7 +10,6 @@ import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/form_component.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile.dart';
-import 'package:control_chart/ui/screen/screen_content/setting_screen_content/setting_var.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';

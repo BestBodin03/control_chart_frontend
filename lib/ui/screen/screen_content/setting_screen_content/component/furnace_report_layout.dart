@@ -1,6 +1,5 @@
 
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
-import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/help.dart';
 import 'package:control_chart/ui/core/shared/small_control_chart/surface_hardness/help.dart';
 import 'package:control_chart/ui/core/shared/table_component.dart';

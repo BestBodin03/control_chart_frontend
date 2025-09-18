@@ -59,10 +59,10 @@ Widget buildChartsSectionCdeCdt(
   if (isReady && current.materialNo != null) {
     final partName = searchState
         .chartDetails.first.chartGeneralDetail.partName
-        ?.trim();
+        .trim();
     final mat = current.materialNo!;
     parts.add(
-      (partName != null && partName.isNotEmpty) ? '$partName - $mat' : '$mat',
+      (partName != null && partName.isNotEmpty) ? '$partName - $mat' : mat,
     );
   }
 
@@ -239,8 +239,11 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                           if (onZoom != null) ...[
                             IconButton(
                               tooltip: 'Zoom',
-                              icon: const Icon(Icons.fullscreen, size: 18),
-                              onPressed: () => onZoom!(context),
+                              icon: const Icon(
+                                Icons.fullscreen, 
+                                size: 18),
+                              splashRadius: 8,
+                              onPressed: () => onZoom!(context)
                             ),
                           ],
                         ],
@@ -328,7 +331,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
 }
 
 class _SmallError extends StatelessWidget {
-  const _SmallError({super.key});
+  const _SmallError();
   @override
   Widget build(BuildContext context) => const Center(
         child: Column(
@@ -344,7 +347,7 @@ class _SmallError extends StatelessWidget {
 }
 
 class _SmallNoData extends StatelessWidget {
-  const _SmallNoData({super.key});
+  const _SmallNoData();
   @override
   Widget build(BuildContext context) =>
       const Center(child: Text('No Data', style: TextStyle(fontSize: 12, color: Colors.grey)));
@@ -402,8 +405,7 @@ class _TrendIconsRow extends StatelessWidget {
   const _TrendIconsRow({
     required this.label,
     required this.labelColor,
-    required this.iconColor,
-    this.showActiveHint = false,
+    required this.iconColor, required this.showActiveHint,
   });
 
   final String label;
@@ -415,8 +417,8 @@ class _TrendIconsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     // slightly emphasize the first icon when trend exists
     final Color firstColor = showActiveHint
-        ? iconColor.withOpacity(0.95)
-        : iconColor.withOpacity(0.65);
+        ? iconColor.withValues(alpha: 0.95)
+        : iconColor.withValues(alpha: 0.65);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -425,7 +427,7 @@ class _TrendIconsRow extends StatelessWidget {
         const SizedBox(width: 8),
         Icon(Icons.trending_up_rounded, size: 14, color: firstColor),
         const SizedBox(width: 4),
-        Icon(Icons.show_chart_rounded, size: 14, color: iconColor.withOpacity(0.85)),
+        Icon(Icons.show_chart_rounded, size: 14, color: iconColor.withValues(alpha: 0.85)),
       ],
     );
   }

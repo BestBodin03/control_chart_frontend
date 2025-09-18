@@ -22,40 +22,42 @@ class ViolationsColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _ViolationRow(
-          color: Colors.pinkAccent,
-          label: 'Trend',
-          violated: trend > 0,
-          // Trend ไม่แสดงตัวเลข แต่จะยังเว้นคอลัมน์ไว้ให้ alignment ตรง
-          showCount: false,
-          fontSize: fontSize,
-          dotSize: dotSize,
-        ),
-        SizedBox(height: gap),
-        _ViolationRow(
-          color: Colors.red,
-          label: 'Beyond Spec Limit',
-          violated: beyondSpecLimit > 0,
-          countText: '$beyondSpecLimit',
-          showCount: beyondSpecLimit > 0,
-          fontSize: fontSize,
-          dotSize: dotSize,
-        ),
-        SizedBox(height: gap),
-        _ViolationRow(
-          color: Colors.orange,
-          label: 'Beyond Control Limit',
-          violated: beyondControlLimit > 0,
-          countText: '$beyondControlLimit',
-          showCount: beyondControlLimit > 0,
-          fontSize: fontSize,
-          dotSize: dotSize,
-        ),
-
-      ],
+    return SizedBox(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ViolationRow(
+            color: Colors.pinkAccent,
+            label: 'Trend',
+            violated: trend > 0,
+            // Trend ไม่แสดงตัวเลข แต่จะยังเว้นคอลัมน์ไว้ให้ alignment ตรง
+            showCount: false,
+            fontSize: fontSize,
+            dotSize: dotSize,
+          ),
+          SizedBox(height: gap),
+          _ViolationRow(
+            color: Colors.red,
+            label: 'Beyond Spec Limit',
+            violated: beyondSpecLimit > 0,
+            countText: '$beyondSpecLimit',
+            showCount: beyondSpecLimit > 0,
+            fontSize: fontSize,
+            dotSize: dotSize,
+          ),
+          SizedBox(height: gap),
+          _ViolationRow(
+            color: Colors.orange,
+            label: 'Beyond Control Limit',
+            violated: beyondControlLimit > 0,
+            countText: '$beyondControlLimit',
+            showCount: beyondControlLimit > 0,
+            fontSize: fontSize,
+            dotSize: dotSize,
+          ),
+      
+        ],
+      ),
     );
   }
 }
@@ -88,56 +90,58 @@ class _ViolationRow extends StatelessWidget {
     final icon = violated ? Icons.cancel : Icons.check_circle;
     final iconColor = violated ? AppColors.colorAlert1 : AppColors.colorSuccess1;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Dot (with aura + blinking if violated)
-        SizedBox(
-          width: _dotColWidth,
-          child: Center(
-            child: _BlinkingDot(
-              color: color,
-              size: dotSize,
-              active: violated,
+    return SizedBox(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Dot (with aura + blinking if violated)
+          SizedBox(
+            width: _dotColWidth,
+            child: Center(
+              child: _BlinkingDot(
+                color: color,
+                size: dotSize,
+                active: violated,
+              ),
             ),
           ),
-        ),
-
-    // Label (flexible instead of fixed width)
-    Expanded(
-          child: Text(
-            label,
-            style: TextStyle(color: color, fontSize: fontSize),
+      
+          // Label (flexible instead of fixed width)
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(color: color, fontSize: fontSize),
+            ),
           ),
-        ),
-
-        // Icon
-        SizedBox(
-          width: _iconColWidth,
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Icon(icon, size: fontSize + 4, color: iconColor),
+      
+          // Icon
+          SizedBox(
+            width: _iconColWidth,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Icon(icon, size: fontSize + 4, color: iconColor),
+            ),
           ),
-        ),
-
-        // Count
-        SizedBox(
-          width: _countColWidth,
-          child: showCount
-              ? Align(
-                  alignment: Alignment.center,
-                  child: Text(
-                    countText ?? '',
-                    style: TextStyle(
-                      fontSize: fontSize,
-                      color: violated ? AppColors.colorBlack : Colors.grey.shade600,
-                      fontWeight: FontWeight.w600,
+      
+          // Count
+          SizedBox(
+            width: _countColWidth,
+            child: showCount
+                ? Align(
+                    alignment: Alignment.center,
+                    child: Text(
+                      countText ?? '',
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        color: violated ? AppColors.colorBlack : Colors.grey.shade600,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                )
-              : const SizedBox.shrink(),
-        ),
-      ],
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
     );
   }
 }

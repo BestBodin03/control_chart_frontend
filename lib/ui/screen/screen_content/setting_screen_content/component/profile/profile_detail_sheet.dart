@@ -1,12 +1,8 @@
 // ✅ Profile Detail Sheet Component
-import 'package:control_chart/data/cubit/setting_form/setting_form_cubit.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
-import 'package:control_chart/ui/core/shared/setting_form.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile.dart';
-import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
 class ProfileDetailSheet extends StatelessWidget {
@@ -30,70 +26,68 @@ class ProfileDetailSheet extends StatelessWidget {
           topRight: Radius.circular(20),
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header with close button
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'รายละเอียดโปรไฟล์',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF0F172A),
-                ),
-              ),
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Profile details
-          _buildDetailRow(context, 'ชื่อโปรไฟล์', profile.name),
-          _buildDetailRow(context, 'ประเภทการแสดงผล', profile.displayType),
-          _buildDetailRow(
-            context,
-            'สร้างเมื่อ',
-            profile.createdAt != null
-                ? DateFormat('dd/MM').format(profile.createdAt!)
-                : "-",
-          ),
-          _buildDetailRow(context, 'สถานะ', profile.active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'),
-          
-          if (profile.chartChangeInterval != null)
-            _buildDetailRow(context, 'ช่วงเวลาการเปลี่ยนแปลง', '${profile.chartChangeInterval} วินาที'),
-          
-          if (profile.ruleSelected != null && profile.ruleSelected!.isNotEmpty)
-            _buildDetailRow(context, 'กฎที่เลือก', _formatSelectedRules(profile.ruleSelected!)),
-
-          if (profile.specifics != null && profile.specifics!.isNotEmpty)
-            _buildDetailRow(context, 'รายละเอียด \nการแสดงผล', _formatSettingSpecificDetails(profile.specifics!)),
-          
-          const SizedBox(height: 24),
-          
-          // Action buttons
-          Row(
-            children: [
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.colorBrand,
-                    foregroundColor: Colors.white,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with close button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'รายละเอียดโปรไฟล์',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF0F172A),
                   ),
-                  child: const Text('ปิด'),
                 ),
-              ),
-            ],
-          ),
-        ],
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Profile details
+            _buildDetailRow(context, 'ชื่อโปรไฟล์', profile.name),
+            _buildDetailRow(context, 'ประเภทการแสดงผล', profile.displayType),
+            if (profile.specifics != null && profile.specifics!.isNotEmpty)
+              _buildDetailRow(context, 'ระยะเวลา', _formatDate(profile.specifics!)),
+
+            _buildDetailRow(context, 'สถานะ', profile.active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'),
+            
+            if (profile.chartChangeInterval != null)
+              _buildDetailRow(context, 'ช่วงเวลาเปลี่ยนหน้า', '${profile.chartChangeInterval} วินาที'),
+            
+            if (profile.ruleSelected != null && profile.ruleSelected!.isNotEmpty)
+              _buildDetailRow(context, 'กฎที่เลือก', _formatSelectedRules(profile.ruleSelected!)),
+        
+            if (profile.specifics != null && profile.specifics!.isNotEmpty)
+              _buildDetailRow(context, 'รายละเอียด \nการแสดงผล', _formatSettingSpecificDetails(profile.specifics!)),
+            
+            const SizedBox(height: 24),
+            
+            // Action buttons
+            Row(
+              children: [
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.colorBrand,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('ปิด'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -142,17 +136,35 @@ class ProfileDetailSheet extends StatelessWidget {
         .join(', ');
   }
 
+  String _formatDate(List<SpecificSettingState> specifics) {
+    if (specifics.isEmpty) return "ไม่พบข้อมูล";
+
+    final first = specifics.first;
+
+    final start = first.startDate != null
+        ? DateFormat('dd/MM/yyyy').format(first.startDate!)
+        : "-";
+    final end = first.endDate != null
+        ? DateFormat('dd/MM/yyyy').format(first.endDate!)
+        : "-";
+
+    return '$start ถึง $end';
+  }
+
+
   String _formatSettingSpecificDetails(List<SpecificSettingState> specifics) {
     if (specifics.isEmpty) return "ไม่พบข้อมูล";
 
-  return specifics.map((s) {
-    final start = s.startDate != null ? DateFormat('dd/MM').format(s.startDate!) : "-";
-    final end   = s.endDate   != null ? DateFormat('dd/MM').format(s.endDate!)   : "-";
+    return specifics.indexed.map((entry) {
+      final (i, s) = entry;
 
-    return 'ระยะเวลา: $start ถึง $end'
-          ' - เตาที่: ${s.furnaceNo ?? "-"}'
-          ' - เลขแมต: ${s.cpNo ?? "-"}';
-  }).join("\n");
+      // final start = s.startDate != null ? DateFormat('dd/MM').format(s.startDate!) : "-";
+      // final end   = s.endDate   != null ? DateFormat('dd/MM').format(s.endDate!)   : "-";
+      final page = i + 1;
+
+      return 'หน้าที่ $page'
+            ' - เตาที่: ${s.furnaceNo ?? "-"}'
+            ' - เลขแมต: ${s.cpNo ?? "-"}';
+    }).join("\n");
   }
-
 }
