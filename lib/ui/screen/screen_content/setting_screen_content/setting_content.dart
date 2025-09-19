@@ -5,7 +5,7 @@ import 'package:control_chart/data/cubit/setting_form/setting_form_state.dart';
 import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/setting_form.dart';
-import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/import_page.dart';
+import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/import_data/import_page.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile_page.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/setting_var.dart';
@@ -117,22 +117,25 @@ class _SettingContentState extends State<SettingContent> {
                     );
                   },
                 ),
-                TabKey.importData => ImportPage(
-                  fileName: null,
-                  onPickFile: () {},
-                  dropdown1: 'x',
-                  onDropdown1: (v) {},
-                  dropdown2: 'y',
-                  onDropdown2: (v) {},
-
-                  // ฟอร์มด้านล่าง
-                  nameValue: '',                   // จาก state
-                  onNameChanged: (v) => '',
-                  onConfirm: () {
-                    // ทำงานเมื่อกด "ยืนยัน"
-                    // เช่น: context.read<SettingProfileBloc>().add(SubmitImport(...));
-                  },
-                  isSubmitting: false,
+                TabKey.importData => Align(
+                  alignment: Alignment.centerLeft,
+                  child: ImportPage(
+                    fileName: null,
+                    onPickFile: () {},
+                    dropdown1: 'x',
+                    onDropdown1: (v) {},
+                    dropdown2: 'y',
+                    onDropdown2: (v) {},
+                  
+                    // ฟอร์มด้านล่าง
+                    nameValue: '',                   // จาก state
+                    onNameChanged: (v) => '',
+                    onConfirm: () {
+                      // ทำงานเมื่อกด "ยืนยัน"
+                      // เช่น: context.read<SettingProfileBloc>().add(SubmitImport(...));
+                    },
+                    isSubmitting: false,
+                  ),
                 )
 
               },

@@ -229,20 +229,6 @@ class _MediumContainer extends StatelessWidget {
                                       color: Colors.white.withValues(alpha: 0.6),
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(width: 1, color: Colors.grey.shade500),
-                                      // boxShadow: [
-                                      //   // BoxShadow(
-                                      //   //   color: Colors.grey.shade100,
-                                      //   //   blurRadius: 10,
-                                      //   //   spreadRadius: 0,
-                                      //   //   offset: const Offset(0, 8),
-                                      //   // ),
-                                      //   // BoxShadow(
-                                      //   //   color: Colors.white.withValues(alpha: 0.8),
-                                      //   //   // blurRadius: 12,
-                                      //   //   // spreadRadius: 6,
-                                      //   //   offset: const Offset(0, -2),
-                                      //   // ),
-                                      // ]
                                     ),
                                     child: Text(
                                       '$spotCount Records',

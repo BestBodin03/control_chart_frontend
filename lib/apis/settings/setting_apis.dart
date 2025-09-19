@@ -85,13 +85,25 @@ class SettingApis {
   Future<ApiResponse<Setting>> getAllProfileSettings() async {
     try {
       final Response res = await ApiConfig().get('/setting/all-profiles');
-      return ApiResponse.fromResponse<Setting>(res, Setting.fromJson);
-    } catch (e) {
-      return ApiResponse<Setting>(
-        success: false,
-        data: const [],
-        error: 'Failed to get settings: $e',
-      );
+
+      if (res.statusCode == 200) {
+        return ApiResponse.fromResponse<Setting>(res, Setting.fromJson);
+      } else {
+        return ApiResponse<Setting>(
+          success: false,
+          data: const [],
+          error: 'ไม่สามารถโหลดข้อมูลได้ (รหัส ${res.statusCode})',
+        );
+      }
+    } on DioException catch (e) {
+      String message = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        message = 'การเชื่อมต่อล้มเหลว กรุณาลองใหม่';
+      } else if (e.type == DioExceptionType.badResponse) {
+        message = 'เซิร์ฟเวอร์ไม่ตอบสนอง กรุณาลองใหม่ภายหลัง';
+      }
+      return ApiResponse<Setting>(success: false, data: const [], error: message);
     }
   }
 
