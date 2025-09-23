@@ -157,9 +157,6 @@ class ProfileDetailSheet extends StatelessWidget {
 
     return specifics.indexed.map((entry) {
       final (i, s) = entry;
-
-      // final start = s.startDate != null ? DateFormat('dd/MM').format(s.startDate!) : "-";
-      // final end   = s.endDate   != null ? DateFormat('dd/MM').format(s.endDate!)   : "-";
       final page = i + 1;
 
       return 'หน้าที่ $page'

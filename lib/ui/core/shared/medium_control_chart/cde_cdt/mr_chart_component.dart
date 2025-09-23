@@ -172,8 +172,8 @@ class MrChartComponent extends StatelessWidget implements ChartComponent {
           reservedSize: 24,
           interval: _getInterval(),
           getTitlesWidget: (v, _) => Text(
-            v.toStringAsFixed(0),
-            style: const TextStyle(color: Colors.black54, fontSize: 8),
+            v.toStringAsFixed(2),
+            style: const TextStyle(color: Color.fromARGB(137, 203, 172, 172), fontSize: 8),
           ),
         ),
       ),

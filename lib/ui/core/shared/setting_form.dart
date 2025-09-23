@@ -434,7 +434,16 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                         Row(
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
-                                            buildSectionTitle('หน้าที่ ${i + 1}'),
+                                            Row(
+                                              children: [
+                                                buildSectionTitle('หน้าที่ ${i + 1}'),
+                                                IconButton(
+                                                  tooltip: 'Chart Preview',
+                                                onPressed: () => {},
+                                                  icon: const Icon(Icons.info_outline), // or Icons.info
+                                                ),
+                                              ],
+                                            ),
                                             SizedBox(
                                               height: 36,
                                               child: DecoratedBox(

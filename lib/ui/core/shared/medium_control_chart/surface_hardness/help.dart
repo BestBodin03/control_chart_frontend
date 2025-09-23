@@ -282,16 +282,16 @@ class _MediumContainer extends StatelessWidget {
 
                               ),
 
-                            ...[
-                              IconButton(
-                                tooltip: 'Zoom',
-                                icon: const Icon(
-                                  Icons.fullscreen, 
-                                  size: 18),
-                                splashRadius: 8,
-                                onPressed: () => onZoom(context)
-                              ),
-                            ],
+                            // ...[
+                            //   IconButton(
+                            //     tooltip: 'Zoom',
+                            //     icon: const Icon(
+                            //       Icons.fullscreen, 
+                            //       size: 18),
+                            //     splashRadius: 8,
+                            //     onPressed: () => onZoom(context)
+                            //   ),
+                            // ],
                             ],
                           ),
                         ],
@@ -311,18 +311,18 @@ class _MediumContainer extends StatelessWidget {
                       const SizedBox(height: 8),
 
                       // Header bottom
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Center(
-                              child: Text(
-                                "Surface Hardness |  Moving Range",
-                                style: AppTypography.textBody3B,
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                        ],
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                                Text(
+                                  "Surface Hardness |  Moving Range",
+                                  style: AppTypography.textBody3BBold,
+                                  textAlign: TextAlign.center,
+                                ),
+                          ],
+                        ),
                       ),
 
                       const SizedBox(height: 8),
@@ -347,28 +347,31 @@ class _MediumContainer extends StatelessWidget {
   }
 }
 
-// Decide background color based on violation hierarchy
-Color _getViolationBgColor(int beyondControl, int beyondSpec, int trend) {
-  if (trend > 0) {
-    return Colors.pink.shade200.withValues(alpha: 0.15);
-  } else if (beyondSpec > 0) {
-    return Colors.red.shade200.withValues(alpha: 0.15);
-  } else if (beyondControl > 0) {
-    return Colors.orange.shade200.withValues(alpha: 0.15);
+Color _getViolationBgColor(int overControl, int overSpec, int trend) {
+  if (overSpec > 0) {
+    return Colors.red.withValues(alpha: 0.15);
+    // return Colors.pink.shade200.withValues(alpha: 0.15);
+  } else if (overControl > 0) {
+    return Colors.orange.withValues(alpha: 0.15);
+    // return Colors.red.shade200.withValues(alpha: 0.15);
+  } else if (trend > 0) {
+    return Colors.pink.withValues(alpha: 0.15);
   }
   return AppColors.colorBrandTp.withValues(alpha: 0.15);
 }
 
 // Decide border color in same hierarchy
-Color _getViolationBorderColor(int beyondControl, int beyondSpec, int trend) {
-  if (trend > 0) {
-    return Colors.pinkAccent.withValues(alpha: 0.35);
-  } else if (beyondSpec > 0) {
-    return Colors.red.withValues(alpha: 0.35);
-  } else if (beyondControl > 0) {
-    return Colors.orange.withValues(alpha: 0.35);
+Color _getViolationBorderColor(int overControl, int overSpec, int trend) {
+  if (overSpec > 0) {
+    return Colors.red.withValues(alpha: 0.70);
+    // return Colors.pink.shade200.withValues(alpha: 0.15);
+  } else if (overControl > 0) {
+    return Colors.orange.withValues(alpha: 0.70);
+    // return Colors.red.shade200.withValues(alpha: 0.15);
+  } else if (trend > 0) {
+    return Colors.pinkAccent.withValues(alpha: 0.70);
   }
-  return AppColors.colorBrandTp.withValues(alpha: 0.35);
+  return AppColors.colorBrandTp.withValues(alpha: 0.70);
 }
 
 

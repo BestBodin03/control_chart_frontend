@@ -11,6 +11,7 @@ class ChartDataPoint {
   final bool isViolatedR1BeyondUCL;
   final bool isViolatedR1BeyondLSL;
   final bool isViolatedR1BeyondUSL;
+  final String? fgNo;
 
   ChartDataPoint({
     required this.collectDate,
@@ -24,7 +25,8 @@ class ChartDataPoint {
     required this.isViolatedR1BeyondLCL,
     required this.isViolatedR1BeyondUCL,
     required this.isViolatedR1BeyondLSL,
-    required this.isViolatedR1BeyondUSL
+    required this.isViolatedR1BeyondUSL,
+    this.fgNo
 
   });
 }
@@ -38,6 +40,7 @@ class ChartDataPointCdeCdt {
   final double value;
   final double mrValue;
   final bool isViolatedR3;
+  final String? fgNo;
 
   ChartDataPointCdeCdt({
     required this.collectDate,
@@ -47,6 +50,7 @@ class ChartDataPointCdeCdt {
     this.matNo,
     this.value = 0.0,
     this.mrValue = 0.0,
-    required this.isViolatedR3
+    required this.isViolatedR3,
+    this.fgNo
   });
 }

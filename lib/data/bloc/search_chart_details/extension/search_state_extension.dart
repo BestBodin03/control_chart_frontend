@@ -39,6 +39,7 @@ extension SearchStateExtension on SearchState {
       return ChartDataPoint(
         collectDate: dt,
         label: DateFormat('dd/MM').format(dt),
+        fgNo: chartDetail.fgNo,
         fullLabel:
             "${dt.day.toString().padLeft(2, '0')}/"
             "${dt.month.toString().padLeft(2, '0')}/"
@@ -97,6 +98,7 @@ extension SearchStateExtension on SearchState {
 
       return ChartDataPointCdeCdt(
         collectDate: dt,
+        fgNo: chartDetail.fgNo,
         label: DateFormat('dd/MM').format(dt),
         fullLabel:
             "${dt.day.toString().padLeft(2, '0')}/"

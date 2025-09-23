@@ -1,5 +1,6 @@
 // lib/ui/screen/screen_content/setting_screen_content/component/profile/profile_card.dart
 import 'package:control_chart/data/bloc/setting_profile/setting_profile_bloc.dart';
+import 'package:control_chart/data/cubit/setting_form/extension/setting_form_cubit_global_period.dart';
 import 'package:control_chart/data/cubit/setting_form/setting_form_cubit.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/profile/profile.dart';
@@ -129,7 +130,7 @@ class _ProfileCardState extends State<ProfileCard> {
 
                 Text(
                   'ประเภทการแสดงผล: ${widget.profile.displayType}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: const Color(0xFF475569),
                         height: 1.45,
                       ),
@@ -143,7 +144,7 @@ class _ProfileCardState extends State<ProfileCard> {
                   children: [
                     Text(
                       'แสดงผล ${widget.profile.specifics?.length ?? 0} หน้า',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(color: const Color(0xFF64748B)),
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(color: const Color(0xFF64748B)),
                     ),
                     const Spacer(),
 
@@ -183,9 +184,11 @@ class _ProfileCardState extends State<ProfileCard> {
                             ..updateRuleSelected()
                             // ..updateGlobalPeriodType(formCubit.)
                             ..updateSpecifics(widget.profile.specifics ?? [])
-                            ..updateIsUsed(widget.profile.active);
+                            ..updateIsUsed(v);
+                            // ..updateGlobalStartDate(widget.profile.specifics.first.startDate)
 
                             final success = await formCubit.saveForm(id: widget.profile.profileId);
+                            // debugPrint(success.toString());
                             if (!context.mounted) return;
 
                             if (success) {
@@ -202,6 +205,7 @@ class _ProfileCardState extends State<ProfileCard> {
                             } else {
                               // rollback
                               setState(() => _isOn = prev);
+                              // debugPrint('HII');
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   duration: Duration(seconds: 1),

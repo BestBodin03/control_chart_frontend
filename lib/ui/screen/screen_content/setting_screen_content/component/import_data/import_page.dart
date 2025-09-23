@@ -1,4 +1,5 @@
 import 'package:control_chart/ui/core/design_system/app_color.dart';
+import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/form_component.dart';
 import 'package:control_chart/ui/core/shared/pill_button.dart';
 import 'package:flutter/material.dart';
@@ -123,13 +124,10 @@ class ImportPage extends StatelessWidget {
                                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                             ),
                                           )
-                                        : const Icon(Icons.replay_rounded, size: 18),
+                                        : const Icon(Icons.replay_rounded, size: 20),
                                     label: Text(
                                       isSubmitting ? 'กำลังดำเนินการ...' : 'ดึงข้อมูลปัจจุบัน',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                      style: AppTypography.textBody2WBold
                                     ),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppColors.colorBrand,
@@ -204,19 +202,16 @@ class ImportPage extends StatelessWidget {
                                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                     ),
                                   )
-                                : const Icon(Icons.check_rounded, size: 18),
+                                : const Icon(Icons.check_rounded, size: 20),
                             label: Text(
                               isSubmitting ? 'กำลังดำเนินการ...' : 'ยืนยัน',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: AppTypography.textBody2WBold
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF059669),
+                              backgroundColor: AppColors.colorSuccess1,
                               foregroundColor: Colors.white,
                               elevation: 8,
-                              shadowColor: const Color(0xFF059669).withValues(alpha: 0.4),
+                              shadowColor: AppColors.colorSuccess1.withValues(alpha: 0.4),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(24),
                               ),

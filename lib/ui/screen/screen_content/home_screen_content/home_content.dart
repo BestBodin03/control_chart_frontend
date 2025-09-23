@@ -127,54 +127,54 @@ class _HomeContentState extends State<HomeContent> {
   // ---------------- STEP 1: คิดหน้าต่างจาก labels + xTick ----------------
 
   /// แปลง labels จาก state เป็น List<DateTime> (local)
-  List<DateTime> _labelsFromState(SearchState st) {
-    final raw = st.controlChartStats?.xAxisMediumLabel ?? const[];
-    return raw.map((d) => d.toLocal()).toList();
-      return raw
-        .map((e) {
-          if (e is DateTime) return e.toLocal();
-          if (e is String) {
-            try { return DateTime.parse(e.toIso8601String()).toLocal(); } catch (_) {}
-          }
-          return null;
-        })
-        .whereType<DateTime>()
-        .toList();
-      return const <DateTime>[];
-  }
+  // List<DateTime> _labelsFromState(SearchState st) {
+  //   final raw = st.controlChartStats?.xAxisMediumLabel ?? const[];
+  //   return raw.map((d) => d.toLocal()).toList();
+  //     return raw
+  //       .map((e) {
+  //         if (e is DateTime) return e.toLocal();
+  //         if (e is String) {
+  //           try { return DateTime.parse(e.toIso8601String()).toLocal(); } catch (_) {}
+  //         }
+  //         return null;
+  //       })
+  //       .whereType<DateTime>()
+  //       .toList();
+  //     return const <DateTime>[];
+  // }
 
   /// คำนวณหน้าต่าง “ตาม label”
-  void _recalcWindowByLabels(SearchState st) {
-    final labels = _labelsFromState(st);
-    final labelCount = labels.length;
+  // void _recalcWindowByLabels(SearchState st) {
+  //   // final labels = _labelsFromState(st);
+  //   // final labelCount = labels.length;
 
-    final int xTick = (st.controlChartStats?.xTick ?? 6).clamp(1, 100);
-    _winSize = labelCount > 0 ? xTick.clamp(1, labelCount) : xTick;
+  //   final int xTick = (st.controlChartStats?.xTick ?? 6).clamp(1, 100);
+  //   _winSize = xTick.clamp(1, labelCount) : xTick;
 
-    if (labelCount <= 0) {
-      _winMaxStart = 0;
-      _winStart = 0;
-      return;
-    }
+  //   if (labelCount <= 0) {
+  //     _winMaxStart = 0;
+  //     _winStart = 0;
+  //     return;
+  //   }
 
-    _winMaxStart = (labelCount - _winSize).clamp(0, labelCount);
-    if (!_hasUserMovedSlider) {
-      // เกาะขวาสุด (แสดง label ล่าสุดตาม xTick)
-      _winStart = _isAscendingChrono ? _winMaxStart : 0;
-    }
-    if (_winStart > _winMaxStart) _winStart = _winMaxStart;
-    if (_winStart < 0) _winStart = 0;
-  }
+  //   _winMaxStart = (labelCount - _winSize).clamp(0, labelCount);
+  //   if (!_hasUserMovedSlider) {
+  //     // เกาะขวาสุด (แสดง label ล่าสุดตาม xTick)
+  //     _winStart = _isAscendingChrono ? _winMaxStart : 0;
+  //   }
+  //   if (_winStart > _winMaxStart) _winStart = _winMaxStart;
+  //   if (_winStart < 0) _winStart = 0;
+  // }
 
-  /// คืนช่วงวันที่ (ซ้าย-ขวา) ของ “หน้าต่าง label ปัจจุบัน”
-  (DateTime?, DateTime?) _currentLabelWindowRange(SearchState st) {
-    final labels = _labelsFromState(st);
-    if (labels.isEmpty) return (null, null);
+  // /// คืนช่วงวันที่ (ซ้าย-ขวา) ของ “หน้าต่าง label ปัจจุบัน”
+  // (DateTime?, DateTime?) _currentLabelWindowRange(SearchState st) {
+  //   final labels = _labelsFromState(st);
+  //   if (labels.isEmpty) return (null, null);
 
-    final int s = _winStart.clamp(0, labels.length - 1);
-    final int e = (_winStart + (_winSize) - 1).clamp(0, labels.length - 1);
-    return (labels[s], labels[e]);
-  }
+  //   final int s = _winStart.clamp(0, labels.length - 1);
+  //   final int e = (_winStart + (_winSize) - 1).clamp(0, labels.length - 1);
+  //   return (labels[s], labels[e]);
+  // }
 
   // ---------------- STEP 2: สวมช่วงเวลา (xStart/xEnd) ลงในโปรไฟล์ที่จะส่งเข้ากราฟ ----------------
 
@@ -222,10 +222,12 @@ class _HomeContentState extends State<HomeContent> {
               }
 
               // STEP 1: คำนวณหน้าต่างจาก labels + xTick
-              _recalcWindowByLabels(searchState);
+              // _recalcWindowByLabels(searchState);
 
               // STEP 2: เอาช่วง (ซ้าย-ขวา) ของหน้าต่าง label มา “สวม” ลงโปรไฟล์
-              final (left, right) = _currentLabelWindowRange(searchState);
+              // final (left, right) = _currentLabelWindowRange(searchState);
+              final (left, right) = (searchState.currentQuery.startDate, 
+              searchState.currentQuery.endDate);
               final qWindow = _applyRangeToProfile(q, left, right);
 
               return Column(
@@ -253,7 +255,7 @@ class _HomeContentState extends State<HomeContent> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _buildLabelWindowSliderSingle(searchState), // สไลเดอร์อิง labels
+                  // _buildLabelWindowSliderSingle(searchState), // สไลเดอร์อิง labels
                   const SizedBox(height: 8),
                 ],
               );
@@ -288,12 +290,15 @@ class _HomeContentState extends State<HomeContent> {
                     }
 
                     // STEP 1
-                    _recalcWindowByLabels(searchState);
+                    // _recalcWindowByLabels(searchState);
 
                     // STEP 2
-                    final (left, right) = _currentLabelWindowRange(searchState);
+                    // final (left, right) = _currentLabelWindowRange(searchState);
                     final q = profiles[i];
+                    final (left, right) = (searchState.currentQuery.startDate, 
+                    searchState.currentQuery.endDate);
                     final qWindow = _applyRangeToProfile(q, left, right);
+                    // final qWindow = _applyRangeToProfile(q, left, right);
 
                     return Padding(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -338,19 +343,21 @@ class _HomeContentState extends State<HomeContent> {
                                       height: constraints.maxHeight - (8 + 16),
                                       child: _ChartFillBox(
                                         child: buildChartsSectionCdeCdt(
-                                          profiles
-                                              .toList()
-                                              ..[i] = qWindow, // ใส่โปรไฟล์ที่สวมช่วงเวลาแล้ว ณ index นี้
-                                          i,
-                                          searchState,
-                                          externalStart: _winStart,
-                                          externalWindowSize: _winSize,
-                                        //   zoomBuilder: (ctx, profileAtIndex, st) =>
-                                        //       buildChartsSectionSurfaceHardnessLarge(
-                                        //         profileAtIndex,
-                                        //         st,
-                                        //         onClose: () => Navigator.of(ctx).maybePop(),
-                                        //       ),
+                                        profiles
+                                            .toList()
+                                            ..[i] = qWindow, // ใส่โปรไฟล์ที่สวมช่วงเวลาแล้ว ณ index นี้
+                                        i,
+                                        searchState,
+                                        externalStart: _winStart,
+                                        externalWindowSize: _winSize,
+                                        baseStart: baseStartDates[i],
+                                        baseEnd: baseEndDates[i],
+                                      //   zoomBuilder: (ctx, profileAtIndex, st) =>
+                                      //       buildChartsSectionSurfaceHardnessLarge(
+                                      //         profileAtIndex,
+                                      //         st,
+                                      //         onClose: () => Navigator.of(ctx).maybePop(),
+                                      //       ),
                                         ),
                                       ),
                                     ),
@@ -385,47 +392,47 @@ class _HomeContentState extends State<HomeContent> {
     return '$left - $right';
   }
 
-  Widget _buildLabelWindowSliderSingle(SearchState st) {
-    final labels = _labelsFromState(st);
-    final bool showSliderNeeded = labels.length > _winSize;
+  // Widget _buildLabelWindowSliderSingle(SearchState st) {
+  //   final labels = _labelsFromState(st);
+  //   final bool showSliderNeeded = labels.length > _winSize;
 
-    final (l, r) = _currentLabelWindowRange(st);
-    final labelText = _formatDateRange(l, r);
+  //   final (l, r) = _currentLabelWindowRange(st);
+  //   final labelText = _formatDateRange(l, r);
 
-    return SizedBox(
-      height: _rowH,
-      child: Row(
-        children: [
-          SizedBox(
-            width: showSliderNeeded ? (200 + _gap) : 0.0,
-            child: showSliderNeeded
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(labelText, style: const TextStyle(fontSize: 12)),
-                      Slider(
-                        min: 0,
-                        max: _winMaxStart.toDouble(),
-                        divisions: _winMaxStart > 0 ? _winMaxStart : null,
-                        value: _winStart.toDouble(),
-                        onChanged: (v) => setState(() {
-                          _hasUserMovedSlider = true;
-                          _winStart = v.round().clamp(0, _winMaxStart);
-                        }),
-                      ),
-                    ],
-                  )
-                : widget,
-          ),
-          const Expanded(child: SizedBox()),
-        ],
-      ),
-    );
-  }
+  //   return SizedBox(
+  //     height: _rowH,
+  //     child: Row(
+  //       children: [
+  //         SizedBox(
+  //           width: showSliderNeeded ? (200 + _gap) : 0.0,
+  //           child: showSliderNeeded
+  //               ? Column(
+  //                   crossAxisAlignment: CrossAxisAlignment.start,
+  //                   children: [
+  //                     Text(labelText, style: const TextStyle(fontSize: 12)),
+  //                     Slider(
+  //                       min: 0,
+  //                       max: _winMaxStart.toDouble(),
+  //                       divisions: _winMaxStart > 0 ? _winMaxStart : null,
+  //                       value: _winStart.toDouble(),
+  //                       onChanged: (v) => setState(() {
+  //                         _hasUserMovedSlider = true;
+  //                         _winStart = v.round().clamp(0, _winMaxStart);
+  //                       }),
+  //                     ),
+  //                   ],
+  //                 )
+  //               : widget,
+  //         ),
+  //         const Expanded(child: SizedBox()),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildLabelWindowSliderCarousel(int profilesLength, SearchState st) {
-    final labels = _labelsFromState(st);
-    final bool showSliderNeeded = labels.length > _winSize;
+    // final labels = _labelsFromState(st);
+    // final bool showSliderNeeded = labels.length > _winSize;
 
     // ความกว้างสไลเดอร์ (ดีไซน์เดิม)
     double sliderWidthForVisible(int count) {
@@ -434,8 +441,8 @@ class _HomeContentState extends State<HomeContent> {
       const double maxW = 320.0;
       return (count * perItem).clamp(minW, maxW);
     }
-    final sliderWidth = sliderWidthForVisible(_winSize);
-    final reservedLeftWidth = showSliderNeeded ? (sliderWidth + _gap) : 0.0;
+    // final sliderWidth = sliderWidthForVisible(_winSize);
+    // final reservedLeftWidth = showSliderNeeded ? (sliderWidth + _gap) : 0.0;
 
     // dots กลางจอ (ดีไซน์เดิม)
     Widget dots() => Row(
@@ -471,33 +478,33 @@ class _HomeContentState extends State<HomeContent> {
           IgnorePointer(child: dots()),
           Row(
             children: [
-              SizedBox(
-                width: reservedLeftWidth,
-                child: showSliderNeeded
-                    ? SizedBox(
-                        width: sliderWidth,
-                        child: SliderTheme(
-                          data: SliderTheme.of(context).copyWith(
-                            thumbColor: AppColors.colorBrand,
-                            activeTrackColor: AppColors.colorBrandTp,
-                            trackHeight: 2,
-                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                          ),
-                          child: Slider(
-                            min: 0,
-                            max: _winMaxStart.toDouble(),
-                            divisions: _winMaxStart > 0 ? _winMaxStart : null,
-                            value: _winStart.toDouble(),
-                            onChanged: (v) => setState(() {
-                              _hasUserMovedSlider = true;
-                              _winStart = v.round().clamp(0, _winMaxStart);
-                            }),
-                          ),
-                        ),
-                      )
-                    : null,
-              ),
-              const Expanded(child: SizedBox()),
+              // SizedBox(
+              //   width: reservedLeftWidth,
+              // //   child: showSliderNeeded
+              // //       ? SizedBox(
+              // //           width: sliderWidth,
+              // //           // child: SliderTheme(
+              // //           //   data: SliderTheme.of(context).copyWith(
+              // //           //     thumbColor: AppColors.colorBrand,
+              // //           //     activeTrackColor: AppColors.colorBrandTp,
+              // //           //     trackHeight: 2,
+              // //           //     thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+              // //           //   ),
+              // //             // child: Slider(
+              // //             //   min: 0,
+              // //             //   max: _winMaxStart.toDouble(),
+              // //             //   divisions: _winMaxStart > 0 ? _winMaxStart : null,
+              // //             //   value: _winStart.toDouble(),
+              // //             //   onChanged: (v) => setState(() {
+              // //             //     _hasUserMovedSlider = true;
+              // //             //     _winStart = v.round().clamp(0, _winMaxStart);
+              // //             //   }),
+              // //             // ),
+              // //           ),
+              // //         )
+              // //       : null,
+              // // ),
+              // const Expanded(child: SizedBox()),
             ],
           ),
         ],

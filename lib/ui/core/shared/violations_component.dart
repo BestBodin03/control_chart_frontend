@@ -26,19 +26,10 @@ class ViolationsColumn extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _ViolationRow(
-            color: Colors.pinkAccent,
-            label: 'Trend',
-            violated: trend > 0,
-            // Trend ไม่แสดงตัวเลข แต่จะยังเว้นคอลัมน์ไว้ให้ alignment ตรง
-            showCount: false,
-            fontSize: fontSize,
-            dotSize: dotSize,
-          ),
-          SizedBox(height: gap),
+          // SizedBox(height: gap),
           _ViolationRow(
             color: Colors.red,
-            label: 'Beyond Spec Limit',
+            label: 'Over Spec',
             violated: beyondSpecLimit > 0,
             countText: '$beyondSpecLimit',
             showCount: beyondSpecLimit > 0,
@@ -48,14 +39,23 @@ class ViolationsColumn extends StatelessWidget {
           SizedBox(height: gap),
           _ViolationRow(
             color: Colors.orange,
-            label: 'Beyond Control Limit',
+            label: 'Over Control',
             violated: beyondControlLimit > 0,
             countText: '$beyondControlLimit',
             showCount: beyondControlLimit > 0,
             fontSize: fontSize,
             dotSize: dotSize,
           ),
-      
+          SizedBox(height: gap),
+          _ViolationRow(
+            color: Colors.pinkAccent,
+            label: 'Trend',
+            violated: trend > 0,
+            // Trend ไม่แสดงตัวเลข แต่จะยังเว้นคอลัมน์ไว้ให้ alignment ตรง
+            showCount: false,
+            fontSize: fontSize,
+            dotSize: dotSize,
+          ),
         ],
       ),
     );

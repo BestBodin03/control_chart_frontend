@@ -47,7 +47,7 @@ class SettingFormState {
     if (specifics.isEmpty) return false;
     
     // Check global period settings
-    if (globalPeriodType == null || globalStartDate == null || globalEndDate == null) return false;
+    // if (globalPeriodType == null || globalStartDate == null || globalEndDate == null) return false;
 
     for (final sp in specifics) {
       if (displayType == DisplayType.FURNACE || displayType == DisplayType.FURNACE_CP) {

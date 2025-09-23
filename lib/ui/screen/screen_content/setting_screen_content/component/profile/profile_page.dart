@@ -111,6 +111,7 @@ class _ProfilesPageState extends State<ProfilesPage> {
           }
 
           return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header actions
               Row(

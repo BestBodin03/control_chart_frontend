@@ -258,12 +258,13 @@ class SettingFormCubit extends Cubit<SettingFormState> {
   Future<bool> saveForm({String? id}) async {
     // กันยิงซ้ำระหว่างกำลัง submit หรือ cubit ถูกปิดไปแล้ว
     if (state.status == SubmitStatus.submitting || isClosed) return false;
+    debugPrint(state.copyWith().toString());
 
     // ตรวจความถูกต้องก่อนส่ง
     if (!state.isValid) {
       emit(state.copyWith(
         status: SubmitStatus.failure,
-        error: 'Please fill all required fields correctly',
+        error: 'โปรดกรอกข้อมูลให้ครบถ้วน',
       ));
       return false;
     }

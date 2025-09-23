@@ -199,170 +199,169 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
 
   // ----- CONTROL LINES (respect selected attribute) -----
 
-  @override
-  ExtraLinesData buildControlLines() {
-    final specUsl = _sel(
-      controlChartStats?.specAttribute?.cdeUpperSpec,
-      controlChartStats?.specAttribute?.cdtUpperSpec,
-      controlChartStats?.specAttribute?.compoundLayerUpperSpec,
-    );
-    final specLsl = _sel(
-      controlChartStats?.specAttribute?.cdeLowerSpec,
-      controlChartStats?.specAttribute?.cdtLowerSpec,
-      controlChartStats?.specAttribute?.compoundLayerLowerSpec,
-    );
-    final target = _sel(
-      controlChartStats?.specAttribute?.cdeTarget,
-      controlChartStats?.specAttribute?.cdtTarget,
-      controlChartStats?.specAttribute?.compoundLayerTarget,
-    );
-    final ucl = _sel(
-      controlChartStats?.cdeControlLimitIChart?.ucl,
-      controlChartStats?.cdtControlLimitIChart?.ucl,
-      controlChartStats?.compoundLayerControlLimitIChart?.ucl,
-    );
-    final lcl = _sel(
-      controlChartStats?.cdeControlLimitIChart?.lcl,
-      controlChartStats?.cdtControlLimitIChart?.lcl,
-      controlChartStats?.compoundLayerControlLimitIChart?.lcl,
-    );
-    final avg = _sel(
-      controlChartStats?.cdeAverage,
-      controlChartStats?.cdtAverage,
-      controlChartStats?.compoundLayerAverage,
-    );
+// ----- LINE & TOUCH -----
 
-    return ExtraLinesData(
-      extraLinesOnTop: false,
-      horizontalLines: [
-        if ((specUsl ?? 0) > 0)
-          HorizontalLine(y: specUsl!, color: Colors.red.shade400, strokeWidth: 2),
-        if (ucl != null) HorizontalLine(y: ucl, color: Colors.amberAccent, strokeWidth: 1.5),
-        if ((target ?? 0) != 0)
-          HorizontalLine(y: target!, color: Colors.deepPurple.shade300, strokeWidth: 1.5),
-        if (avg != null) HorizontalLine(y: avg, color: AppColors.colorSuccess1, strokeWidth: 2),
-        if (lcl != null) HorizontalLine(y: lcl, color: Colors.amberAccent, strokeWidth: 1.5),
-        if ((specLsl ?? 0) > 0)
-          HorizontalLine(y: specLsl!, color: Colors.red.shade400, strokeWidth: 2),
-      ],
-    );
+@override
+ExtraLinesData buildControlLines() {
+  final specUsl = _sel(
+    controlChartStats?.specAttribute?.cdeUpperSpec,
+    controlChartStats?.specAttribute?.cdtUpperSpec,
+    controlChartStats?.specAttribute?.compoundLayerUpperSpec,
+  );
+  final specLsl = _sel(
+    controlChartStats?.specAttribute?.cdeLowerSpec,
+    controlChartStats?.specAttribute?.cdtLowerSpec,
+    controlChartStats?.specAttribute?.compoundLayerLowerSpec,
+  );
+  final target = _sel(
+    controlChartStats?.specAttribute?.cdeTarget,
+    controlChartStats?.specAttribute?.cdtTarget,
+    controlChartStats?.specAttribute?.compoundLayerTarget,
+  );
+  final ucl = _sel(
+    controlChartStats?.cdeControlLimitIChart?.ucl,
+    controlChartStats?.cdtControlLimitIChart?.ucl,
+    controlChartStats?.compoundLayerControlLimitIChart?.ucl,
+  );
+  final lcl = _sel(
+    controlChartStats?.cdeControlLimitIChart?.lcl,
+    controlChartStats?.cdtControlLimitIChart?.lcl,
+    controlChartStats?.compoundLayerControlLimitIChart?.lcl,
+  );
+  final avg = _sel(
+    controlChartStats?.cdeAverage,
+    controlChartStats?.cdtAverage,
+    controlChartStats?.compoundLayerAverage,
+  );
+
+  return ExtraLinesData(
+    extraLinesOnTop: false,
+    horizontalLines: [
+      if ((specUsl ?? 0) > 0)
+        HorizontalLine(y: specUsl!, color: Colors.red.shade400, strokeWidth: 2),
+      if (ucl != null) HorizontalLine(y: ucl, color: Colors.amberAccent, strokeWidth: 1.5),
+      if ((target ?? 0) != 0)
+        HorizontalLine(y: target!, color: Colors.deepPurple.shade300, strokeWidth: 1.5),
+      if (avg != null) HorizontalLine(y: avg, color: AppColors.colorSuccess1, strokeWidth: 2),
+      if (lcl != null) HorizontalLine(y: lcl, color: Colors.amberAccent, strokeWidth: 1.5),
+      if ((specLsl ?? 0) > 0)
+        HorizontalLine(y: specLsl!, color: Colors.red.shade400, strokeWidth: 2),
+    ],
+  );
+}
+
+@override
+List<LineChartBarData> buildLineBarsData() {
+  final pts = _pointsInWindow;
+  if (pts.isEmpty) {
+    return [LineChartBarData(spots: const [], color: dataLineColor, barWidth: 2)];
   }
 
-  // ----- LINE & TOUCH -----
+  final spots = pts
+      .map((p) => FlSpot(
+            p.collectDate.millisecondsSinceEpoch.toDouble(),
+            p.value,
+          ))
+      .toList()
+    ..sort((a, b) => a.x.compareTo(b.x));
 
-  @override
-  List<LineChartBarData> buildLineBarsData() {
-    final pts = _pointsInWindow;
-    if (pts.isEmpty) {
-      return [
-        LineChartBarData(spots: const [], color: dataLineColor, barWidth: 2),
-      ];
-    }
+  final specUsl = _sel(
+        controlChartStats?.specAttribute?.cdeUpperSpec,
+        controlChartStats?.specAttribute?.cdtUpperSpec,
+        controlChartStats?.specAttribute?.compoundLayerUpperSpec,
+      ) ?? 0.0;
+  final specLsl = _sel(
+        controlChartStats?.specAttribute?.cdeLowerSpec,
+        controlChartStats?.specAttribute?.cdtLowerSpec,
+        controlChartStats?.specAttribute?.compoundLayerLowerSpec,
+      ) ?? 0.0;
+  final ucl = _sel(
+        controlChartStats?.cdeControlLimitIChart?.ucl,
+        controlChartStats?.cdtControlLimitIChart?.ucl,
+        controlChartStats?.compoundLayerControlLimitIChart?.ucl,
+      ) ?? 0.0;
+  final lcl = _sel(
+        controlChartStats?.cdeControlLimitIChart?.lcl,
+        controlChartStats?.cdtControlLimitIChart?.lcl,
+        controlChartStats?.compoundLayerControlLimitIChart?.lcl,
+      ) ?? 0.0;
 
-    final minXv = xStart.millisecondsSinceEpoch.toDouble();
-    final maxXv = xEnd.millisecondsSinceEpoch.toDouble();
+  return [
+    LineChartBarData(
+      spots: spots,
+      isCurved: false,
+      color: dataLineColor,
+      barWidth: 2,
+      isStrokeCapRound: true,
+      dotData: FlDotData(
+        show: true,
+        getDotPainter: (spot, __, ___, ____) {
+          final v = spot.y;
+          Color dotColor = dataLineColor ?? AppColors.colorBrand;
 
-    final spots = pts
-        .map((p) => FlSpot(
-              p.collectDate.millisecondsSinceEpoch.toDouble(),
-              p.value,
-            ))
-        // .where((s) =>
-        //     s.x >= math.min(minXv, maxXv) && s.x <= math.max(minXv, maxXv))
-        .toList()
-      ..sort((a, b) => a.x.compareTo(b.x));
+          if (((specUsl > 0) && v > specUsl) || ((specLsl > 0) && v < specLsl)) {
+            dotColor = Colors.red;
+          } else if ((ucl > 0 && v > ucl) || (lcl > 0 && v < lcl)) {
+            dotColor = Colors.orange;
+          }
 
-    final specUsl = _sel(
-          controlChartStats?.specAttribute?.cdeUpperSpec,
-          controlChartStats?.specAttribute?.cdtUpperSpec,
-          controlChartStats?.specAttribute?.compoundLayerUpperSpec,
-        ) ??
-        0.0;
-    final specLsl = _sel(
-          controlChartStats?.specAttribute?.cdeLowerSpec,
-          controlChartStats?.specAttribute?.cdtLowerSpec,
-          controlChartStats?.specAttribute?.compoundLayerLowerSpec,
-        ) ??
-        0.0;
-    final ucl = _sel(
-          controlChartStats?.cdeControlLimitIChart?.ucl,
-          controlChartStats?.cdtControlLimitIChart?.ucl,
-          controlChartStats?.compoundLayerControlLimitIChart?.ucl,
-        ) ??
-        0.0;
-    final lcl = _sel(
-          controlChartStats?.cdeControlLimitIChart?.lcl,
-          controlChartStats?.cdtControlLimitIChart?.lcl,
-          controlChartStats?.compoundLayerControlLimitIChart?.lcl,
-        ) ??
-        0.0;
-
-    return [
-      LineChartBarData(
-        spots: spots,
-        isCurved: false,
-        color: dataLineColor,
-        barWidth: 2,
-        isStrokeCapRound: true,
-        dotData: FlDotData(
-          show: true,
-          getDotPainter: (spot, _, __, ___) {
-            final v = spot.y;
-            Color dotColor = dataLineColor ?? AppColors.colorBrand;
-
-            if (((specUsl > 0) && v > specUsl) || ((specLsl > 0) && v < specLsl)) {
-              dotColor = Colors.red; // out of spec
-            } else if ((ucl > 0 && v > ucl) || (lcl > 0 && v < lcl)) {
-              dotColor = Colors.orange; // warning
-            }
-
-            return FlDotCirclePainter(
-              radius: 3.5,
-              color: dotColor.withValues(alpha: 0.7),
-              strokeWidth: 1,
-              strokeColor: Colors.white,
-            );
-          },
-        ),
-        belowBarData: BarAreaData(show: false),
-      ),
-    ];
-  }
-
-  @override
-  LineTouchData buildTouchData() {
-    final points = _pointsInWindow;
-    final Map<double, ChartDataPointCdeCdt> map = {
-      for (final p in points) p.collectDate.millisecondsSinceEpoch.toDouble(): p
-    };
-
-    return LineTouchData(
-      handleBuiltInTouches: true,
-      touchTooltipData: LineTouchTooltipData(
-        maxContentWidth: 150,
-        getTooltipColor: (_) => AppColors.colorBrand.withValues(alpha: 0.9),
-        tooltipBorderRadius: BorderRadius.circular(8),
-        fitInsideHorizontally: true,
-        fitInsideVertically: true,
-        tooltipMargin: 8,
-        getTooltipItems: (spots) {
-          return spots.map((barSpot) {
-            final p = map[barSpot.x];
-            if (p == null) return null;
-
-            return LineTooltipItem(
-              "วันที่: ${p.fullLabel}\n"
-              "ค่า: ${barSpot.y.toStringAsFixed(3)}\n"
-              "เตา: ${p.furnaceNo ?? '-'}\n"
-              "เลขแมต: ${p.matNo ?? '-'}",
-              AppTypography.textBody3W,
-              textAlign: TextAlign.left,
-            );
-          }).whereType<LineTooltipItem>().toList();
+          return FlDotCirclePainter(
+            radius: 3.5,
+            color: dotColor.withValues(alpha: 0.7),
+            strokeWidth: 1,
+            strokeColor: Colors.white,
+          );
         },
       ),
-    );
-  }
+    ),
+  ];
+}
+
+@override
+LineTouchData buildTouchData() {
+  final points = _pointsInWindow;
+  final Map<double, ChartDataPointCdeCdt> map = {
+    for (final p in points) p.collectDate.millisecondsSinceEpoch.toDouble(): p
+  };
+
+  return LineTouchData(
+    handleBuiltInTouches: true,
+    
+    // Disable default indicators to prevent overlap
+    getTouchedSpotIndicator: (bar, idxs) => idxs
+        .map((_) => TouchedSpotIndicatorData(
+              FlLine(color: Colors.transparent, strokeWidth: 0),
+              FlDotData(show: false),
+            ))
+        .toList(),
+
+    touchTooltipData: LineTouchTooltipData(
+      maxContentWidth: 150,
+      getTooltipColor: (_) => AppColors.colorBrand.withValues(alpha: 0.9),
+      tooltipBorderRadius: BorderRadius.circular(8),
+      fitInsideHorizontally: true,
+      fitInsideVertically: true,
+      tooltipMargin: 50, // Large margin to keep tooltip away from dot
+      tooltipPadding: const EdgeInsets.all(12),
+      
+      getTooltipItems: (spots) {
+        return spots.map((barSpot) {
+          final p = map[barSpot.x];
+          if (p == null) return null;
+
+          return LineTooltipItem(
+            "วันที่: ${p.fullLabel}\n"
+            "ค่า: ${barSpot.y.toStringAsFixed(3)}\n"
+            "เตา: ${p.furnaceNo ?? '-'}\n"
+            "เลขแมต: ${p.matNo ?? '-'}",
+            AppTypography.textBody3W,
+            textAlign: TextAlign.left,
+          );
+        }).whereType<LineTooltipItem>().toList();
+      },
+    ),
+  );
+}
 
   // ----- LEGEND -----
 
