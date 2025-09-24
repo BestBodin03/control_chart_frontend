@@ -157,7 +157,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
           angle: -30 * math.pi / 180,
           child: Text(
             text,
-            style: const TextStyle(fontSize: 8, color: Colors.black54),
+            style: const TextStyle(fontSize: 8, color: AppColors.colorBlack),
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -172,7 +172,7 @@ class ControlChartComponent extends StatelessWidget implements ChartComponent {
           interval: _getInterval(),
           getTitlesWidget: (v, _) => Text(
             v.toStringAsFixed(2),
-            style: const TextStyle(color: Colors.black54, fontSize: 8),
+            style: const TextStyle(color: AppColors.colorBlack, fontSize: 8),
           ),
         ),
       ),
@@ -257,14 +257,19 @@ List<LineChartBarData> buildLineBarsData() {
     return [LineChartBarData(spots: const [], color: dataLineColor, barWidth: 2)];
   }
 
+  // Spots & x->point map
   final spots = pts
-      .map((p) => FlSpot(
-            p.collectDate.millisecondsSinceEpoch.toDouble(),
-            p.value,
-          ))
+      .where((p) => p.collectDate != null)
+      .map((p) => FlSpot(p.collectDate.millisecondsSinceEpoch.toDouble(), p.value))
       .toList()
     ..sort((a, b) => a.x.compareTo(b.x));
 
+  final Map<double, ChartDataPointCdeCdt> dpByX = {
+    for (final p in pts.where((p) => p.collectDate != null))
+      p.collectDate.millisecondsSinceEpoch.toDouble(): p
+  };
+
+  // Specs & limits
   final specUsl = _sel(
         controlChartStats?.specAttribute?.cdeUpperSpec,
         controlChartStats?.specAttribute?.cdtUpperSpec,
@@ -286,36 +291,137 @@ List<LineChartBarData> buildLineBarsData() {
         controlChartStats?.compoundLayerControlLimitIChart?.lcl,
       ) ?? 0.0;
 
-  return [
-    LineChartBarData(
-      spots: spots,
-      isCurved: false,
-      color: dataLineColor,
-      barWidth: 2,
-      isStrokeCapRound: true,
-      dotData: FlDotData(
-        show: true,
-        getDotPainter: (spot, __, ___, ____) {
-          final v = spot.y;
-          Color dotColor = dataLineColor ?? AppColors.colorBrand;
+  final baseColor = dataLineColor ?? AppColors.colorBrand;
 
-          if (((specUsl > 0) && v > specUsl) || ((specLsl > 0) && v < specLsl)) {
-            dotColor = Colors.red;
-          } else if ((ucl > 0 && v > ucl) || (lcl > 0 && v < lcl)) {
-            dotColor = Colors.orange;
-          }
+  // --- split into consecutive R3 vs non-R3 segments ---
+  final nonR3Segments = <List<FlSpot>>[];
+  final r3SegmentsRaw = <List<FlSpot>>[];
 
-          return FlDotCirclePainter(
-            radius: 3.5,
-            color: dotColor.withValues(alpha: 0.7),
-            strokeWidth: 1,
-            strokeColor: Colors.white,
-          );
-        },
-      ),
+  var cur = <FlSpot>[];
+  bool? curIsR3;
+
+  for (final s in spots) {
+    final isR3 = (dpByX[s.x]?.isViolatedR3 == true);
+    if (cur.isEmpty) {
+      cur.add(s);
+      curIsR3 = isR3;
+    } else if (curIsR3 == isR3) {
+      cur.add(s);
+    } else {
+      if (curIsR3 == true) r3SegmentsRaw.add(cur); else nonR3Segments.add(cur);
+      cur = <FlSpot>[s];
+      curIsR3 = isR3;
+    }
+  }
+  if (cur.isNotEmpty) {
+    if (curIsR3 == true) r3SegmentsRaw.add(cur); else nonR3Segments.add(cur);
+  }
+
+  // Build index map to fetch neighbors easily
+  final indexByX = <double, int>{
+    for (var i = 0; i < spots.length; i++) spots[i].x: i,
+  };
+
+  // Expand each R3 segment by including its immediate prev/next neighbor (if exists)
+  List<List<FlSpot>> r3SegmentsExpanded = r3SegmentsRaw.map((seg) {
+    if (seg.isEmpty) return seg;
+
+    final first = seg.first;
+    final last = seg.last;
+
+    final firstIdx = indexByX[first.x]!;
+    final lastIdx  = indexByX[last.x]!;
+
+    final expanded = <FlSpot>[];
+
+    // prepend previous neighbor if exists
+    if (firstIdx - 1 >= 0) expanded.add(spots[firstIdx - 1]);
+
+    // original R3 segment
+    expanded.addAll(seg);
+
+    // append next neighbor if exists
+    if (lastIdx + 1 < spots.length) expanded.add(spots[lastIdx + 1]);
+
+    return expanded;
+  }).toList();
+
+  // 1) Dots-only series (no visible baseline), preserves your red/orange/default rules
+  final dotsOnly = LineChartBarData(
+    spots: spots,
+    isCurved: false,
+    color: Colors.transparent,
+    barWidth: 0,
+    isStrokeCapRound: true,
+    dotData: FlDotData(
+      show: true,
+      getDotPainter: (spot, __, ___, ____) {
+        final v = spot.y;
+        Color dotColor = baseColor;
+
+        if (((specUsl > 0) && v > specUsl) || ((specLsl > 0) && v < specLsl)) {
+          dotColor = Colors.red;
+        } else if ((ucl > 0 && v > ucl) || (lcl > 0 && v < lcl)) {
+          dotColor = Colors.orange;
+        }
+
+        return FlDotCirclePainter(
+          radius: 3.5,
+          color: dotColor.withValues(alpha: 0.7),
+          strokeWidth: 1,
+          strokeColor: Colors.white,
+        );
+      },
     ),
-  ];
+    belowBarData: BarAreaData(show: false),
+  );
+
+  // 2) Baseline only for non-R3 segments
+  final nonR3Lines = nonR3Segments
+      .where((seg) => seg.length >= 2)
+      .map((seg) => LineChartBarData(
+            spots: seg,
+            isCurved: false,
+            color: baseColor,
+            barWidth: 2,
+            isStrokeCapRound: true,
+            dotData: const FlDotData(show: false),
+            belowBarData: BarAreaData(show: false),
+          ))
+      .toList();
+
+  // 3) R3 overlay with boundary-bridging (white outline + pink)
+  final r3Overlay = r3SegmentsExpanded
+      .where((seg) => seg.length >= 2)
+      .expand((seg) => [
+            LineChartBarData(
+              spots: seg,
+              isCurved: false,
+              color: Colors.white,
+              barWidth: 5,
+              isStrokeCapRound: true,
+              dotData: const FlDotData(show: false),
+              belowBarData: BarAreaData(show: false),
+              showingIndicators: const [],
+            ),
+            LineChartBarData(
+              spots: seg,
+              isCurved: false,
+              color: Colors.pinkAccent,
+              barWidth: 5,
+              isStrokeCapRound: true,
+              dotData: const FlDotData(show: false),
+              belowBarData: BarAreaData(show: false),
+              showingIndicators: const [],
+            ),
+          ])
+      .toList();
+
+  // Order: overlay first (so it visually sits “above” baseline), then baseline, then dots on top
+  return [...r3Overlay, ...nonR3Lines, dotsOnly];
 }
+
+
 
 @override
 LineTouchData buildTouchData() {

@@ -18,7 +18,7 @@ class ControlChartTemplate extends StatefulWidget {
   final double? width;
   final bool isMovingRange;
 
-  /// Optional frozen overrides
+  /// Optional frozen overrides (bypass Bloc)
   final ControlChartStats? frozenStats;
   final List<ChartDataPoint>? frozenDataPoints;
   final SearchStatus? frozenStatus;
@@ -26,6 +26,8 @@ class ControlChartTemplate extends StatefulWidget {
   /// Parent-controlled windowing
   final int? externalStart;
   final int? externalWindowSize;
+
+  /// ช่วงเวลาเป้าหมายที่ parent ต้องการให้กราฟใช้
   final DateTime? xStart;
   final DateTime? xEnd;
   final int? xTick;
@@ -46,7 +48,7 @@ class ControlChartTemplate extends StatefulWidget {
     this.externalWindowSize,
     this.xStart,
     this.xEnd,
-    this.xTick
+    this.xTick,
   });
 
   @override
@@ -54,22 +56,7 @@ class ControlChartTemplate extends StatefulWidget {
 }
 
 class _ControlChartTemplateState extends State<ControlChartTemplate> {
-  List<ChartDataPoint> _fullDataPoints() {
-    if (widget.frozenDataPoints != null) return widget.frozenDataPoints!;
-    final state = context.read<SearchBloc>().state;
-    return state.chartDataPoints;
-  }
-
-  ControlChartStats? _fullStats() {
-    if (widget.frozenStats != null) return widget.frozenStats;
-    final state = context.read<SearchBloc>().state;
-    return state.controlChartStats;
-  }
-
-  SearchStatus _status() {
-    if (widget.frozenStatus != null) return widget.frozenStatus!;
-    return context.read<SearchBloc>().state.status;
-  }
+  // ---------- utils ----------
 
   List<ChartDataPoint> _visible(List<ChartDataPoint> full) {
     if (full.isEmpty) return const <ChartDataPoint>[];
@@ -82,7 +69,7 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
 
   @override
   Widget build(BuildContext context) {
-    // Frozen path (no Bloc)
+    // ---------- Frozen path (ไม่พึ่ง Bloc) ----------
     if (widget.frozenStats != null && widget.frozenDataPoints != null) {
       final data = _visible(widget.frozenDataPoints!);
       return _buildFromData(
@@ -92,21 +79,28 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
       );
     }
 
+    // ---------- Bloc path ----------
     return BlocBuilder<SearchBloc, SearchState>(
       builder: (context, state) {
-        if (state.status == SearchStatus.loading) {
-          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+        // 1) ยังไม่มีช่วงเป้าหมายจาก parent → แจ้งช่วงไม่ถูกต้อง
+        if (widget.xStart == null || widget.xEnd == null) {
+          return const Center(child: Text('ช่วงเวลาไม่ถูกต้อง'));
         }
+
+        // 3) error
         if (state.status == SearchStatus.failure) {
-          return const Center(child: Text('จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ'));
+          return const Center(
+            child: Text('จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ'),
+          );
         }
+
+        // 4) ไม่มีข้อมูล
         if (state.controlChartStats == null || state.chartDataPoints.isEmpty) {
           return const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล'));
         }
 
-        final full = _fullDataPoints();
-        final data = _visible(full);
-
+        // 5) พร้อมวาด (state ตรงช่วงที่ต้องการแล้ว)
+        final data = _visible(state.chartDataPoints);
         return _buildFromData(
           dataPoints: data,
           stats: state.controlChartStats!,
@@ -116,96 +110,83 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
     );
   }
 
-Widget _buildFromData({
-  required List<ChartDataPoint> dataPoints,
-  required ControlChartStats stats,
-  required SearchStatus status,
-}) {
-  return LayoutBuilder(
-    builder: (context, constraints) {
-    final w = widget.width ?? constraints.maxWidth;
-    final h = widget.height ?? constraints.maxHeight;
+  Widget _buildFromData({
+    required List<ChartDataPoint> dataPoints,
+    required ControlChartStats stats,
+    required SearchStatus status,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = widget.width ?? constraints.maxWidth;
+        final h = widget.height ?? constraints.maxHeight;
 
-    // prefer the explicit range from the widget
-    DateTime? start = widget.xStart;
-    DateTime? end   = widget.xEnd;
+        // ใช้ช่วงของ parent (ต้องไม่เป็น null ถึงมาถึงฟังก์ชันนี้ได้)
+        final DateTime start = widget.xStart!;
+        final DateTime end   = widget.xEnd!;
 
-    // print('in Parent ${start?.millisecondsSinceEpoch}');
+        final useI = ControlChartComponent(
+          dataPoints: dataPoints,
+          controlChartStats: stats,
+          dataLineColor: widget.dataLineColor,
+          backgroundColor: widget.backgroundColor,
+          height: h,
+          width: w,
+          xStart: start, // ✅ ช่วงจริงจาก parent
+          xEnd: end,     // ✅ ช่วงจริงจาก parent
+          // ถ้ามีพารามิเตอร์ minY/maxY ในคอมโพเนนต์ของคุณ
+          minY: stats.yAxisRange?.minYsurfaceHardnessControlChart,
+          maxY: stats.yAxisRange?.maxYsurfaceHardnessControlChart,
+        );
 
-    // // optional fallback: from data if caller didn’t provide
-    // if ((start == null || end == null) && dataPoints.isNotEmpty) {
-    //   dataPoints.sort((a, b) => a.collectDate.compareTo(b.collectDate));
-    //   start ??= dataPoints.first.collectDate;
-    //   end   ??= dataPoints.last.collectDate;
-    // }
+        final useMr = MrChartComponent(
+          dataPoints: dataPoints,
+          controlChartStats: stats,
+          dataLineColor: widget.dataLineColor,
+          backgroundColor: widget.backgroundColor,
+          height: h,
+          width: w,
+          xStart: start,
+          xEnd: end,
+        );
 
-    if (start == null || end == null) {
-      return const Center(child: Text('ช่วงเวลาไม่ถูกต้อง'));
-    }
+        final ChartComponent selectedWidget = widget.isMovingRange ? useMr : useI;
 
-    final useI = ControlChartComponent(
-      dataPoints: dataPoints,
-      controlChartStats: stats,
-      dataLineColor: widget.dataLineColor,
-      backgroundColor: widget.backgroundColor,
-      height: h,
-      width: w,
-      xStart: start,   // ✅ real range
-      xEnd: end,       // ✅ real range
-    );
+        const legendRightPad = 24.0;
+        const legendHeight = 32.0;
+        const gapLegendToChart = 4.0;
 
-      // ❌ Comment MR part out
-      final useMr = MrChartComponent(
-        dataPoints: dataPoints,
-        controlChartStats: stats,
-        dataLineColor: widget.dataLineColor,
-        backgroundColor: widget.backgroundColor,
-        height: h,
-        width: w,
-        xStart: start,   // ✅ real range
-        xEnd: end, 
-      );
-
-        final ChartComponent selectedWidget =
-            widget.isMovingRange ? useMr : useI;
-
-      const legendRightPad = 24.0;
-      const legendHeight = 32.0;
-      const gapLegendToChart = 4.0;
-
-      return SizedBox(
-        width: w,
-        height: h,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: widget.backgroundColor ?? Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.grey.shade300),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, legendRightPad, 8),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Legend
-                SizedBox(
-                  height: legendHeight,
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: selectedWidget.buildLegend(),
+        return SizedBox(
+          width: w,
+          height: h,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: widget.backgroundColor ?? Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, legendRightPad, 8),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Legend
+                  SizedBox(
+                    height: legendHeight,
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: selectedWidget.buildLegend(),
+                    ),
                   ),
-                ),
-                const SizedBox(height: gapLegendToChart),
+                  const SizedBox(height: gapLegendToChart),
 
-                // ✅ Use the component directly (it already has LineChart inside)
-                Expanded(child: selectedWidget as Widget),
-              ],
+                  // ✅ ใช้ component ที่มี LineChart ภายในอยู่แล้ว
+                  Expanded(child: selectedWidget as Widget),
+                ],
+              ),
             ),
           ),
-        ),
-      );
-    },
-  );
-}
-
+        );
+      },
+    );
+  }
 }

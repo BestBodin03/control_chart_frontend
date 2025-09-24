@@ -8,6 +8,9 @@ import 'package:control_chart/ui/screen/searching_screen.dart';
 import 'package:control_chart/ui/screen/setting_screen.dart';
 import 'package:control_chart/utils/app_store.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../data/bloc/tv_monitoring/tv_monitoring_bloc.dart';
 
 class MyHomeScreen extends StatefulWidget {
   final dynamic initialParams;
@@ -48,21 +51,27 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
   void _onItemTapped(int index) => setState(() => _selectedIndex = index);
 
   // รับ profiles ที่ใช้จริงในเฟรมนั้นเข้ามา
-  Widget _pageForIndex(int index, List<HomeContentVar> profiles) {
-    switch (index) {
-      case 0:
-        if (profiles.isNotEmpty) return HomeContent(profiles: profiles);
-        return const Center(child: Text('โปรดเลือกโปรไฟล์ตั้งค่าเพื่อแสดงแผนภูมิควบคุม'));
-      case 1:
-        return const SearchingScreen();
-      case 2:
-        return const SettingScreen();
-      case 3:
-        return const ChartDetailScreen();
-      default:
-        return const SizedBox.shrink();
-    }
+Widget _pageForIndex(int index, List<HomeContentVar> profiles) {
+  switch (index) {
+    case 0:
+      if (profiles.isNotEmpty) {
+        return BlocProvider(
+          create: (_) => TvMonitoringBloc(),
+          child: HomeContent(profiles: profiles),
+        );
+      }
+      return const Center(child: Text('โปรดเลือกโปรไฟล์ตั้งค่าเพื่อแสดงแผนภูมิควบคุม'));
+    case 1:
+      return const SearchingScreen();
+    case 2:
+      return const SettingScreen();
+    case 3:
+      return const ChartDetailScreen();
+    default:
+      return const SizedBox.shrink();
   }
+}
+
 
   @override
   Widget build(BuildContext context) {

@@ -420,7 +420,7 @@ class _SmallNoData extends StatelessWidget {
   const _SmallNoData();
   @override
   Widget build(BuildContext context) =>
-      const Center(child: Text('No Data', style: TextStyle(fontSize: 12, color: Colors.grey)));
+      const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล', style: TextStyle(fontSize: 12, color: Colors.grey)));
 }
 
 

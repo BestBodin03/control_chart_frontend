@@ -1,18 +1,19 @@
-import 'dart:async';
+// HomeContent (no-swipe; nav buttons beside dots; Bloc-driven page change)
+
 import 'dart:developer' as dev;
-import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
-import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
-import 'package:control_chart/domain/models/control_chart_stats.dart';
-import 'package:control_chart/ui/core/design_system/app_color.dart';
-import 'package:control_chart/ui/core/shared/large_control_chart/surface_hardness/help.dart' as sh_large;
-import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/help.dart';
-// import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/help.dart' as cde_cdt;
-import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/help.dart' as sh_medium;
-import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
-import 'package:flutter/foundation.dart';
+
+import 'package:control_chart/data/bloc/tv_monitoring/tv_monitoring_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
+
+import '../../../../data/bloc/search_chart_details/search_bloc.dart';
+import '../../../../domain/models/control_chart_stats.dart';
+import '../../../core/design_system/app_color.dart';
+// ✅ แยก alias ให้คนละชื่อ
+import '../../../core/shared/medium_control_chart/surface_hardness/help.dart' as shSurface;
+import '../../../core/shared/medium_control_chart/cde_cdt/help.dart' as shCdeCdt;
+
+import 'home_content_var.dart';
 
 class HomeContent extends StatefulWidget {
   final List<HomeContentVar> profiles;
@@ -24,51 +25,43 @@ class HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<HomeContent> {
-  late final PageController _controller;
-  int _index = 0;
-  Timer? _timer;
+  // ---------- Page controller ต้องอยู่ใน State ----------
+  late final PageController _pageController;
 
-  /// ทิศทางเวลา (ใช้เฉพาะตอน auto-snap ไปขวาสุด)
-  final bool _isAscendingChrono = true;
-  bool _hasUserMovedSlider = false;
+  // เก็บลายเซ็นโปรไฟล์ล่าสุด เพื่อตรวจว่ามีการเปลี่ยนแปลงจริง ๆ หรือไม่
+  String _lastSig = '';
 
-  /// หน้าต่างอิง "labels" (xAxisMediumLabel) ไม่ใช่จำนวนจุด
-  int _winStart = 0;     // index เริ่มของหน้าต่างใน labels
-  int _winMaxStart = 0;  // ค่าสูงสุดที่เลื่อนได้
-  int _winSize = 6;      // = xTick เสมอ
-  late final List<DateTime?> baseStartDates;
-  late final List<DateTime?> baseEndDates;
+  // ---------- helpers ----------
 
-  // ---------- Logging ----------
-  void _logIncomingProfiles(String tag) {
-    if (!kDebugMode) return;
-    dev.log('[$tag] profiles.length = ${widget.profiles.length}');
-    for (var i = 0; i < widget.profiles.length; i++) {
-      dev.log('[$tag] profiles[$i] = ${widget.profiles[i]}');
-    }
+  String _sigProfile(HomeContentVar p) =>
+      '${p.startDate?.millisecondsSinceEpoch ?? 0}-'
+      '${p.endDate?.millisecondsSinceEpoch ?? 0}-'
+      '${p.furnaceNo ?? ''}-'
+      '${p.materialNo ?? ''}-'
+      '${p.displayType}-${p.interval}';
+
+  String _sigList(List<HomeContentVar> ps) => ps.map(_sigProfile).join('|');
+
+  HomeContentVar _applyRangeToProfile(HomeContentVar base, DateTime? start, DateTime? end) {
+    final DateTime effStart = start ?? base.startDate ?? DateTime.now().toLocal();
+    final DateTime effEnd   = end   ?? base.endDate   ?? effStart.add(const Duration(hours: 1));
+    return base.copyWith(startDate: effStart, endDate: effEnd);
   }
 
-  void _logSlide(String tag, int i) {
-    if (!kDebugMode) return;
-    if (i < 0 || i >= widget.profiles.length) return;
-    final p = widget.profiles[i];
-    final uniqueKey =
-        '${p.startDate?.millisecondsSinceEpoch ?? 0}-${p.endDate?.millisecondsSinceEpoch ?? 0}-${p.furnaceNo ?? ''}-${p.materialNo ?? ''}-';
-    dev.log('[$tag] slide=$i  uniqueKey=$uniqueKey  payload=$p');
-  }
+  // ---------- lifecycle ----------
 
   @override
   void initState() {
     super.initState();
-    _controller = PageController();
-    _logIncomingProfiles('initState');
-    baseStartDates = widget.profiles.map((p) => p.startDate).toList();
-    baseEndDates   = widget.profiles.map((p) => p.endDate).toList();
+    _pageController = PageController();
+    _lastSig = _sigList(widget.profiles);
 
+    // ส่ง profiles เข้า Bloc แค่ครั้งแรก
     if (widget.profiles.isNotEmpty) {
-      _logSlide('initState', 0);
-      _dispatchQuery(widget.profiles[0]);
-      _startTimerForIndex(0);
+      dev.log('[HomeContent.initState] seed profiles -> TvMonitoringBloc (${widget.profiles.length})');
+      context.read<TvMonitoringBloc>().add(TvProfilesUpdated(widget.profiles));
+    } else {
+      dev.log('[HomeContent.initState] profiles empty');
     }
   }
 
@@ -76,388 +69,294 @@ class _HomeContentState extends State<HomeContent> {
   void didUpdateWidget(covariant HomeContent oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (!listEquals(oldWidget.profiles, widget.profiles) &&
-        widget.profiles.isNotEmpty) {
-      _timer?.cancel();
-      _index = 0;
-      _controller.jumpToPage(0);
-
-      _logIncomingProfiles('didUpdateWidget');
-      _logSlide('didUpdateWidget', 0);
-
-      _dispatchQuery(widget.profiles[0]);
-      _startTimerForIndex(0);
+    final newSig = _sigList(widget.profiles);
+    if (newSig != _lastSig) {
+      dev.log('[HomeContent.didUpdateWidget] profiles changed: ${widget.profiles.length}');
+      _lastSig = newSig;
+      context.read<TvMonitoringBloc>().add(TvProfilesUpdated(widget.profiles));
+      // ❌ ไม่ jumpToPage ที่นี่ — ให้ BlocListener ซิงก์แทน
     }
-  }
-
-  void _dispatchQuery(HomeContentVar p) {
-    dev.log('[dispatch] $p');
-    _hasUserMovedSlider = false; // ติดขอบขวาจนกว่าผู้ใช้จะขยับเอง
-    context.read<SearchBloc>().add(
-      LoadFilteredChartData(
-        startDate: p.startDate,
-        endDate: p.endDate,
-        furnaceNo: p.furnaceNo,
-        materialNo: p.materialNo,
-      ),
-    );
-  }
-
-  void _startTimerForIndex(int i) {
-    _timer?.cancel();
-    if (widget.profiles.isEmpty) return;
-
-    final sec = widget.profiles[i].interval.clamp(1, 600).toInt();
-    dev.log('[timer] start for slide=$i interval=${sec}s');
-    _timer = Timer.periodic(Duration(seconds: sec), (_) {
-      if (!mounted || widget.profiles.isEmpty) return;
-      final next = (_index + 1) % widget.profiles.length;
-      setState(() => _index = next);
-      _controller.animateToPage(
-        next,
-        duration: const Duration(milliseconds: 450),
-        curve: Curves.linear,
-      );
-      _logSlide('onAutoFlip', next);
-      _dispatchQuery(widget.profiles[next]);
-      _startTimerForIndex(next);
-    });
-  }
-
-  // ---------------- STEP 1: คิดหน้าต่างจาก labels + xTick ----------------
-
-  /// แปลง labels จาก state เป็น List<DateTime> (local)
-  // List<DateTime> _labelsFromState(SearchState st) {
-  //   final raw = st.controlChartStats?.xAxisMediumLabel ?? const[];
-  //   return raw.map((d) => d.toLocal()).toList();
-  //     return raw
-  //       .map((e) {
-  //         if (e is DateTime) return e.toLocal();
-  //         if (e is String) {
-  //           try { return DateTime.parse(e.toIso8601String()).toLocal(); } catch (_) {}
-  //         }
-  //         return null;
-  //       })
-  //       .whereType<DateTime>()
-  //       .toList();
-  //     return const <DateTime>[];
-  // }
-
-  /// คำนวณหน้าต่าง “ตาม label”
-  // void _recalcWindowByLabels(SearchState st) {
-  //   // final labels = _labelsFromState(st);
-  //   // final labelCount = labels.length;
-
-  //   final int xTick = (st.controlChartStats?.xTick ?? 6).clamp(1, 100);
-  //   _winSize = xTick.clamp(1, labelCount) : xTick;
-
-  //   if (labelCount <= 0) {
-  //     _winMaxStart = 0;
-  //     _winStart = 0;
-  //     return;
-  //   }
-
-  //   _winMaxStart = (labelCount - _winSize).clamp(0, labelCount);
-  //   if (!_hasUserMovedSlider) {
-  //     // เกาะขวาสุด (แสดง label ล่าสุดตาม xTick)
-  //     _winStart = _isAscendingChrono ? _winMaxStart : 0;
-  //   }
-  //   if (_winStart > _winMaxStart) _winStart = _winMaxStart;
-  //   if (_winStart < 0) _winStart = 0;
-  // }
-
-  // /// คืนช่วงวันที่ (ซ้าย-ขวา) ของ “หน้าต่าง label ปัจจุบัน”
-  // (DateTime?, DateTime?) _currentLabelWindowRange(SearchState st) {
-  //   final labels = _labelsFromState(st);
-  //   if (labels.isEmpty) return (null, null);
-
-  //   final int s = _winStart.clamp(0, labels.length - 1);
-  //   final int e = (_winStart + (_winSize) - 1).clamp(0, labels.length - 1);
-  //   return (labels[s], labels[e]);
-  // }
-
-  // ---------------- STEP 2: สวมช่วงเวลา (xStart/xEnd) ลงในโปรไฟล์ที่จะส่งเข้ากราฟ ----------------
-
-  HomeContentVar _applyRangeToProfile(HomeContentVar base, DateTime? start, DateTime? end) {
-    // ถ้าไม่มี label ให้ fallback เป็นช่วงเดิมของโปรไฟล์
-    final DateTime effStart = start ?? base.startDate ?? DateTime.now().toLocal();
-    final DateTime effEnd   = end   ?? base.endDate   ?? effStart.add(const Duration(hours: 1));
-
-    // ถ้ามี copyWith ก็ใช้ copyWith; ถ้าไม่มี สร้างใหม่แทน
-    return base.copyWith(
-      startDate: effStart,
-      endDate: effEnd,
-    );
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
-    _controller.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
+  // ---------- build ----------
+
   @override
   Widget build(BuildContext context) {
-    final profiles = widget.profiles;
+    return BlocListener<TvMonitoringBloc, TvMonitoringState>(
+      // ฟังเมื่อ index หรือ profiles เปลี่ยน
+      listenWhen: (prev, curr) =>
+          prev.index != curr.index || prev.profiles != curr.profiles,
+      listener: (context, tvState) {
+        if (tvState.profiles.isEmpty) return;
 
-    // ----- Single page -----
-    if (profiles.length <= 1) {
-      final q = profiles.isNotEmpty ? profiles.first : const HomeContentVar();
-      final uniqueKey =
-          '${q.startDate?.millisecondsSinceEpoch ?? 0}-${q.endDate?.millisecondsSinceEpoch ?? 0}-${q.furnaceNo ?? ''}-${q.materialNo ?? ''}-';
-
-      return LayoutBuilder(
-        key: ValueKey(uniqueKey),
-        builder: (context, constraints) {
-          final h = constraints.maxHeight;
-
-          return BlocBuilder<SearchBloc, SearchState>(
-            builder: (context, searchState) {
-              if (searchState.status == SearchStatus.loading) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (searchState.status == SearchStatus.failure) {
-                return Center(child: Text('Error: ${searchState.errorMessage}'));
-              }
-
-              // STEP 1: คำนวณหน้าต่างจาก labels + xTick
-              // _recalcWindowByLabels(searchState);
-
-              // STEP 2: เอาช่วง (ซ้าย-ขวา) ของหน้าต่าง label มา “สวม” ลงโปรไฟล์
-              // final (left, right) = _currentLabelWindowRange(searchState);
-              final (left, right) = (searchState.currentQuery.startDate, 
-              searchState.currentQuery.endDate);
-              final qWindow = _applyRangeToProfile(q, left, right);
-
-              return Column(
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        // Surface Hardness only
-                        Expanded(
-                          child: SizedBox(
-                            height: h,
-                            child: _ChartFillBox(
-                              child: sh_medium.buildChartsSectionSurfaceHardness(
-                                [qWindow], // << ส่งโปรไฟล์ที่ถูกสวมช่วงเวลาแล้ว
-                                0,
-                                searchState,
-                                // externalStart/externalWindowSize ยังส่งไว้ให้กลไกเดิม (ถ้า builder ใช้)
-                                externalStart: _winStart,
-                                externalWindowSize: _winSize,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // _buildLabelWindowSliderSingle(searchState), // สไลเดอร์อิง labels
-                  const SizedBox(height: 8),
-                ],
-              );
-            },
+        // 1) ขยับ PageView ให้ตรง index ปัจจุบันจาก Bloc
+        final want = tvState.index.clamp(0, tvState.profiles.length - 1);
+        final at = _pageController.hasClients ? _pageController.page?.round() : null;
+        if (_pageController.hasClients && at != want) {
+          dev.log('[HomeContent.listener] animateToPage -> $want (from $at)');
+          _pageController.animateToPage(
+            want,
+            duration: const Duration(milliseconds: 380),
+            curve: Curves.easeOut,
           );
-        },
-      );
-    }
+        }
 
-    // ----- Carousel mode -----
-    return Column(
-      children: [
-        Expanded(
-          child: PageView.builder(
-            controller: _controller,
-            onPageChanged: (i) {
-              setState(() => _index = i);
-              _logSlide('onPageChanged', i);
-              _dispatchQuery(profiles[i]);
-              _startTimerForIndex(i);
-            },
-            itemCount: profiles.length,
-            itemBuilder: (ctx, i) => LayoutBuilder(
+        // 2) ยิง SearchBloc สำหรับหน้า want
+        final p = tvState.profiles[want];
+        dev.log('[HomeContent.listener] LoadFilteredChartData index=$want '
+            'f=${p.furnaceNo} m=${p.materialNo} range=(${p.startDate}..${p.endDate})');
+
+        context.read<SearchBloc>().add(LoadFilteredChartData(
+          startDate: p.startDate,
+          endDate:   p.endDate,
+          furnaceNo: p.furnaceNo,
+          materialNo:p.materialNo,
+        ));
+      },
+
+      child: BlocBuilder<TvMonitoringBloc, TvMonitoringState>(
+        builder: (context, tvState) {
+          final profiles = tvState.profiles;
+
+          // ----- Single page -----
+          if (profiles.length <= 1) {
+            final q = profiles.isNotEmpty ? profiles.first : const HomeContentVar();
+            final uniqueKey =
+                '${q.startDate?.millisecondsSinceEpoch ?? 0}-${q.endDate?.millisecondsSinceEpoch ?? 0}-${q.furnaceNo ?? ''}-${q.materialNo ?? ''}-';
+
+            return LayoutBuilder(
+              key: ValueKey('single-$uniqueKey'),
               builder: (context, constraints) {
+                final h = constraints.maxHeight;
+
                 return BlocBuilder<SearchBloc, SearchState>(
                   builder: (context, searchState) {
-                    if (searchState.status == SearchStatus.loading) {
+                    dev.log('[HomeContent.single] SearchState=${searchState.status} '
+                            'query=${searchState.currentQuery}');
+
+                    if (searchState.isInitial || searchState.isLoading) {
                       return const Center(child: CircularProgressIndicator());
                     }
-                    if (searchState.status == SearchStatus.failure) {
+                    if (searchState.hasError) {
                       return Center(child: Text('Error: ${searchState.errorMessage}'));
                     }
 
-                    // STEP 1
-                    // _recalcWindowByLabels(searchState);
-
-                    // STEP 2
-                    // final (left, right) = _currentLabelWindowRange(searchState);
-                    final q = profiles[i];
-                    final (left, right) = (searchState.currentQuery.startDate, 
-                    searchState.currentQuery.endDate);
+                    final (left, right) =
+                        (searchState.currentQuery.startDate, searchState.currentQuery.endDate);
                     final qWindow = _applyRangeToProfile(q, left, right);
-                    // final qWindow = _applyRangeToProfile(q, left, right);
 
-                    return Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                      child: Column(
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: SizedBox(
-                                    height: constraints.maxHeight - (8 + 16),
-                                    child: _ChartFillBox(
-                                      child: sh_medium.buildChartsSectionSurfaceHardness(
-                                        profiles
-                                            .toList()
-                                            ..[i] = qWindow, // ใส่โปรไฟล์ที่สวมช่วงเวลาแล้ว ณ index นี้
-                                        i,
-                                        searchState,
-                                        externalStart: _winStart,
-                                        externalWindowSize: _winSize,
-                                        baseStart: baseStartDates[i],
-                                        baseEnd: baseEndDates[i],
-                                      //   zoomBuilder: (ctx, profileAtIndex, st) =>
-                                      //       buildChartsSectionSurfaceHardnessLarge(
-                                      //         profileAtIndex,
-                                      //         st,
-                                      //         onClose: () => Navigator.of(ctx).maybePop(),
-                                      //       ),
-                                      ),
+                    dev.log('[HomeContent.single] qWindow '
+                            '(${qWindow.startDate}..${qWindow.endDate}) '
+                            'f=${qWindow.furnaceNo} m=${qWindow.materialNo}');
+
+                    return Column(
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: SizedBox(
+                                  height: h,
+                                  child: _ChartFillBox(
+                                    child: shSurface.buildChartsSectionSurfaceHardness(
+                                      [qWindow],
+                                      0,
+                                      searchState,
+                                      externalStart: 0,
+                                      externalWindowSize: 6,
                                     ),
                                   ),
                                 ),
-                                
-                                const SizedBox(width: 16),
-
-                                // CDE/CDT (hide if NA)
-                                Visibility(
-                                  visible: searchState.controlChartStats?.secondChartSelected !=
-                                      SecondChartSelected.na,
-                                  child: Expanded(
-                                    child: SizedBox(
-                                      height: constraints.maxHeight - (8 + 16),
-                                      child: _ChartFillBox(
-                                        child: buildChartsSectionCdeCdt(
-                                        profiles
-                                            .toList()
-                                            ..[i] = qWindow, // ใส่โปรไฟล์ที่สวมช่วงเวลาแล้ว ณ index นี้
-                                        i,
-                                        searchState,
-                                        externalStart: _winStart,
-                                        externalWindowSize: _winSize,
-                                        baseStart: baseStartDates[i],
-                                        baseEnd: baseEndDates[i],
-                                      //   zoomBuilder: (ctx, profileAtIndex, st) =>
-                                      //       buildChartsSectionSurfaceHardnessLarge(
-                                      //         profileAtIndex,
-                                      //         st,
-                                      //         onClose: () => Navigator.of(ctx).maybePop(),
-                                      //       ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                          _buildLabelWindowSliderCarousel(profiles.length, searchState),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                     );
                   },
                 );
               },
-            ),
+            );
+          }
+
+          // ----- Carousel mode (no swipe; buttons only) -----
+          return Column(
+            children: [
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(), // 🚫 ปิดการสไลด์/ทัชแพด
+                  onPageChanged: (i) {
+                    // ป้องกัน echo: ส่งอีเวนต์เฉพาะเมื่อ index เปลี่ยนจริง
+                    final curr = context.read<TvMonitoringBloc>().state.index;
+                    if (i != curr) {
+                      dev.log('[HomeContent.onPageChanged] i=$i');
+                      context.read<TvMonitoringBloc>().add(TvPageChanged(i));
+                    }
+                  },
+                  itemCount: profiles.length,
+                  itemBuilder: (ctx, i) => LayoutBuilder(
+                    builder: (context, constraints) {
+                      return BlocBuilder<SearchBloc, SearchState>(
+                        builder: (context, searchState) {
+                          dev.log('[HomeContent.page=$i] SearchStatus=${searchState.status}');
+
+                          if (searchState.isInitial || searchState.isLoading) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          if (searchState.hasError) {
+                            return Center(child: Text('Error: ${searchState.errorMessage}'));
+                          }
+
+                          final q = profiles[i];
+                          final (left, right) =
+                              (searchState.currentQuery.startDate, searchState.currentQuery.endDate);
+                          final qWindow = _applyRangeToProfile(q, left, right);
+
+                          final adjustedProfiles = List<HomeContentVar>.of(
+                            profiles,
+                            growable: false,
+                          )..[i] = qWindow;
+
+                          final stats = searchState.controlChartStats;
+                          final minY = stats?.yAxisRange?.minYsurfaceHardnessControlChart;
+                          final maxY = stats?.yAxisRange?.maxYsurfaceHardnessControlChart;
+
+                          final visibleSecond =
+                              (searchState.controlChartStats?.secondChartSelected ??
+                                      SecondChartSelected.na) !=
+                                  SecondChartSelected.na;
+
+                          final surfKey = ValueKey(
+                            'surf-$i-'
+                            '${qWindow.furnaceNo}-${qWindow.materialNo}-'
+                            '${qWindow.startDate?.millisecondsSinceEpoch}-'
+                            '${qWindow.endDate?.millisecondsSinceEpoch}-'
+                            '$minY-$maxY-${searchState.status}-${searchState.currentQuery.hashCode}'
+                          );
+
+                          final cdeKey = ValueKey(
+                            'cde-$i-'
+                            '${qWindow.furnaceNo}-${qWindow.materialNo}-'
+                            '${qWindow.startDate?.millisecondsSinceEpoch}-'
+                            '${qWindow.endDate?.millisecondsSinceEpoch}-'
+                            '$minY-$maxY-${searchState.status}-${searchState.currentQuery.hashCode}'
+                          );
+
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      // -------- กราฟหลัก (Surface Hardness) --------
+Expanded(
+  child: SizedBox(
+    height: constraints.maxHeight - (8 + 16),
+    child: _ChartFillBox(
+      child: KeyedSubtree(
+        key: surfKey,                   // ✅ เปลี่ยน key → Flutter ทิ้ง State เก่าทั้งก้อน
+        child: shSurface.buildChartsSectionSurfaceHardness(
+          adjustedProfiles, i, searchState,
+          externalStart: 0, externalWindowSize: 6,
+          baseStart: qWindow.startDate, baseEnd: qWindow.endDate,
+        ),
+      ),
+    ),
+  ),
+),
+
+                                      const SizedBox(width: 16),
+
+                                      // -------- กราฟที่สอง (CDE/CDT) --------
+if (visibleSecond)
+  Expanded(
+    child: SizedBox(
+      height: constraints.maxHeight - (8 + 16),
+      child: _ChartFillBox(
+        child: KeyedSubtree(
+          key: cdeKey,                  // ✅ key แยกของ CDE/CDT
+          child: shCdeCdt.buildChartsSectionCdeCdt(
+            adjustedProfiles, i, searchState,
+            externalStart: 0, externalWindowSize: 6,
+            baseStart: qWindow.startDate, baseEnd: qWindow.endDate,
           ),
         ),
-      ],
+      ),
+    ),
+  ),
+                                    ],
+                                  ),
+                                ),
+
+                                // ---------- ปุ่มนำทาง + จุด ----------
+                                _buildPagerControls(
+                                  total: profiles.length,
+                                  currentIndex: tvState.index,
+                                  onPrev: () {
+                                    final prev = (tvState.index - 1).clamp(0, profiles.length - 1);
+                                    if (prev != tvState.index) {
+                                      context.read<TvMonitoringBloc>().add(TvPageChanged(prev));
+                                    }
+                                  },
+                                  onNext: () {
+                                    final next = (tvState.index + 1).clamp(0, profiles.length - 1);
+                                    if (next != tvState.index) {
+                                      context.read<TvMonitoringBloc>().add(TvPageChanged(next));
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
-  // ---------------- Slider (อิง labels) ----------------
+  // ---------------- Controls (buttons + dots) ----------------
 
   static const double _rowH = 40.0;
-  static const double _gap = 8.0;
 
-  String _formatDateRange(DateTime? a, DateTime? b) {
-    final df = DateFormat('d MMM');
-    final left = (a != null) ? df.format(a) : '';
-    final right = (b != null) ? df.format(b) : '';
-    return '$left - $right';
-  }
+  Widget _buildPagerControls({
+    required int total,
+    required int currentIndex,
+    required VoidCallback onPrev,
+    required VoidCallback onNext,
+  }) {
+    final canPrev = currentIndex > 0;
+    final canNext = currentIndex < total - 1;
 
-  // Widget _buildLabelWindowSliderSingle(SearchState st) {
-  //   final labels = _labelsFromState(st);
-  //   final bool showSliderNeeded = labels.length > _winSize;
-
-  //   final (l, r) = _currentLabelWindowRange(st);
-  //   final labelText = _formatDateRange(l, r);
-
-  //   return SizedBox(
-  //     height: _rowH,
-  //     child: Row(
-  //       children: [
-  //         SizedBox(
-  //           width: showSliderNeeded ? (200 + _gap) : 0.0,
-  //           child: showSliderNeeded
-  //               ? Column(
-  //                   crossAxisAlignment: CrossAxisAlignment.start,
-  //                   children: [
-  //                     Text(labelText, style: const TextStyle(fontSize: 12)),
-  //                     Slider(
-  //                       min: 0,
-  //                       max: _winMaxStart.toDouble(),
-  //                       divisions: _winMaxStart > 0 ? _winMaxStart : null,
-  //                       value: _winStart.toDouble(),
-  //                       onChanged: (v) => setState(() {
-  //                         _hasUserMovedSlider = true;
-  //                         _winStart = v.round().clamp(0, _winMaxStart);
-  //                       }),
-  //                     ),
-  //                   ],
-  //                 )
-  //               : widget,
-  //         ),
-  //         const Expanded(child: SizedBox()),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  Widget _buildLabelWindowSliderCarousel(int profilesLength, SearchState st) {
-    // final labels = _labelsFromState(st);
-    // final bool showSliderNeeded = labels.length > _winSize;
-
-    // ความกว้างสไลเดอร์ (ดีไซน์เดิม)
-    double sliderWidthForVisible(int count) {
-      const double perItem = 8.0;
-      const double minW = 140.0;
-      const double maxW = 320.0;
-      return (count * perItem).clamp(minW, maxW);
-    }
-    // final sliderWidth = sliderWidthForVisible(_winSize);
-    // final reservedLeftWidth = showSliderNeeded ? (sliderWidth + _gap) : 0.0;
-
-    // dots กลางจอ (ดีไซน์เดิม)
     Widget dots() => Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
-            (profilesLength <= 6) ? profilesLength : 6,
+            (total <= 6) ? total : 6,
             (dot) {
-              final start =
-                  (profilesLength <= 6) ? 0 : (_index - 3).clamp(0, profilesLength - 6);
+              final start = (total <= 6)
+                  ? 0
+                  : (currentIndex - 3).clamp(0, total - 6);
               final realIndex = start + dot;
-              final isActive = realIndex == _index;
+              final isActive = realIndex == currentIndex;
 
               return AnimatedContainer(
-                key: ValueKey(realIndex),
-                duration: const Duration(milliseconds: 500),
+                key: ValueKey('dot-$realIndex'),
+                duration: const Duration(milliseconds: 250),
                 margin: const EdgeInsets.symmetric(horizontal: 3),
                 width: isActive ? 16 : 8,
                 height: 8,
@@ -472,42 +371,52 @@ class _HomeContentState extends State<HomeContent> {
 
     return SizedBox(
       height: _rowH,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          IgnorePointer(child: dots()),
-          Row(
-            children: [
-              // SizedBox(
-              //   width: reservedLeftWidth,
-              // //   child: showSliderNeeded
-              // //       ? SizedBox(
-              // //           width: sliderWidth,
-              // //           // child: SliderTheme(
-              // //           //   data: SliderTheme.of(context).copyWith(
-              // //           //     thumbColor: AppColors.colorBrand,
-              // //           //     activeTrackColor: AppColors.colorBrandTp,
-              // //           //     trackHeight: 2,
-              // //           //     thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-              // //           //   ),
-              // //             // child: Slider(
-              // //             //   min: 0,
-              // //             //   max: _winMaxStart.toDouble(),
-              // //             //   divisions: _winMaxStart > 0 ? _winMaxStart : null,
-              // //             //   value: _winStart.toDouble(),
-              // //             //   onChanged: (v) => setState(() {
-              // //             //     _hasUserMovedSlider = true;
-              // //             //     _winStart = v.round().clamp(0, _winMaxStart);
-              // //             //   }),
-              // //             // ),
-              // //           ),
-              // //         )
-              // //       : null,
-              // // ),
-              // const Expanded(child: SizedBox()),
-            ],
-          ),
-        ],
+      child: Center(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // left
+            canPrev
+                ? ConstrainedBox(
+                    constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                    child: IconButton(
+                      tooltip: 'Previous',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                      visualDensity: VisualDensity.compact,
+                      iconSize: 20,
+                      splashRadius: 18,
+                      icon: const Icon(Icons.chevron_left),
+                      onPressed: onPrev,
+                    ),
+                  )
+                : const SizedBox(width: 32),
+
+            const SizedBox(width: 6),
+
+            // dots
+            IgnorePointer(child: dots()),
+
+            const SizedBox(width: 6),
+
+            // right
+            canNext
+                ? ConstrainedBox(
+                    constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                    child: IconButton(
+                      tooltip: 'Next',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+                      visualDensity: VisualDensity.compact,
+                      iconSize: 20,
+                      splashRadius: 18,
+                      icon: const Icon(Icons.chevron_right),
+                      onPressed: onNext,
+                    ),
+                  )
+                : const SizedBox(width: 32),
+          ],
+        ),
       ),
     );
   }

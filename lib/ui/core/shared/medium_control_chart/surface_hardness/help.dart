@@ -65,7 +65,6 @@ Widget buildChartsSectionSurfaceHardness(
   // ผลลัพธ์: จะมีเฉพาะส่วนที่มีข้อมูลจริง และคั่นด้วย " | "
   final title = parts.join(' | ');
 
-
   return SizedBox.expand(
     child: _MediumContainer(
       title: title,
@@ -164,6 +163,8 @@ class _MediumContainer extends StatelessWidget {
     if (state.controlChartStats == null || state.chartDetails.isEmpty) {
       return const _SmallNoData();
     }
+
+    debugPrint('in help MAX ${searchState.controlChartStats?.yAxisRange?.maxYsurfaceHardnessControlChart}');
 
     return Container(
       color: Colors.transparent,
@@ -436,7 +437,7 @@ class _SmallNoData extends StatelessWidget {
   const _SmallNoData();
   @override
   Widget build(BuildContext context) =>
-      const Center(child: Text('No Data', style: TextStyle(fontSize: 12, color: Colors.grey)));
+      const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล', style: TextStyle(fontSize: 12, color: Colors.grey)));
 }
 
   double getXInterval(PeriodType periodType, double startMs, double endMs) {

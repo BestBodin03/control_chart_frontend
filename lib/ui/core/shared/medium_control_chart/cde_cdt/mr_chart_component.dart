@@ -55,22 +55,24 @@ class MrChartComponent extends StatelessWidget implements ChartComponent {
     }
   }
 
-  // windowed points by time (like Surface)
   List<ChartDataPointCdeCdt> get _pointsInWindow {
     final src = dataPoints ?? const <ChartDataPointCdeCdt>[];
     if (src.isEmpty) return const <ChartDataPointCdeCdt>[];
+
     final startUs = xStart.millisecondsSinceEpoch;
     final endUs = xEnd.millisecondsSinceEpoch;
     final lo = math.min(startUs, endUs).toDouble();
     final hi = math.max(startUs, endUs).toDouble();
 
-    return src
-        .where((p) {
-          final t = p.collectDate.millisecondsSinceEpoch.toDouble();
-          return t >= lo && t <= hi;
-        })
-        .toList()
-      ..sort((a, b) => a.collectDate.compareTo(b.collectDate));
+    final filtered = src.where((p) {
+      final t = p.collectDate.millisecondsSinceEpoch.toDouble();
+      return t >= lo && t <= hi;
+    }).toList();
+
+    if (filtered.isEmpty) return filtered;
+
+    // remove last index
+    return filtered.sublist(0, filtered.length - 1);
   }
 
   @override
@@ -158,7 +160,7 @@ class MrChartComponent extends StatelessWidget implements ChartComponent {
           angle: -30 * math.pi / 180,
           child: Text(
             text,
-            style: const TextStyle(fontSize: 8, color: Colors.black54),
+            style: const TextStyle(fontSize: 8, color: AppColors.colorBlack),
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -173,7 +175,7 @@ class MrChartComponent extends StatelessWidget implements ChartComponent {
           interval: _getInterval(),
           getTitlesWidget: (v, _) => Text(
             v.toStringAsFixed(2),
-            style: const TextStyle(color: Color.fromARGB(137, 203, 172, 172), fontSize: 8),
+            style: const TextStyle(color: AppColors.colorBlack, fontSize: 8),
           ),
         ),
       ),
