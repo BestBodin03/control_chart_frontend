@@ -4,11 +4,12 @@ import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
+import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-/// MR-Chart (Moving Range) with internal Stack-based tooltip (no Overlay).
+/// MR-Chart (Moving Range) with local Tooltip (no Overlay), quadrant placement.
 class MrChartComponent extends StatefulWidget implements ChartComponent {
   final List<ChartDataPoint>? dataPoints;
   final ControlChartStats? controlChartStats;
@@ -33,7 +34,7 @@ class MrChartComponent extends StatefulWidget implements ChartComponent {
     required this.xEnd,
   });
 
-  // ===== Legend (ใช้จริงจาก Template) =====
+  // ===== Legend =====
   @override
   Widget buildLegend() {
     String fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
@@ -57,14 +58,14 @@ class MrChartComponent extends StatefulWidget implements ChartComponent {
       children: [
         SizedBox(width: 8, height: 2, child: DecoratedBox(decoration: BoxDecoration(color: color))),
         const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack)),
+        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack, fontWeight: FontWeight.bold)),
         const SizedBox(width: 4),
-        Text(value, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack, fontWeight: FontWeight.w500)),
+        Text(value, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack, fontWeight: FontWeight.bold)),
       ],
     );
   }
 
-  // ===== STUBs เพื่อให้ StatefulWidget ตอบสนอง interface ChartComponent =====
+  // ===== STUBs เพื่อให้ตอบ interface ChartComponent =====
   @override
   FlBorderData buildBorderData() => FlBorderData(show: false);
   @override
@@ -97,17 +98,27 @@ class _MrChartComponentState extends State<MrChartComponent> {
   // Tooltip state (local)
   final ValueNotifier<_MrTip?> _tip = ValueNotifier<_MrTip?>(null);
 
+
   List<ChartDataPoint> get _pointsInWindow {
     final src = widget.dataPoints ?? const <ChartDataPoint>[];
-    if (src.isEmpty) return const <ChartDataPoint>[];
-    final lo = math.min(widget.xStart.millisecondsSinceEpoch, widget.xEnd.millisecondsSinceEpoch).toDouble();
-    final hi = math.max(widget.xStart.millisecondsSinceEpoch, widget.xEnd.millisecondsSinceEpoch).toDouble();
+    if (src.length <= 1) return const <ChartDataPoint>[];
 
-    return src.where((p) {
+    final lo = math.min(widget.xStart.millisecondsSinceEpoch,
+                        widget.xEnd.millisecondsSinceEpoch).toDouble();
+    final hi = math.max(widget.xStart.millisecondsSinceEpoch,
+                        widget.xEnd.millisecondsSinceEpoch).toDouble();
+
+    final filtered = src.where((p) {
       final t = p.collectDate.millisecondsSinceEpoch.toDouble();
       return t >= lo && t <= hi;
-    }).toList();
+    }).toList()
+      ..sort((a, b) => a.collectDate.compareTo(b.collectDate));
+
+    if (filtered.length <= 1) return const <ChartDataPoint>[];
+    // เอาแค่ length - 1 (ตัดตัวท้าย)
+    return filtered.sublist(0, filtered.length - 1);
   }
+
 
   @override
   void dispose() {
@@ -120,16 +131,19 @@ class _MrChartComponentState extends State<MrChartComponent> {
     final double minXv = widget.xStart.millisecondsSinceEpoch.toDouble();
     final double maxXv = widget.xEnd.millisecondsSinceEpoch.toDouble();
     final double safeRange = (maxXv - minXv).abs().clamp(1.0, double.infinity);
-    final int desiredTick = (widget.controlChartStats?.xTick ?? 6).clamp(2, 24);
+    final int desiredTick = (widget.controlChartStats?.xTick ?? 6).clamp(2, 100);
     final double tickInterval = safeRange / (desiredTick - 1);
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final chartSize = Size(constraints.maxWidth, constraints.maxHeight);
+        final Size chartSize = Size(
+          widget.width  ?? constraints.maxWidth,
+          widget.height ?? constraints.maxHeight,
+        );
 
         return Container(
-          height: widget.height,
-          width: widget.width,
+          height: chartSize.height,
+          width: chartSize.width,
           decoration: BoxDecoration(
             color: widget.backgroundColor ?? Colors.white,
             borderRadius: BorderRadius.circular(8),
@@ -137,7 +151,7 @@ class _MrChartComponentState extends State<MrChartComponent> {
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              // chart
+              // Chart
               Positioned.fill(
                 child: KeyedSubtree(
                   key: _chartKey,
@@ -158,66 +172,88 @@ class _MrChartComponentState extends State<MrChartComponent> {
                 ),
               ),
 
-              // tooltip (local-only, non-blocking)
+              // Tooltip (local-only, non-blocking) — quadrant placement + clamp
               ValueListenableBuilder<_MrTip?>(
                 valueListenable: _tip,
-                builder: (context, tip, _) {
-                  if (tip == null) return const SizedBox.shrink();
-                  const double maxWidth = 280;
-                  const double dotR = 6, gap = 8, boxH = 72;
+              builder: (context, tip, _) {
+                if (tip == null) return const SizedBox.shrink();
 
-                  var left = tip.local.dx - maxWidth / 2;
-                  var top  = tip.local.dy - dotR - gap - boxH;
-                  if (top < 0) top = tip.local.dy + dotR + gap;
+                const double maxWidth = 90;
+                const double boxH = 120;
+                const double dotR = 8;
+                const double gap = 8;
+                const double pad = 8;
 
-                  left = left.clamp(0.0, (chartSize.width - maxWidth).clamp(0.0, double.infinity));
+                final dx = tip.local.dx;
+                final dy = tip.local.dy;
 
-                  return Positioned(
-                    left: left,
-                    top: top,
-                    width: maxWidth,
-                    child: IgnorePointer(
-                      ignoring: true,
-                      child: Material(
-                        color: Colors.transparent,
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.85),
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: const [
-                              BoxShadow(
-                                blurRadius: 12,
-                                spreadRadius: 1,
-                                offset: Offset(0, 4),
-                                color: Colors.black26,
-                              )
-                            ],
-                          ),
-                          child: DefaultTextStyle(
-                            style: const TextStyle(color: Colors.white, fontSize: 12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Moving Range', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                const SizedBox(height: 6),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text('ค่า'),
-                                    Text(tip.valueStr),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Container(height: 2, color: AppColors.colorBrand),
-                              ],
-                            ),
-                          ),
+                // available room checks
+                final bool canAbove = dy - (dotR + gap + boxH) >= pad;
+                final bool canBelow = dy + (dotR + gap + boxH) <= chartSize.height - pad;
+                final bool canRight = dx + (dotR + gap + maxWidth) <= chartSize.width  - 6*pad;
+                final bool canLeft  = dx - (dotR + gap + maxWidth) >= pad; // ✅ fix
+
+                double left, top;
+
+                if (canAbove) {
+                  // above
+                  left = dx - maxWidth / 2;
+                  top  = dy - dotR - gap - boxH;
+                  final hiX = chartSize.width - maxWidth - pad;
+                  left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
+                } else if (canBelow) {
+                  // below
+                  left = dx - maxWidth / 2;
+                  top  = dy + dotR + gap;
+                  final hiX = chartSize.width - maxWidth - pad;
+                  left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
+                } else if (canRight) {
+                  // right (vertically centered)
+                  left = dx + dotR + 4*gap;
+                  top  = dy - boxH / 2;
+                  final hiY = chartSize.height - boxH - pad;
+                  top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
+                } else if (canLeft) {
+                  // left (vertically centered)
+                  left = dx - dotR - gap - maxWidth;
+                  top  = dy - boxH / 2;
+                  final hiY = chartSize.height - boxH - pad;
+                  top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
+                } else {
+                  // very tight: center in the box
+                  left = (chartSize.width  - maxWidth) / 2;
+                  top  = (chartSize.height - boxH) / 2;
+                }
+
+                // final clamp (safety)
+                final hiX = chartSize.width - maxWidth - pad;
+                final hiY = chartSize.height - boxH - pad;
+                if (hiX > pad) left = left.clamp(pad, hiX);
+                if (hiY > pad) top  = top.clamp(pad, hiY);
+
+                return Positioned(
+                  left: left,
+                  top: top,
+                  width: maxWidth,
+                  child: IgnorePointer(
+                    ignoring: true,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.colorBrand.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(8),
                         ),
+                        child: Text(
+                          textAlign: TextAlign.center,
+                          tip.valueStr,
+                          style: AppTypography.textBody4WBold,),
                       ),
                     ),
-                  );
-                },
+                  ),
+                );
+              },
               ),
             ],
           ),
@@ -255,7 +291,10 @@ class _MrChartComponentState extends State<MrChartComponent> {
         space: 8,
         child: Transform.rotate(
           angle: -30 * math.pi / 180,
-          child: Text(text, style: const TextStyle(fontSize: 8, color: Colors.black54), overflow: TextOverflow.ellipsis),
+          child: Text(text, style: const TextStyle(
+            fontSize: 8, 
+            color: AppColors.colorBlack), 
+            overflow: TextOverflow.ellipsis),
         ),
       );
     }
@@ -266,13 +305,17 @@ class _MrChartComponentState extends State<MrChartComponent> {
           showTitles: true,
           reservedSize: 24,
           interval: _getInterval(),
-          getTitlesWidget: (v, _) => Text(v.toStringAsFixed(0), style: const TextStyle(color: Colors.black54, fontSize: 8)),
+          getTitlesWidget: (v, _) => Text(
+            v.toStringAsFixed(0), 
+            style: const TextStyle(
+              color: AppColors.colorBlack, 
+              fontSize: 8)),
         ),
       ),
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 24,
+          reservedSize: 20,
           interval: step,
           getTitlesWidget: bottomLabel,
         ),
@@ -321,32 +364,31 @@ class _MrChartComponentState extends State<MrChartComponent> {
         .toList()
       ..sort((a, b) => a.x.compareTo(b.x));
 
+    final ucl = widget.controlChartStats?.controlLimitMRChart?.ucl ?? 0.0;
+    final baseColor = widget.dataLineColor ?? AppColors.colorBrand;
+
     return [
       LineChartBarData(
         spots: spots,
         isCurved: false,
-        color: widget.dataLineColor,
+        color: baseColor,
         barWidth: 2,
         isStrokeCapRound: true,
         dotData: FlDotData(
           show: true,
           getDotPainter: (spot, _, __, ___) {
             final v = spot.y;
-            Color dotColor = widget.dataLineColor ?? AppColors.colorBrand;
-            final ucl = widget.controlChartStats?.controlLimitMRChart?.ucl ?? 0.0;
-
-            if ((ucl > 0 && v > ucl)) {
-              dotColor = Colors.orange;
-            }
-
+            final isOverUCL = (ucl > 0 && v > ucl);
+            final dotColor = isOverUCL ? Colors.orange : baseColor;
             return FlDotCirclePainter(
               radius: 3.5,
-              color: dotColor.withOpacity(0.7),
+              color: dotColor.withValues(alpha: 0.85),
               strokeWidth: 1,
               strokeColor: Colors.white,
             );
           },
         ),
+        belowBarData: BarAreaData(show: false),
       ),
     ];
   }
@@ -357,28 +399,24 @@ class _MrChartComponentState extends State<MrChartComponent> {
       List<LineTooltipItem?>.filled(touchedSpots.length, null);
 
   LineTouchData _touchData() {
-    final points = _pointsInWindow;
-
     return LineTouchData(
       handleBuiltInTouches: true,
-      touchSpotThreshold: 18,
-
+      touchSpotThreshold: 16,
       getTouchedSpotIndicator: (barData, indexes) => indexes.map((_) {
         return TouchedSpotIndicatorData(
-          FlLine(color: const Color(0x00000000)),
+          FlLine(color: Colors.blueAccent.withValues(alpha: 0.5), strokeWidth: 3),
           FlDotData(
             show: true,
             getDotPainter: (spot, __, ___, ____) => FlDotCirclePainter(
-              radius: 6.0,
-              color: AppColors.colorBrand,
-              strokeWidth: 2,
-              strokeColor: const Color(0xFFFFFFFF),
+              radius: 3.5,
+              color: AppColors.colorBrandTp,
+              strokeWidth: 3,
+              strokeColor: Colors.blueAccent
             ),
           ),
         );
       }).toList(),
-
-      // สำคัญ: คืน list ความยาวเท่ากับ touchedSpots (null ได้)
+      // ปิด tooltip ของ fl_chart (เราวาดเอง)
       touchTooltipData: LineTouchTooltipData(getTooltipItems: _emptyTooltip),
 
       touchCallback: (event, resp) {
@@ -392,7 +430,6 @@ class _MrChartComponentState extends State<MrChartComponent> {
         }
 
         final s = resp.lineBarSpots!.first;
-
         _tip.value = _MrTip(
           local: event.localPosition!,
           valueStr: s.y.toStringAsFixed(3),
@@ -415,7 +452,7 @@ class _MrChartComponentState extends State<MrChartComponent> {
 
   double _getInterval() {
     const divisions = 5; // -> 6 ticks
-    final spotMin = 0.0;
+    final spotMin = 0.0; // MR เริ่มที่ศูนย์
     final spotMax = widget.controlChartStats?.yAxisRange?.maxYsurfaceHardnessMrChart ?? spotMin;
 
     if (spotMax <= spotMin) {

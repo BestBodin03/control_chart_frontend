@@ -152,7 +152,7 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
         final ChartComponent selectedWidget = widget.isMovingRange ? useMr : useI;
 
         const legendRightPad = 24.0;
-        const legendHeight = 32.0;
+        const legendHeight = 28.0;
         const gapLegendToChart = 4.0;
 
         return SizedBox(

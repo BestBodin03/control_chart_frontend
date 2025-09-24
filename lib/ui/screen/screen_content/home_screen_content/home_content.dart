@@ -3,15 +3,16 @@
 import 'dart:developer' as dev;
 
 import 'package:control_chart/data/bloc/tv_monitoring/tv_monitoring_bloc.dart';
+import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/control_chart_component.dart';
+import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/help.dart' as shCdeCdt;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../data/bloc/search_chart_details/search_bloc.dart';
 import '../../../../domain/models/control_chart_stats.dart';
 import '../../../core/design_system/app_color.dart';
-// ✅ แยก alias ให้คนละชื่อ
+import '../../../core/shared/medium_control_chart/cde_cdt/control_chart_component.dart' as shCdeCdt;
 import '../../../core/shared/medium_control_chart/surface_hardness/help.dart' as shSurface;
-import '../../../core/shared/medium_control_chart/cde_cdt/help.dart' as shCdeCdt;
 
 import 'home_content_var.dart';
 

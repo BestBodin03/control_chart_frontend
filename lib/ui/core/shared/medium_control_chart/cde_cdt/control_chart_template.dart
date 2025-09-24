@@ -4,15 +4,14 @@ import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/control_chart_component.dart';
-import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/mr_chart_component.dart';
+import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/control_chart_component.dart' as ctrl;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../domain/types/chart_component.dart';
+import 'control_chart_component.dart';
+import 'mr_chart_component.dart' as mr;
 
-/// CDE/CDT template (Surface-like)
-/// - Uses real time axis with xStart/xEnd (like Surface)
-/// - No internal slider; parent controls the time window (xStart/xEnd)
 class ControlChartTemplateCdeCdt extends StatefulWidget {
   final String xAxisLabel;
   final String yAxisLabel;
@@ -110,7 +109,6 @@ class _ControlChartTemplateCdeCdtState
         final w = widget.width ?? constraints.maxWidth;
         final h = widget.height ?? constraints.maxHeight;
 
-        // Use provided xStart/xEnd (Surface-like). If null, fallback to data.
         DateTime? start = widget.xStart;
         DateTime? end = widget.xEnd;
 
@@ -123,7 +121,7 @@ class _ControlChartTemplateCdeCdtState
           return const Center(child: Text('ช่วงเวลาไม่ถูกต้อง'));
         }
 
-        final useI = ControlChartComponent(
+        final useI = ctrl.ControlChartComponent(
           dataPoints: dataPoints,
           controlChartStats: stats,
           dataLineColor: widget.dataLineColor,
@@ -134,7 +132,7 @@ class _ControlChartTemplateCdeCdtState
           xEnd: end,
         );
 
-        final useMr = MrChartComponent(
+        final useMr = mr.MrChartComponent(
           dataPoints: dataPoints,
           controlChartStats: stats,
           dataLineColor: widget.dataLineColor,
@@ -145,8 +143,7 @@ class _ControlChartTemplateCdeCdtState
           xEnd: end,
         );
 
-        final ChartComponent selectedWidget =
-            widget.isMovingRange ? useMr : useI;
+        final Widget selectedWidget = widget.isMovingRange ? useMr : useI;
 
         const legendRightPad = 24.0;
         const legendHeight = 32.0;
@@ -171,13 +168,13 @@ class _ControlChartTemplateCdeCdtState
                     height: legendHeight,
                     child: Align(
                       alignment: Alignment.center,
-                      child: selectedWidget.buildLegend(),
+                      child: (selectedWidget as ChartComponent).buildLegend(),
                     ),
                   ),
                   const SizedBox(height: gapLegendToChart),
 
-                  // ✅ Use the component directly (contains its own LineChart)
-                  Expanded(child: selectedWidget as Widget),
+                  // chart
+                  Expanded(child: selectedWidget),
                 ],
               ),
             ),

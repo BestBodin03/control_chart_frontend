@@ -179,8 +179,10 @@ class _MediumContainer extends StatelessWidget {
               // Title row (centered) — no slider here; slider is in HomeContent
               Row(
                 children: [
-                  Expanded(
-                    child: Center(child: Text(title, style: AppTypography.textBody3BBold)),
+                  SizedBox(
+                    child: Expanded(
+                      child: Center(child: Text(title, style: AppTypography.textBody3BBold)),
+                    ),
                   ),
                   // if (onZoom != null) ...[
                   //   // const SizedBox(width: 8),
@@ -216,10 +218,17 @@ class _MediumContainer extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Surface Hardness | Control Chart",
+                                  "Surface Hardness",
                                   style: AppTypography.textBody3BBold,
-                                  textAlign: TextAlign.center,
+                                  textAlign: TextAlign.start,
                                 ),
+                                Text(
+                                  "Control Chart",
+                                  style: AppTypography.textBody3B,
+                                  textAlign: TextAlign.start,
+                                ),
+
+
 
                                 const SizedBox(height: 8,),
 
@@ -313,14 +322,14 @@ class _MediumContainer extends StatelessWidget {
 
                       // Header bottom
                       Padding(
-                        padding: const EdgeInsets.only(left: 16.0),
+                        padding: const EdgeInsets.only(left: 8.0),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
                                 Text(
-                                  "Surface Hardness |  Moving Range",
-                                  style: AppTypography.textBody3BBold,
-                                  textAlign: TextAlign.center,
+                                  "Moving Range",
+                                  style: AppTypography.textBody3B,
+                                  textAlign: TextAlign.start,
                                 ),
                           ],
                         ),

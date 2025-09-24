@@ -1,36 +1,34 @@
 import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart';
-import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
-import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/control_chart_template.dart';
+// import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/control_chart_template_cde_cdt.dart';
 import 'package:control_chart/ui/core/shared/violations_component.dart';
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
-import 'package:control_chart/ui/screen/screen_content/setting_screen_content/component/temp.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-/// Keep a separate typedef name to avoid clashing with Surface's ZoomBuilder.
+import '../../../../../domain/models/control_chart_stats.dart';
+import 'control_chart_template.dart';
+
 typedef CdeCdtZoomBuilder = Widget Function(
   BuildContext context,
   HomeContentVar settingProfile,
   SearchState searchState,
 );
 
-/// Public builder — Surface-like: uses time window (xStart/xEnd) from settingProfile,
-/// shows 2 charts (Control & MR), and keeps the selected attribute logic.
 Widget buildChartsSectionCdeCdt(
   List<HomeContentVar> profiles,
   int currentIndex,
   SearchState searchState, {
-  CdeCdtZoomBuilder? zoomBuilder,
-  int? externalStart,        // kept for API parity
-  int? externalWindowSize,   // kept for API parity
-  int? xAxisStart,           // reserved for parity
-  int? xAxisWinSize,         // reserved for parity
-  DateTime? baseStart,       // NEW: for title date range (like Surface)
-  DateTime? baseEnd,         // NEW: for title date range (like Surface)
+  // ZoomBuilder? zoomBuilder,
+  int? externalStart,
+  int? externalWindowSize,
+  int? xAxisStart,
+  int? xAxisWinSize,
+  DateTime? baseStart,
+  DateTime? baseEnd
 }) {
   final sel = searchState.controlChartStats?.secondChartSelected;
   if (sel == null || sel == SecondChartSelected.na) {
@@ -46,7 +44,7 @@ Widget buildChartsSectionCdeCdt(
 
   final current = profiles[currentIndex];
 
-  // ---- Build title parts (Furnace | Material | Date), same as Surface ----
+  // ---- Title: Furnace | Material | Date (เหมือน Surface) ----
   final bool isReady =
       searchState.status == SearchStatus.success &&
       searchState.chartDetails.isNotEmpty;
@@ -77,22 +75,18 @@ Widget buildChartsSectionCdeCdt(
       selectedLabel: selectedLabel,
       settingProfile: current,
       searchState: searchState,
-      externalStart: externalStart,
-      externalWindowSize: externalWindowSize,
-      xAxisStart: xAxisStart,
-      xAxisWinSize: xAxisWinSize,
-      onZoom: (ctx) {
-        if (zoomBuilder == null) return;
-        showDialog(
-          context: ctx,
-          builder: (_) => Dialog(
-            insetPadding: const EdgeInsets.all(24),
-            clipBehavior: Clip.antiAlias,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: zoomBuilder(ctx, current, searchState),
-          ),
-        );
-      },
+      // onZoom: (ctx) {
+      //   if (zoomBuilder == null) return;
+      //   showDialog(
+      //     context: ctx,
+      //     builder: (_) => Dialog(
+      //       insetPadding: const EdgeInsets.all(24),
+      //       clipBehavior: Clip.antiAlias,
+      //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      //       child: zoomBuilder(ctx, current, searchState),
+      //     ),
+      //   );
+      // },
     ),
   );
 }
@@ -103,30 +97,32 @@ class _MediumContainerCdeCdt extends StatelessWidget {
     required this.selectedLabel,
     required this.settingProfile,
     required this.searchState,
-    this.onZoom,
-    this.externalStart,
-    this.externalWindowSize,
-    this.xAxisStart,
-    this.xAxisWinSize,
+    // this.onZoom,
   });
 
   final String title;
   final String selectedLabel;
   final HomeContentVar settingProfile;
   final SearchState searchState;
-  final void Function(BuildContext)? onZoom;
+  // final void Function(BuildContext)? onZoom;
 
-  // Kept for API parity with Surface (not used when time-windowing).
-  final int? externalStart;
-  final int? externalWindowSize;
-  final int? xAxisStart;
-  final int? xAxisWinSize;
+  T? _sel<T>(T? cde, T? cdt, T? comp) {
+    switch (searchState.controlChartStats?.secondChartSelected) {
+      case SecondChartSelected.cde:
+        return cde;
+      case SecondChartSelected.cdt:
+        return cdt;
+      case SecondChartSelected.compoundLayer:
+        return comp;
+      default:
+        return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final state = searchState;
 
-    // ---- Guards (same as Surface) ----
     if (state.status == SearchStatus.loading) {
       return const Center(
         child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
@@ -139,22 +135,9 @@ class _MediumContainerCdeCdt extends StatelessWidget {
       return const _SmallNoData();
     }
 
-  T? _sel<T>(T? cde, T? cdt, T? comp) {
-    switch (state.controlChartStats?.secondChartSelected) {
-      case SecondChartSelected.cde:
-        return cde;
-      case SecondChartSelected.cdt:
-        return cdt;
-      case SecondChartSelected.compoundLayer:
-        return comp;
-      default:
-        return null;
-    }
-  }
-
-    // Use Surface-like time window: pass full data and the explicit xStart/xEnd to the templates.
+    // ใช้ช่วงเวลาแบบ Surface: ส่ง full data + xStart/xEnd ให้ template
     final allPoints = state.chartDataPointsCdeCdt;
-    final records = allPoints.length; // simple count pill
+    final records = allPoints.length;
 
     final q = settingProfile;
     final uniqueKey = '${q.startDate?.millisecondsSinceEpoch ?? 0}-'
@@ -165,40 +148,44 @@ class _MediumContainerCdeCdt extends StatelessWidget {
     final xStart = q.startDate;
     final xEnd = q.endDate;
 
-    final int? vOverControl = _sel(
-      state.controlChartStats?.cdeViolations?.beyondControlLimit ?? 0,
-      state.controlChartStats?.cdtViolations?.beyondControlLimit ?? 0,
-      state.controlChartStats?.compoundLayerViolations?.beyondControlLimit ?? 0,
-    );
+    final int vOverControl = _sel(
+          state.controlChartStats?.cdeViolations?.beyondControlLimit,
+          state.controlChartStats?.cdtViolations?.beyondControlLimit,
+          state.controlChartStats?.compoundLayerViolations?.beyondControlLimit,
+        ) ??
+        0;
 
-    final int? vOverSpec = _sel(
-      state.controlChartStats?.cdeViolations?.beyondSpecLimit ?? 0,
-      state.controlChartStats?.cdtViolations?.beyondSpecLimit ?? 0,
-      state.controlChartStats?.compoundLayerViolations?.beyondSpecLimit ?? 0,
-    );
+    final int vOverSpec = _sel(
+          state.controlChartStats?.cdeViolations?.beyondSpecLimit,
+          state.controlChartStats?.cdtViolations?.beyondSpecLimit,
+          state.controlChartStats?.compoundLayerViolations?.beyondSpecLimit,
+        ) ??
+        0;
 
-    final int? vTrend = _sel(
-      state.controlChartStats?.cdeViolations?.trend ?? 0,
-      state.controlChartStats?.cdtViolations?.trend ?? 0,
-      state.controlChartStats?.compoundLayerViolations?.trend ?? 0,
-    );
+    final int vTrend = _sel(
+          state.controlChartStats?.cdeViolations?.trend,
+          state.controlChartStats?.cdtViolations?.trend,
+          state.controlChartStats?.compoundLayerViolations?.trend,
+        ) ??
+        0;
 
-    final bgColor = _getViolationBgColor(vOverControl!, vOverSpec!, vTrend!);
+    final bgColor = _getViolationBgColor(vOverControl, vOverSpec, vTrend);
     final borderColor = _getViolationBorderColor(vOverControl, vOverSpec, vTrend);
+
+    const sectionLabelH = 20.0;
+    const gapV = 8.0;
 
     return Container(
       color: Colors.transparent,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          const sectionLabelH = 20.0;
-          const gapV = 8.0;
           final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV) * 2 - 108) / 2)
               .clamp(0.0, double.infinity);
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ---- Title row (centered), like Surface ----
+              // Title row
               Row(
                 children: [
                   Expanded(
@@ -207,7 +194,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                 ],
               ),
 
-              // ---- Card w/ violation color + header similar to Surface ----
+              // Card
               DecoratedBox(
                 decoration: BoxDecoration(
                   color: bgColor,
@@ -218,7 +205,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
                   child: Column(
                     children: [
-                      // Header Top (left: label + count pill, right: Violations + zoom)
+                      // Header Top
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -229,9 +216,12 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "$selectedLabel | Control Chart",
+                                  "$selectedLabel",
                                   style: AppTypography.textBody3BBold,
-                                  textAlign: TextAlign.center,
+                                ),
+                                Text(
+                                  "Control Chart",
+                                  style: AppTypography.textBody3B,
                                 ),
                                 const SizedBox(height: 8),
                                 Container(
@@ -244,7 +234,6 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                                   child: Text(
                                     '$records Records',
                                     style: AppTypography.textBody3BBold,
-                                    textAlign: TextAlign.center,
                                   ),
                                 ),
                               ],
@@ -291,7 +280,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
 
                       const SizedBox(height: 8),
 
-                      // ---- Control Chart (time-windowed) ----
+                      // Control Chart
                       SizedBox(
                         width: double.infinity,
                         height: eachChartH,
@@ -318,15 +307,14 @@ class _MediumContainerCdeCdt extends StatelessWidget {
 
                       const SizedBox(height: 8),
 
-                      // ---- Header bottom (MR label) ----
+                      // Header bottom
                       Row(
                         children: [
                           Expanded(
                             child: Center(
                               child: Text(
-                                "$selectedLabel |  Moving Range",
+                                "$selectedLabel | Moving Range",
                                 style: AppTypography.textBody3B,
-                                textAlign: TextAlign.center,
                               ),
                             ),
                           ),
@@ -335,7 +323,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
 
                       const SizedBox(height: 8),
 
-                      // ---- MR Chart (time-windowed) ----
+                      // MR Chart
                       SizedBox(
                         width: double.infinity,
                         height: eachChartH,
@@ -371,32 +359,18 @@ class _MediumContainerCdeCdt extends StatelessWidget {
   }
 }
 
-// ---- Reuse the same helpers as Surface (or keep these if you want a local copy) ----
-// Decide background color based on violation hierarchy
+// ---- Helpers: สีพื้น/เส้นกรอบตาม violation (เหมือน Surface) ----
 Color _getViolationBgColor(int overControl, int overSpec, int trend) {
-  if (overSpec > 0) {
-    return Colors.red.withValues(alpha: 0.15);
-    // return Colors.pink.shade200.withValues(alpha: 0.15);
-  } else if (overControl > 0) {
-    return Colors.orange.withValues(alpha: 0.15);
-    // return Colors.red.shade200.withValues(alpha: 0.15);
-  } else if (trend > 0) {
-    return Colors.pink.withValues(alpha: 0.15);
-  }
+  if (overSpec > 0)   return Colors.red.withValues(alpha: 0.15);
+  if (overControl > 0) return Colors.orange.withValues(alpha: 0.15);
+  if (trend > 0)      return Colors.pink.withValues(alpha: 0.15);
   return AppColors.colorBrandTp.withValues(alpha: 0.15);
 }
 
-// Decide border color in same hierarchy
 Color _getViolationBorderColor(int overControl, int overSpec, int trend) {
-  if (overSpec > 0) {
-    return Colors.red.withValues(alpha: 0.70);
-    // return Colors.pink.shade200.withValues(alpha: 0.15);
-  } else if (overControl > 0) {
-    return Colors.orange.withValues(alpha: 0.70);
-    // return Colors.red.shade200.withValues(alpha: 0.15);
-  } else if (trend > 0) {
-    return Colors.pinkAccent.withValues(alpha: 0.70);
-  }
+  if (overSpec > 0)   return Colors.red.withValues(alpha: 0.70);
+  if (overControl > 0) return Colors.orange.withValues(alpha: 0.70);
+  if (trend > 0)      return Colors.pinkAccent.withValues(alpha: 0.70);
   return AppColors.colorBrandTp.withValues(alpha: 0.70);
 }
 
@@ -422,5 +396,3 @@ class _SmallNoData extends StatelessWidget {
   Widget build(BuildContext context) =>
       const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล', style: TextStyle(fontSize: 12, color: Colors.grey)));
 }
-
-
