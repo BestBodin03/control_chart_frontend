@@ -17,16 +17,24 @@ import '../../../core/shared/medium_control_chart/surface_hardness/help.dart' as
 import 'home_content_var.dart';
 
 class HomeContent extends StatefulWidget {
-  final List<HomeContentVar> profiles;
+  final List<HomeContentVar> profiles;           // snapshot จริง
+  final ValueChanged<HomeContentVar>? onSendSnapshotToSearch;
 
-  const HomeContent({super.key, required this.profiles});
+  const HomeContent({
+    super.key,
+    required this.profiles,
+    this.onSendSnapshotToSearch,
+  });
 
   @override
   State<HomeContent> createState() => _HomeContentState();
 }
 
-class _HomeContentState extends State<HomeContent> {
-  // ---------- Page controller ต้องอยู่ใน State ----------
+class _HomeContentState extends State<HomeContent>
+    with AutomaticKeepAliveClientMixin<HomeContent> {
+
+  @override
+  bool get wantKeepAlive => true;
   late final PageController _pageController;
 
   // เก็บลายเซ็นโปรไฟล์ล่าสุด เพื่อตรวจว่ามีการเปลี่ยนแปลงจริง ๆ หรือไม่
@@ -47,6 +55,15 @@ class _HomeContentState extends State<HomeContent> {
     final DateTime effStart = start ?? base.startDate ?? DateTime.now().toLocal();
     final DateTime effEnd   = end   ?? base.endDate   ?? effStart.add(const Duration(hours: 1));
     return base.copyWith(startDate: effStart, endDate: effEnd);
+  }
+
+  void _handleGoToSearchFromIndex(int i, {DateTime? start, DateTime? end}) {
+    final base = widget.profiles[i];
+    final snap = base.copyWith(
+      startDate: start ?? base.startDate,
+      endDate:   end   ?? base.endDate,
+    );
+    widget.onSendSnapshotToSearch?.call(snap);   // ✅ one-shot ไป Search
   }
 
   // ---------- lifecycle ----------
@@ -89,6 +106,7 @@ class _HomeContentState extends State<HomeContent> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); 
     return BlocListener<TvMonitoringBloc, TvMonitoringState>(
       // ฟังเมื่อ index หรือ profiles เปลี่ยน
       listenWhen: (prev, curr) =>
@@ -259,41 +277,41 @@ class _HomeContentState extends State<HomeContent> {
                                   child: Row(
                                     children: [
                                       // -------- กราฟหลัก (Surface Hardness) --------
-Expanded(
-  child: SizedBox(
-    height: constraints.maxHeight - (8 + 16),
-    child: _ChartFillBox(
-      child: KeyedSubtree(
-        key: surfKey,                   // ✅ เปลี่ยน key → Flutter ทิ้ง State เก่าทั้งก้อน
-        child: shSurface.buildChartsSectionSurfaceHardness(
-          adjustedProfiles, i, searchState,
-          externalStart: 0, externalWindowSize: 6,
-          baseStart: qWindow.startDate, baseEnd: qWindow.endDate,
-        ),
-      ),
-    ),
-  ),
-),
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: constraints.maxHeight - (8 + 16),
+                                        child: _ChartFillBox(
+                                          child: KeyedSubtree(
+                                            key: surfKey,                   // ✅ เปลี่ยน key → Flutter ทิ้ง State เก่าทั้งก้อน
+                                            child: shSurface.buildChartsSectionSurfaceHardness(
+                                              adjustedProfiles, i, searchState,
+                                              externalStart: 0, externalWindowSize: 6,
+                                              baseStart: qWindow.startDate, baseEnd: qWindow.endDate,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
 
-                                      const SizedBox(width: 16),
+                                  const SizedBox(width: 16),
 
-                                      // -------- กราฟที่สอง (CDE/CDT) --------
-if (visibleSecond)
-  Expanded(
-    child: SizedBox(
-      height: constraints.maxHeight - (8 + 16),
-      child: _ChartFillBox(
-        child: KeyedSubtree(
-          key: cdeKey,                  // ✅ key แยกของ CDE/CDT
-          child: shCdeCdt.buildChartsSectionCdeCdt(
-            adjustedProfiles, i, searchState,
-            externalStart: 0, externalWindowSize: 6,
-            baseStart: qWindow.startDate, baseEnd: qWindow.endDate,
-          ),
-        ),
-      ),
-    ),
-  ),
+                                                                          // -------- กราฟที่สอง (CDE/CDT) --------
+                                    if (visibleSecond)
+                                      Expanded(
+                                        child: SizedBox(
+                                          height: constraints.maxHeight - (8 + 16),
+                                          child: _ChartFillBox(
+                                            child: KeyedSubtree(
+                                              key: cdeKey,                  // ✅ key แยกของ CDE/CDT
+                                              child: shCdeCdt.buildChartsSectionCdeCdt(
+                                                adjustedProfiles, i, searchState,
+                                                externalStart: 0, externalWindowSize: 6,
+                                                baseStart: qWindow.startDate, baseEnd: qWindow.endDate,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),

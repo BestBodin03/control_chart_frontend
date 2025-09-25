@@ -555,7 +555,7 @@ Widget build(BuildContext context) {
     final points = _pointsInWindow;
     const hoverColor = Colors.blueAccent;
 
-    debugPrint(points.first.fgNo);
+    // debugPrint(points.first.fgNo);
 
     return LineTouchData(
       handleBuiltInTouches: true,

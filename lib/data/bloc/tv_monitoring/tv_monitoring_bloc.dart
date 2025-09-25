@@ -25,7 +25,7 @@ class TvMonitoringBloc extends Bloc<TvMonitoringEvent, TvMonitoringState> {
       return;
     }
 
-    _dispatchQuery(e.profiles.first);
+    // _dispatchQuery(e.profiles.first);
     _startTimer(0, e.profiles);
 
     emit(state.copyWith(
@@ -42,7 +42,7 @@ class TvMonitoringBloc extends Bloc<TvMonitoringEvent, TvMonitoringState> {
     final i = e.index;
     if (i < 0 || i >= state.profiles.length) return;
 
-    _dispatchQuery(state.profiles[i]);
+    // _dispatchQuery(state.profiles[i]);
     _startTimer(i, state.profiles);
 
     emit(state.copyWith(index: () => i));
@@ -58,10 +58,10 @@ class TvMonitoringBloc extends Bloc<TvMonitoringEvent, TvMonitoringState> {
   }
 
   // ----------------- helpers -----------------
-  void _dispatchQuery(HomeContentVar p) {
-    // TODO: connect to SearchBloc
-    // context.read<SearchBloc>().add(LoadFilteredChartData(...));
-  }
+  // void _dispatchQuery(HomeContentVar p) {
+  //   // TODO: connect to SearchBloc
+  //   // context.read<SearchBloc>().add(LoadFilteredChartData(...));
+  // }
 
   void _startTimer(int i, List<HomeContentVar> profiles) {
     final sec = profiles[i].interval.clamp(1, 600).toInt();

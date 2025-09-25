@@ -6,10 +6,12 @@ import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
 import 'package:control_chart/ui/screen/searching_screen.dart';
 import 'package:control_chart/ui/screen/setting_screen.dart';
+import 'package:control_chart/utils/app_route.dart';
 import 'package:control_chart/utils/app_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../data/bloc/search_chart_details/search_bloc.dart';
 import '../../data/bloc/tv_monitoring/tv_monitoring_bloc.dart';
 
 class MyHomeScreen extends StatefulWidget {
@@ -24,83 +26,91 @@ class MyHomeScreen extends StatefulWidget {
 }
 
 class _MyHomeScreenState extends State<MyHomeScreen> {
-  int _selectedIndex = 0;
+  late final List<HomeContentVar> _profilesSnapshot;
 
-  // ❗ ไม่เป็น final เพื่ออัปเดตได้เมื่อ seed / fallback
-  List<HomeContentVar> _profiles = const <HomeContentVar>[];
+  // แยก Bloc ของ Home กับของ Search (ไม่ชนกัน)
+  late final TvMonitoringBloc _tvBloc;
+  late final SearchBloc _homeSearchBloc;     // ใช้ใน Home เท่านั้น
+  // SearchScreen จะมี SearchBloc ของตัวเอง
+
+  late final List<Widget> _tabs; // เก็บหน้าที่สร้างครั้งเดียว
 
   @override
   void initState() {
     super.initState();
 
-    // 1) seed จาก initialParams (ครั้งแรกตอนเปิดจอ)
+    // ---- snapshot profiles ครั้งเดียว ----
     final p = widget.initialParams;
-    if (p is List) {
-      _profiles = p.whereType<HomeContentVar>().toList();
-    } else {
-      _profiles = const <HomeContentVar>[];
-    }
-
-    // 2) ถ้า AppStore ยังว่างอยู่ ให้ seed ค่าเริ่มจาก _profiles
+    final seeded = (p is List) ? p.whereType<HomeContentVar>().toList() : <HomeContentVar>[];
     final store = AppStore.instance.homeProfiles;
-    if (store.value.isEmpty && _profiles.isNotEmpty) {
-      store.value = List<HomeContentVar>.from(_profiles);
+    if (store.value.isEmpty && seeded.isNotEmpty) {
+      store.value = List<HomeContentVar>.from(seeded);
     }
+    final effective = store.value.isNotEmpty ? store.value : seeded;
+    _profilesSnapshot = List<HomeContentVar>.unmodifiable(effective);
+
+    // ---- สร้าง Bloc ที่ Home จะใช้ ----
+    _tvBloc = TvMonitoringBloc();
+    _homeSearchBloc = SearchBloc(/* deps */);
+
+    // ---- สร้างแท็บครั้งเดียว ----
+    _tabs = [
+      MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: _tvBloc),
+          BlocProvider.value(value: _homeSearchBloc),
+        ],
+        child: HomeContent(
+          profiles: _profilesSnapshot, // snapshot จริง
+          // เพิ่ม callback ให้ Home ยิง snapshot ไป Search
+          onSendSnapshotToSearch: (snap) {
+            AppRoute.instance.searchSnapshot.value = snap;
+            AppRoute.instance.navIndex.value = 1; // ไปแท็บ Search
+          },
+        ),
+      ),
+      const SearchingScreen(),  // ภายในมี SearchBloc ของตัวเอง
+      const SettingScreen(),
+      const ChartDetailScreen(),
+    ];
   }
 
-  void _onItemTapped(int index) => setState(() => _selectedIndex = index);
-
-  // รับ profiles ที่ใช้จริงในเฟรมนั้นเข้ามา
-Widget _pageForIndex(int index, List<HomeContentVar> profiles) {
-  switch (index) {
-    case 0:
-      if (profiles.isNotEmpty) {
-        return BlocProvider(
-          create: (_) => TvMonitoringBloc(),
-          child: HomeContent(profiles: profiles),
-        );
-      }
-      return const Center(child: Text('โปรดเลือกโปรไฟล์ตั้งค่าเพื่อแสดงแผนภูมิควบคุม'));
-    case 1:
-      return const SearchingScreen();
-    case 2:
-      return const SettingScreen();
-    case 3:
-      return const ChartDetailScreen();
-    default:
-      return const SizedBox.shrink();
+  @override
+  void dispose() {
+    _homeSearchBloc.close();
+    _tvBloc.close();
+    super.dispose();
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: Builder(builder: (context) => const CollapsedAppDrawer()),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 32.0),
-            child: DateTimeComponent(),
+    return ValueListenableBuilder<int>(
+      valueListenable: AppRoute.instance.navIndex,
+      builder: (_, nav, __) {
+        return Scaffold(
+          appBar: AppBar(
+            leading: const CollapsedAppDrawer(),
+            actions: const [Padding(
+              padding: EdgeInsets.only(right: 32),
+              child: DateTimeComponent(),
+            )],
           ),
-        ],
-      ),
-      // 👇 ฟัง AppStore: ถ้า store มีค่า ใช้ค่านั้น; ถ้ายังว่าง ใช้ seed (_profiles)
-      body: ValueListenableBuilder<List<HomeContentVar>>(
-        valueListenable: AppStore.instance.homeProfiles,
-        builder: (_, liveProfiles, __) {
-          final effective = (liveProfiles.isNotEmpty) ? liveProfiles : _profiles;
-          return Center(child: _pageForIndex(_selectedIndex, effective));
-        },
-      ),
-      drawer: SizedBox(
-        width: 240.0,
-        child: AppDrawer(
-          selectedIndex: _selectedIndex,
-          onItemTapped: _onItemTapped,
-        ),
-      ),
+          body: IndexedStack(            // ✅ ไม่ทำลาย ไม่ rebuild ลูก
+            index: nav,
+            children: _tabs,
+          ),
+          drawer: SizedBox(
+            width: 240,
+            child: AppDrawer(
+              selectedIndex: nav,
+              onItemTapped: (i) {
+                if (i != nav) AppRoute.instance.navIndex.value = i;
+                Navigator.pop(context);
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 }
-

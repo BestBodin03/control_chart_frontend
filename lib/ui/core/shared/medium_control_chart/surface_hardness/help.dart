@@ -7,8 +7,14 @@ import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_template.dart';
 import 'package:control_chart/ui/core/shared/violations_component.dart';
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
+import 'package:control_chart/utils/app_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+
+import '../../../../screen/screen_content/searching_screen_content/searching_content.dart';
+import '../../../../screen/searching_screen.dart';
+import '../../searching_form.dart';
 
 typedef ZoomBuilder = Widget Function(
   BuildContext context,
@@ -74,17 +80,7 @@ Widget buildChartsSectionSurfaceHardness(
       externalWindowSize: externalWindowSize,
       xAxisStart: xAxisStart,
       xAxisWinSize: xAxisWinSize,
-      onZoom: (ctx) {
-        showDialog(
-          context: ctx,
-          builder: (_) => Dialog(
-            insetPadding: const EdgeInsets.all(24),
-            clipBehavior: Clip.antiAlias,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: zoomBuilder!(ctx, current, searchState),
-          ),
-        );
-      },
+      currentIndex: currentIndex,
     ),
   );
 }
@@ -94,22 +90,24 @@ class _MediumContainer extends StatelessWidget {
     required this.title,
     required this.settingProfile,
     required this.searchState,
-    required this.onZoom,
+    // required this.onZoom,
     this.externalStart,
     this.externalWindowSize,
     this.xAxisStart,
-    this.xAxisWinSize
+    this.xAxisWinSize,
+    this.currentIndex
   });
 
   final String title;
   final HomeContentVar settingProfile;
   final SearchState searchState;
-  final void Function(BuildContext) onZoom;
+  // final void Function(BuildContext) onZoom;
   // parent-controlled window
   final int? externalStart;
   final int? externalWindowSize;
   final int? xAxisStart;
   final int? xAxisWinSize;
+  final int? currentIndex;
 
 
   // static const int _defaultWindow = 30;
@@ -179,22 +177,31 @@ class _MediumContainer extends StatelessWidget {
               // Title row (centered) — no slider here; slider is in HomeContent
               Row(
                 children: [
-                  SizedBox(
-                    child: Expanded(
-                      child: Center(child: Text(title, style: AppTypography.textBody3BBold)),
+                  Expanded(
+                    child: Material( // ✅ เพิ่มแค่ Material ครอบ InkWell
+                      color: Colors.transparent, // ให้ใช้พื้นหลังเดิม ไม่ทับธีม/สีของ Home
+                      child: InkWell(
+                        onTap: () {
+                          // current คือ HomeContentVar ของการ์ดนี้
+                          final snap = HomeContentVar(
+                            startDate:  settingProfile.startDate,
+                            endDate:    settingProfile.endDate,
+                            furnaceNo:  settingProfile.furnaceNo,
+                            materialNo: settingProfile.materialNo,
+                            // เติม field อื่นที่จำเป็นต่อการค้นหา/แสดงผล
+                          );
+
+                            AppRoute.instance.searchSnapshot.value = snap; // ✅ ส่ง snapshot ข้ามหน้า
+                            AppRoute.instance.navIndex.value = 1;          // ไปแท็บ Search
+                          },
+                        child: Center(
+                          child: Text(title, style: AppTypography.textBody3BBold),
+                        ),
+                      ),
                     ),
                   ),
-                  // if (onZoom != null) ...[
-                  //   // const SizedBox(width: 8),
-                  //   IconButton(
-                  //     tooltip: 'Zoom',
-                  //     icon: const Icon(Icons.fullscreen, size: 18),
-                  //     onPressed: () => onZoom(context),
-                  //   ),
-                  // ],
                 ],
               ),
-
               // Card
               DecoratedBox(
                 decoration: BoxDecoration(

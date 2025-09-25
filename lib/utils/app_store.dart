@@ -9,3 +9,5 @@ class AppStore {
   final ValueNotifier<List<HomeContentVar>> homeProfiles =
       ValueNotifier<List<HomeContentVar>>(<HomeContentVar>[]);
 }
+
+

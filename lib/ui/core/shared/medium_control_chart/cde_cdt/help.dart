@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../domain/models/control_chart_stats.dart';
+import '../../../../../utils/app_route.dart';
 import 'control_chart_template.dart';
 
 typedef CdeCdtZoomBuilder = Widget Function(
@@ -75,6 +76,7 @@ Widget buildChartsSectionCdeCdt(
       selectedLabel: selectedLabel,
       settingProfile: current,
       searchState: searchState,
+      currentIndex: currentIndex,
       // onZoom: (ctx) {
       //   if (zoomBuilder == null) return;
       //   showDialog(
@@ -97,6 +99,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
     required this.selectedLabel,
     required this.settingProfile,
     required this.searchState,
+    this.currentIndex
     // this.onZoom,
   });
 
@@ -105,6 +108,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
   final HomeContentVar settingProfile;
   final SearchState searchState;
   // final void Function(BuildContext)? onZoom;
+  final int? currentIndex;
 
   T? _sel<T>(T? cde, T? cdt, T? comp) {
     switch (searchState.controlChartStats?.secondChartSelected) {
@@ -189,7 +193,27 @@ class _MediumContainerCdeCdt extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Center(child: Text(title, style: AppTypography.textBody3BBold)),
+                    child: Material( // ✅ เพิ่มแค่ Material ครอบ InkWell
+                      color: Colors.transparent, // ให้ใช้พื้นหลังเดิม ไม่ทับธีม/สีของ Home
+                      child: InkWell(
+                        onTap: () {
+                          // current คือ HomeContentVar ของการ์ดนี้
+                          final snap = HomeContentVar(
+                            startDate:  settingProfile.startDate,
+                            endDate:    settingProfile.endDate,
+                            furnaceNo:  settingProfile.furnaceNo,
+                            materialNo: settingProfile.materialNo,
+                            // เติม field อื่นที่จำเป็นต่อการค้นหา/แสดงผล
+                          );
+
+                            AppRoute.instance.searchSnapshot.value = snap; // ✅ ส่ง snapshot ข้ามหน้า
+                            AppRoute.instance.navIndex.value = 1;          // ไปแท็บ Search
+                          },
+                        child: Center(
+                          child: Text(title, style: AppTypography.textBody3BBold),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),

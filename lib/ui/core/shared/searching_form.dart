@@ -10,8 +10,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
+import '../../screen/screen_content/home_screen_content/home_content_var.dart';
+
 class SearchingForm extends StatefulWidget {
-  const SearchingForm({super.key});
+  const SearchingForm({
+    super.key,
+    this.initialProfile});
+
+  final HomeContentVar? initialProfile; 
 
   @override
   State<SearchingForm> createState() => _SearchingFormState();
@@ -22,11 +28,34 @@ class _SearchingFormState extends State<SearchingForm> {
   static const _periodItems = ['1 เดือน', '3 เดือน', '6 เดือน', '1 ปี', 'ตลอดเวลา', 'กำหนดเอง'];
   final double backgroundOpacity = 0.2;
 
-  @override
-  void initState() {
-    super.initState();
-    _settingBloc = SettingBloc(settingApis: SettingApis())..add(InitializeForm());
+@override
+void initState() {
+  super.initState();
+  _settingBloc = SettingBloc(settingApis: SettingApis())..add(InitializeForm());
+
+  // Prefill once when coming from a tapped title
+  if (widget.initialProfile != null) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final p = widget.initialProfile!;
+
+      // Keep SettingBloc in sync with explicit dates
+      _settingBloc
+        ..add(UpdatePeriodS('กำหนดเอง'))
+        ..add(UpdateStartDate(startDate: p.startDate!))
+        ..add(UpdateEndDate(endDate: p.endDate!));
+
+      // Kick off SearchBloc with the incoming profile
+      context.read<SearchBloc>().add(LoadFilteredChartData(
+        startDate: p.startDate,
+        endDate:   p.endDate,
+        furnaceNo: p.furnaceNo,
+        materialNo:p.materialNo,
+      ));
+    });
   }
+}
+
 
   @override
   void dispose() {
