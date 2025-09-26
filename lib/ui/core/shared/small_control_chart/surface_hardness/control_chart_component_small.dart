@@ -11,7 +11,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-class ControlChartComponentSmall extends StatelessWidget implements ChartComponent {
+class ControlChartComponentSmall extends StatefulWidget implements ChartComponent{
   final List<ChartDataPoint>? dataPoints;
   final ControlChartStats? controlChartStats;
   final Color? dataLineColor;
@@ -19,11 +19,12 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
   final double? height;
   final double? width;
 
-  // /// ช่วงเวลาที่ต้องการแสดง (อ้างอิงจาก HomeContent)
-  // final DateTime xStart;
-  // final DateTime xEnd;
+  final DateTime xStart;
+  final DateTime xEnd;
+  final double? minY;
+  final double? maxY;
 
-  ControlChartComponentSmall({
+  const ControlChartComponentSmall({
     super.key,
     this.dataPoints,
     this.controlChartStats,
@@ -31,67 +32,288 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
     this.backgroundColor,
     this.height,
     this.width = 560,
-    // required this.xStart,
-    // required this.xEnd,
+    required this.xStart,
+    required this.xEnd,
+    required this.minY,
+    required this.maxY
   });
 
+  @override
+  Widget buildLegend() {
+    return SizedBox.shrink();
+    // String fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
+    // return Wrap(
+    //   spacing: 4,
+    //   runSpacing: 4,
+    //   direction: Axis.horizontal,
+    //   alignment: WrapAlignment.spaceEvenly,
+    //   children: [
+    //     if (fmt(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec) != 'N/A')
+    //       _legendItem('Spec', Colors.red, 
+    //       fmt(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec)),
+    //     if (fmt(controlChartStats?.controlLimitIChart?.ucl) != 'N/A')
+    //       _legendItem('UCL', Colors.orange, 
+    //       fmt(controlChartStats?.controlLimitIChart?.ucl)),
+    //     if (fmt(controlChartStats?.specAttribute?.surfaceHardnessTarget) != 'N/A')
+    //       _legendItem('Target', Colors.deepPurple.shade300, 
+    //       fmt(controlChartStats?.specAttribute?.surfaceHardnessTarget)),
+    //     if (fmt(controlChartStats?.average) != 'N/A')
+    //       _legendItem('AVG', Colors.green, 
+    //       fmt(controlChartStats?.average)),
+    //     if (fmt(controlChartStats?.controlLimitIChart?.lcl) != 'N/A')
+    //       _legendItem('LCL', Colors.orange, 
+    //       fmt(controlChartStats?.controlLimitIChart?.lcl)),
+    //     if (fmt(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec) != 'N/A')
+    //       _legendItem('Spec', Colors.red, 
+    //       fmt(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec)),
+    //   ],
+    // );
+  }
+
+  // Widget _legendItem(String label, Color color, String value) {
+  //   return Row(
+  //     mainAxisSize: MainAxisSize.min,
+  //     children: [
+  //       SizedBox(width: 8, height: 2, 
+  //       child: DecoratedBox(decoration: BoxDecoration(color: color))),
+  //       const SizedBox(width: 8),
+  //       Text(label, 
+  //       style: const TextStyle(
+  //         fontSize: 10, 
+  //         color: AppColors.colorBlack, 
+  //         fontWeight: FontWeight.bold)),
+  //       const SizedBox(width: 4),
+  //       Text(value, 
+  //       style: const TextStyle(
+  //         fontSize: 10, 
+  //         color: AppColors.colorBlack, 
+  //         fontWeight: FontWeight.bold)),
+  //     ],
+  //   );
+  // }
+
+  @override
+  FlBorderData buildBorderData() => FlBorderData(show: false);
+  @override
+  ExtraLinesData buildControlLines() => const ExtraLinesData();
+  @override
+  FlGridData buildGridData(double? minX, double? maxX, double? tickInterval) => const FlGridData(show: false);
+  @override
+  List<LineChartBarData> buildLineBarsData() => const <LineChartBarData>[];
+  @override
+  FlTitlesData buildTitlesData(double? minX, double? maxX, double? tickInterval) => const FlTitlesData();
+  @override
+  LineTouchData buildTouchData() => const LineTouchData();
+  @override
+  double getMaxY() => 0;
+  @override
+  double getMinY() => 0;
+
+  @override
+  State<ControlChartComponentSmall> createState() => _ControlChartComponentSmallState();
+}
+
+class _ControlChartComponentSmallState extends State<ControlChartComponentSmall> {
+  final GlobalKey _chartKey = GlobalKey();
+
   // ---------- คำนวณ/แคชสเกลแกน Y ----------
-  double? _cachedMinY;
+  double? _cachedMinY = 0.0;
   double? _cachedMaxY;
   double? _cachedInterval;
+
+  // Tooltip state ภายใน widget
+  final ValueNotifier<_Tip?> _tip = ValueNotifier<_Tip?>(null);
+
+  List<ChartDataPoint> get _pointsInWindow {
+    final src = widget.dataPoints ?? const <ChartDataPoint>[];
+    if (src.isEmpty) return const <ChartDataPoint>[];
+    final lo = math.min(widget.xStart.millisecondsSinceEpoch, widget.xEnd.millisecondsSinceEpoch).toDouble();
+    final hi = math.max(widget.xStart.millisecondsSinceEpoch, widget.xEnd.millisecondsSinceEpoch).toDouble();
+    return src.where((p) {
+          final t = p.collectDate.millisecondsSinceEpoch.toDouble();
+          return t >= lo && t <= hi;
+    }).toList();
+  }
+
+  @override
+  void dispose() {
+    _tip.dispose();
+    super.dispose();
+  }
+
+@override
+Widget build(BuildContext context) {
+  final double minXv = widget.xStart.millisecondsSinceEpoch.toDouble();
+  final double maxXv = widget.xEnd.millisecondsSinceEpoch.toDouble();
+  final double safeRange = (maxXv - minXv).abs().clamp(1.0, double.infinity);
+  final int desiredTick = (widget.controlChartStats?.xTick ?? 6).clamp(2, 100);
+  final double tickInterval = safeRange / (desiredTick - 1);
+
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final Size chartSize = Size(
+        widget.width  ?? constraints.maxWidth,
+        widget.height ?? constraints.maxHeight,
+      );
+
+      return Container(
+        height: chartSize.height,
+        width: chartSize.width,
+        decoration: BoxDecoration(
+          color: widget.backgroundColor ?? Colors.white,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Chart
+            Positioned.fill(
+              child: KeyedSubtree(
+                key: _chartKey,
+                child: LineChart(
+                  LineChartData(
+                    minX: minXv,
+                    maxX: maxXv,
+                    minY: _getMinY(),
+                    maxY: _getMaxY(),
+                    gridData: _gridData(minXv, maxXv, tickInterval),
+                    titlesData: _titlesData(minXv, maxXv),
+                    borderData: _borderData(),
+                    extraLinesData: _controlLines(),
+                    lineBarsData: _lineBarsData(),
+                    lineTouchData: _touchData(),
+                  ),
+                ),
+              ),
+            ),
+
+            // Tooltip (local-only, non-blocking)
+            ValueListenableBuilder<_Tip?>(
+              valueListenable: _tip,
+              builder: (context, tip, _) {
+                if (tip == null) return const SizedBox.shrink();
+
+                const double maxWidth = 240;
+                const double boxH = 120;
+                const double dotR = 8;
+                const double gap = 8;
+                const double pad = 8;
+
+                final dx = tip.local.dx;
+                final dy = tip.local.dy;
+
+                // available room checks
+                final bool canAbove = dy - (dotR + gap + boxH) >= pad;
+                final bool canBelow = dy + (dotR + gap + boxH) <= chartSize.height - pad;
+                final bool canRight = dx + (dotR + gap + maxWidth) <= chartSize.width  - 6*pad;
+                final bool canLeft  = dx - (dotR + gap + maxWidth) >= pad; // ✅ fix
+
+                double left, top;
+
+                if (canAbove) {
+                  // above
+                  left = dx - maxWidth / 2;
+                  top  = dy - dotR - gap - boxH;
+                  final hiX = chartSize.width - maxWidth - pad;
+                  left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
+                } else if (canBelow) {
+                  // below
+                  left = dx - maxWidth / 2;
+                  top  = dy + dotR + gap;
+                  final hiX = chartSize.width - maxWidth - pad;
+                  left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
+                } else if (canRight) {
+                  // right (vertically centered)
+                  left = dx + dotR + 4*gap;
+                  top  = dy - boxH / 2;
+                  final hiY = chartSize.height - boxH - pad;
+                  top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
+                } else if (canLeft) {
+                  // left (vertically centered)
+                  left = dx - dotR - gap - maxWidth;
+                  top  = dy - boxH / 2;
+                  final hiY = chartSize.height - boxH - pad;
+                  top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
+                } else {
+                  // very tight: center in the box
+                  left = (chartSize.width  - maxWidth) / 2;
+                  top  = (chartSize.height - boxH) / 2;
+                }
+
+                // final clamp (safety)
+                final hiX = chartSize.width - maxWidth - pad;
+                final hiY = chartSize.height - boxH - pad;
+                if (hiX > pad) left = left.clamp(pad, hiX);
+                if (hiY > pad) top  = top.clamp(pad, hiY);
+
+                return Positioned(
+                  left: left,
+                  top: top,
+                  width: maxWidth,
+                  child: IgnorePointer(
+                    ignoring: true,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.colorBrand.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: tip.content,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 
   // ---------------------------------------------------------------------------
   // GRID / TITLES / BORDER
   // ---------------------------------------------------------------------------
-
-  @override
-  FlGridData buildGridData(double? minX, double? maxX, double? tickInterval) {
+ FlGridData _gridData(double? minX, double? maxX, double? tickInterval) {
     return FlGridData(
       show: true,
       drawHorizontalLine: true,
       drawVerticalLine: true,
-      horizontalInterval: _getInterval(),   // ให้ grid แนว Y สอดคล้องกับ tick Y
-      verticalInterval: tickInterval ?? 1,  // ให้ grid แนว X กระจายตามช่วงเวลา
+      horizontalInterval: _getInterval(),
+      verticalInterval: tickInterval ?? 1,
       getDrawingHorizontalLine: (_) => FlLine(
-        color: Colors.grey.shade100,
-        strokeWidth: 0.5,
-      ),
+        color: Colors.grey.shade100, 
+        strokeWidth: 0.5),
       getDrawingVerticalLine: (_) => FlLine(
-        color: Colors.grey.shade100,
-        strokeWidth: 0.5,
-      ),
+        color: Colors.grey.shade100, 
+        strokeWidth: 0.5),
     );
   }
 
-
-  @override
-  FlTitlesData buildTitlesData(double? minX, double? maxX, double? tickInterval) {
-    final double minXv = minX!;
-    final double maxXv = maxX!;
-    final PeriodType periodType = controlChartStats?.periodType ?? PeriodType.ONE_MONTH;
-    // final double range = (maxXv - minXv).abs().clamp(1.0, double.infinity);
+  FlTitlesData _titlesData(double? minX, double? maxX) {
+    final double minXv = minX ?? widget.xStart.millisecondsSinceEpoch.toDouble();
+    final double maxXv = maxX ?? widget.xEnd.millisecondsSinceEpoch.toDouble();
+    final PeriodType periodType = widget.controlChartStats?.periodType ?? PeriodType.ONE_MONTH;
     final df = DateFormat('dd/MM');
-
-    // final int desiredTick = (controlChartStats?.xTick ?? 6).clamp(2, 24);
-    final double step = getXInterval(periodType, minXv, maxXv);
-
-    // final shownLabels = <String>{};
+    final double step = _xInterval(periodType, minXv, maxXv);
 
     Widget bottomLabel(double value, TitleMeta meta) {
       final dt = DateTime.fromMillisecondsSinceEpoch(value.round(), isUtc: true);
       final text = df.format(dt);
-      // if (!shownLabels.add(text)) return const SizedBox.shrink();
-
       return SideTitleWidget(
         meta: meta,
         space: 8,
         child: Transform.rotate(
           angle: -30 * math.pi / 180,
-          child: Text(
-            text,
-            style: const TextStyle(fontSize: 8, color: Colors.black54),
-            overflow: TextOverflow.ellipsis,
-          ),
+          child: Text(text, 
+          style: const TextStyle(
+            fontSize: 8, 
+            color: AppColors.colorBlack), 
+            overflow: TextOverflow.ellipsis),
         ),
       );
     }
@@ -102,16 +324,16 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
           showTitles: true,
           reservedSize: 24,
           interval: _getInterval(),
-          getTitlesWidget: (v, _) => Text(
-            v.toStringAsFixed(0),
-            style: const TextStyle(color: Colors.black54, fontSize: 8),
-          ),
+          getTitlesWidget: (v, _) => Text(v.toStringAsFixed(0), 
+          style: const TextStyle(
+            color: AppColors.colorBlack, 
+            fontSize: 8)),
         ),
       ),
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 32,
+          reservedSize: 20,
           interval: step,
           getTitlesWidget: bottomLabel,
         ),
@@ -121,53 +343,48 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
     );
   }
 
-  @override
-  FlBorderData buildBorderData() {
-    return FlBorderData(
-      show: true,
-      border: Border.all(color: Colors.black54, width: 1),
-    );
-  }
+  FlBorderData _borderData() => FlBorderData(
+    show: true, 
+    border: Border.all(
+      color: Colors.black54, 
+      width: 1));
 
-  // ---------------------------------------------------------------------------
-  // CONTROL LINES
-  // ---------------------------------------------------------------------------
+  // -------------------------- CONTROL LINES --------------------------
 
-  @override
-  ExtraLinesData buildControlLines() {
+  ExtraLinesData _controlLines() {
     return ExtraLinesData(
       extraLinesOnTop: false,
       horizontalLines: [
-        if ((controlChartStats?.specAttribute?.surfaceHardnessUpperSpec ?? 0.0) > 0.0)
+        if ((widget.controlChartStats?.specAttribute?.surfaceHardnessUpperSpec ?? 0.0) > 0.0)
           HorizontalLine(
-            y: controlChartStats!.specAttribute!.surfaceHardnessUpperSpec!,
+            y: widget.controlChartStats!.specAttribute!.surfaceHardnessUpperSpec!,
             color: Colors.red.shade400,
             strokeWidth: 2,
           ),
         HorizontalLine(
-          y: controlChartStats?.controlLimitIChart?.ucl ?? 0.0,
+          y: widget.controlChartStats?.controlLimitIChart?.ucl ?? 0.0,
           color: Colors.amberAccent,
           strokeWidth: 1.5,
         ),
-        if ((controlChartStats?.specAttribute?.surfaceHardnessTarget ?? 0.0) != 0.0)
+        if ((widget.controlChartStats?.specAttribute?.surfaceHardnessTarget ?? 0.0) != 0.0)
           HorizontalLine(
-            y: controlChartStats!.specAttribute!.surfaceHardnessTarget!,
+            y: widget.controlChartStats!.specAttribute!.surfaceHardnessTarget!,
             color: Colors.deepPurple.shade300,
             strokeWidth: 1.5,
           ),
         HorizontalLine(
-          y: controlChartStats?.average ?? 0.0,
+          y: widget.controlChartStats?.average ?? 0.0,
           color: AppColors.colorSuccess1,
           strokeWidth: 2,
         ),
         HorizontalLine(
-          y: controlChartStats?.controlLimitIChart?.lcl ?? 0.0,
+          y: widget.controlChartStats?.controlLimitIChart?.lcl ?? 0.0,
           color: Colors.amberAccent,
           strokeWidth: 1.5,
         ),
-        if ((controlChartStats?.specAttribute?.surfaceHardnessLowerSpec ?? 0.0) > 0.0)
+        if ((widget.controlChartStats?.specAttribute?.surfaceHardnessLowerSpec ?? 0.0) > 0.0)
           HorizontalLine(
-            y: controlChartStats!.specAttribute!.surfaceHardnessLowerSpec!,
+            y: widget.controlChartStats!.specAttribute!.surfaceHardnessLowerSpec!,
             color: Colors.red.shade400,
             strokeWidth: 2,
           ),
@@ -175,181 +392,260 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // LINE & TOUCH
-  // ---------------------------------------------------------------------------
+  // ---------------------------- DATA LAYERS ----------------------------
 
-  @override
-  List<LineChartBarData> buildLineBarsData() {
-    // final pts = dataPoints!;
-    // if (pts.isEmpty) {
-    //   return [
-    //     LineChartBarData(spots: const [], color: dataLineColor, barWidth: 2),
-    //   ];
-    // }
-    final spots = dataPoints!
-        .map((p) => FlSpot(
-              p.collectDate.millisecondsSinceEpoch.toDouble(),
-              p.value,
-            ))
+  List<LineChartBarData> _lineBarsData() {
+    final pts = _pointsInWindow;
+    if (pts.isEmpty) {
+      return [LineChartBarData(spots: const [], color: widget.dataLineColor, barWidth: 2)];
+    }
+
+    final minXv = widget.xStart.millisecondsSinceEpoch.toDouble();
+    final maxXv = widget.xEnd.millisecondsSinceEpoch.toDouble();
+
+    final spots = pts
+        .where((p) => p.collectDate != null)
+        .map((p) => FlSpot(p.collectDate.millisecondsSinceEpoch.toDouble(), p.value))
+        .where((s) => s.x >= math.min(minXv, maxXv) && s.x <= math.max(minXv, maxXv))
         .toList()
       ..sort((a, b) => a.x.compareTo(b.x));
 
-    return [
-      LineChartBarData(
-        spots: spots,
-        isCurved: false,
-        color: dataLineColor,
-        barWidth: 2,
-        isStrokeCapRound: true,
-        dotData: FlDotData(
-          show: true,
-          getDotPainter: (spot, _, __, ___) {
-            final v = spot.y;
-            Color dotColor = dataLineColor ?? AppColors.colorBrand;
-            final upperSpec = controlChartStats?.specAttribute?.surfaceHardnessUpperSpec ?? 0.0;
-            final lowerSpec = controlChartStats?.specAttribute?.surfaceHardnessLowerSpec ?? 0.0;
-            final ucl = controlChartStats?.controlLimitIChart?.ucl ?? 0.0;
-            final lcl = controlChartStats?.controlLimitIChart?.lcl ?? 0.0;
+    final Map<double, ChartDataPoint> dpByX = {
+      for (final p in pts.where((e) => e.collectDate != null))
+        p.collectDate!.millisecondsSinceEpoch.toDouble(): p
+    };
 
-            if ((upperSpec > 0 && v > upperSpec) || (lowerSpec > 0 && v < lowerSpec)) {
-              dotColor = Colors.red;
-            } else if ((ucl > 0 && v > ucl) || (lcl > 0 && v < lcl)) {
-              dotColor = Colors.orange;
-            }
+    // split R3 / non-R3 segments
+    List<List<FlSpot>> r3Segments = [];
+    List<List<FlSpot>> nonR3Segments = [];
 
-            return FlDotCirclePainter(
-              radius: 3.5,
-              color: dotColor.withValues(alpha: 0.7),
-              strokeWidth: 1,
-              strokeColor: Colors.white,
-            );
-          },
-        ),
-        belowBarData: BarAreaData(show: false),
+    var cur = <FlSpot>[];
+    bool? curIsR3;
+
+    for (final s in spots) {
+      final isR3 = (dpByX[s.x]?.isViolatedR3 == true);
+
+      if (cur.isEmpty) {
+        cur.add(s);
+        curIsR3 = isR3;
+      } else if (curIsR3 == isR3) {
+        cur.add(s);
+      } else {
+        (curIsR3 == true ? r3Segments : nonR3Segments).add(cur);
+        cur = <FlSpot>[s];
+        curIsR3 = isR3;
+      }
+    }
+
+    if (cur.isNotEmpty) {
+      (curIsR3 == true ? r3Segments : nonR3Segments).add(cur);
+    }
+
+
+    final baseColor = widget.dataLineColor ?? AppColors.colorBrand;
+
+    final upperSpec = widget.controlChartStats?.specAttribute?.surfaceHardnessUpperSpec ?? 0.0;
+    final lowerSpec = widget.controlChartStats?.specAttribute?.surfaceHardnessLowerSpec ?? 0.0;
+    final ucl       = widget.controlChartStats?.controlLimitIChart?.ucl ?? 0.0;
+    final lcl       = widget.controlChartStats?.controlLimitIChart?.lcl ?? 0.0;
+
+    final indexByX = <double, int>{for (var i = 0; i < spots.length; i++) spots[i].x: i};
+
+    final bridgeSegments = <List<FlSpot>>[];
+    for (final seg in r3Segments) {
+      if (seg.isEmpty) continue;
+      final firstIdx = indexByX[seg.first.x]!;
+      final lastIdx  = indexByX[seg.last.x]!;
+      if (firstIdx - 1 >= 0) bridgeSegments.add([spots[firstIdx - 1], seg.first]);
+      if (lastIdx + 1 < spots.length) bridgeSegments.add([seg.last, spots[lastIdx + 1]]);
+    }
+
+    // dots-only layer
+    final dotsOnly = LineChartBarData(
+      spots: spots,
+      isCurved: false,
+      color: Colors.transparent,
+      barWidth: 0,
+      isStrokeCapRound: true,
+      dotData: FlDotData(
+        show: true,
+        getDotPainter: (spot, __, ___, ____) {
+          final dp = dpByX[spot.x];
+          final v = spot.y;
+
+          Color dotColor;
+          if (dp?.isViolatedR3 == true) {
+            dotColor = Colors.pinkAccent;
+          } else if (dp?.isViolatedR1BeyondUSL == true ||
+              dp?.isViolatedR1BeyondLSL == true ||
+              ((upperSpec > 0 && v > upperSpec) || (lowerSpec > 0 && v < lowerSpec))) {
+            dotColor = Colors.red;
+          } else if (dp?.isViolatedR1BeyondUCL == true ||
+              dp?.isViolatedR1BeyondLCL == true ||
+              ((ucl > 0 && v > ucl) || (lcl > 0 && v < lcl))) {
+            dotColor = Colors.orange;
+          } else {
+            dotColor = baseColor;
+          }
+
+          return FlDotCirclePainter(
+            radius: 3.5,
+            color: dotColor,
+            strokeWidth: 1,
+            strokeColor: Colors.white,
+          );
+        },
       ),
-    ];
+      belowBarData: BarAreaData(show: false),
+    );
+
+    // non-R3 lines
+    final nonR3Lines = nonR3Segments
+        .where((seg) => seg.length >= 2)
+        .map((seg) => LineChartBarData(
+              spots: seg,
+              isCurved: false,
+              color: baseColor,
+              barWidth: 2,
+              isStrokeCapRound: true,
+              dotData: const FlDotData(show: false),
+              belowBarData: BarAreaData(show: false),
+            ))
+        .toList();
+
+    final bridgeLines = bridgeSegments
+        .map((seg) => LineChartBarData(
+              spots: seg,
+              isCurved: false,
+              color: baseColor,
+              barWidth: 2,
+              isStrokeCapRound: true,
+              dotData: const FlDotData(show: false),
+              belowBarData: BarAreaData(show: false),
+            ))
+        .toList();
+
+    // R3 overlay
+    final r3Overlay = r3Segments
+        .where((seg) => seg.length >= 2)
+        .expand((seg) => [
+              LineChartBarData(
+                spots: seg, 
+                isCurved: false, 
+                color: Colors.white, 
+                barWidth: 5, 
+                dotData: const FlDotData(show: false)),
+              LineChartBarData(
+                spots: seg, 
+                isCurved: false, 
+                color: Colors.pinkAccent, 
+                barWidth: 3, 
+                dotData: const FlDotData(show: false)),
+            ])
+        .toList();
+
+    return [...r3Overlay, ...nonR3Lines, ...bridgeLines, dotsOnly];
   }
 
-  @override
-  LineTouchData buildTouchData() {
-    final points = dataPoints!;
-    final Map<double, ChartDataPoint> map = {
-      for (final p in points) p.collectDate.millisecondsSinceEpoch.toDouble(): p
-    };
+  // --------------------------- TOUCH / TOOLTIP ---------------------------
+
+  static List<LineTooltipItem?> _emptyTooltip(List<LineBarSpot> touchedSpots) =>
+      List<LineTooltipItem?>.filled(touchedSpots.length, null);
+
+  LineTouchData _touchData() {
+    final points = _pointsInWindow;
+    const hoverColor = Colors.blueAccent;
+
+    // debugPrint(points.first.fgNo);
 
     return LineTouchData(
       handleBuiltInTouches: true,
-      touchTooltipData: LineTouchTooltipData(
-        maxContentWidth: 150,
-        getTooltipColor: (_) => AppColors.colorBrand.withValues(alpha: 0.9),
-        tooltipBorderRadius: BorderRadius.circular(8),
-        fitInsideHorizontally: true,
-        fitInsideVertically: true,
-        tooltipMargin: 8,
-        getTooltipItems: (spots) {
-          return spots.map((barSpot) {
-            final p = map[barSpot.x];
-            if (p == null) return null;
+      touchSpotThreshold: 8,
+    mouseCursorResolver: (event, response) {
+      final hasHit = response?.lineBarSpots?.isNotEmpty ?? false;
+      return hasHit ? SystemMouseCursors.click : SystemMouseCursors.basic;
+    },
 
-            return LineTooltipItem(
-              "วันที่: ${p.fullLabel}\n"
-              "ค่า: ${barSpot.y.toStringAsFixed(3)}\n"
-              "เตา: ${p.furnaceNo}\n"
-              "เลขแมต: ${p.matNo}",
-              AppTypography.textBody3W,
-              textAlign: TextAlign.left,
-            );
-          }).whereType<LineTooltipItem>().toList();
-        },
-      ),
-    );
-  }
-
-  // ---------------------------------------------------------------------------
-  // LEGEND
-  // ---------------------------------------------------------------------------
-
-  @override
-  Widget buildLegend() {
-    return Wrap(
-      spacing: 4,
-      runSpacing: 4,
-      direction: Axis.horizontal,
-      alignment: WrapAlignment.spaceEvenly,
-      children: [
-        if (formatValue(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec) != 'N/A')
-          buildLegendItem('Spec', Colors.red, false,
-              formatValue(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec)),
-        if (formatValue(controlChartStats?.controlLimitIChart?.ucl) != 'N/A')
-          buildLegendItem('UCL', Colors.orange, false,
-              formatValue(controlChartStats?.controlLimitIChart?.ucl)),
-        if (formatValue(controlChartStats?.specAttribute?.surfaceHardnessTarget) != 'N/A')
-          buildLegendItem('Target', Colors.deepPurple.shade300, false,
-              formatValue(controlChartStats?.specAttribute?.surfaceHardnessTarget)),
-        if (formatValue(controlChartStats?.average) != 'N/A')
-          buildLegendItem('AVG', Colors.green, false,
-              formatValue(controlChartStats?.average)),
-        if (formatValue(controlChartStats?.controlLimitIChart?.lcl) != 'N/A')
-          buildLegendItem('LCL', Colors.orange, false,
-              formatValue(controlChartStats?.controlLimitIChart?.lcl)),
-        if (formatValue(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec) != 'N/A')
-          buildLegendItem('Spec', Colors.red, false,
-              formatValue(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec)),
-      ],
-    );
-  }
-
-  Widget buildLegendItem(String label, Color color, bool isDashed, String? value) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 8,
-          height: 2,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: color,
-              border: isDashed ? Border.all(color: color, width: 1) : null,
+      getTouchedSpotIndicator: (barData, indexes) => indexes.map((_) {
+        return TouchedSpotIndicatorData(
+          FlLine(color: hoverColor.withValues(alpha: 0.5), strokeWidth: 3),
+          FlDotData(
+            show: true,
+            getDotPainter: (spot, __, ___, ____) => FlDotCirclePainter(
+              radius: 3.5,
+              color: AppColors.colorBrandTp,
+              strokeWidth: 3,
+              strokeColor: hoverColor
             ),
-            child: isDashed
-                ? CustomPaint(painter: DashedLinePainter(color: color))
-                : null,
           ),
-        ),
-        const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack)),
-        const SizedBox(width: 4),
-        Text(value ?? 'N/A',
-            style: const TextStyle(
-              fontSize: 10,
-              color: AppColors.colorBlack,
-              fontWeight: FontWeight.w500,
-            )),
-      ],
+        );
+      }).toList(),
+
+      touchTooltipData: LineTouchTooltipData(getTooltipItems: _emptyTooltip),
+      
+      touchCallback: (event, resp) {
+        final noHit = !event.isInterestedForInteractions ||
+            resp?.lineBarSpots == null || resp!.lineBarSpots!.isEmpty;
+
+        if (noHit) {
+          _tip.value = null;
+          return;
+        }
+
+        final s = resp.lineBarSpots!.first;
+
+        // หา data point จริงที่ใกล้ที่สุด
+        final nearestPoint = points
+            .where((p) => p.collectDate != null)
+            .reduce((a, b) {
+          final aDistance = (a.collectDate.millisecondsSinceEpoch.toDouble() - s.x).abs();
+          final bDistance = (b.collectDate.millisecondsSinceEpoch.toDouble() - s.x).abs();
+          return aDistance < bDistance ? a : b;
+        });
+
+        final bool beyondCL   = nearestPoint.isViolatedR1BeyondLCL == true || 
+        nearestPoint.isViolatedR1BeyondUCL == true;
+        final bool beyondSpec = nearestPoint.isViolatedR1BeyondLSL == true || 
+        nearestPoint.isViolatedR1BeyondUSL == true;
+        final bool trend      = nearestPoint.isViolatedR3 == true;
+
+        final chips = <_ChipData>[
+          if (trend)      _ChipData('Trend', Colors.pinkAccent),
+          if (beyondSpec) _ChipData('Over Spec', Colors.red),
+          if (beyondCL)   _ChipData('Over Control', Colors.orange),
+        ];
+
+        final content = TooltipContent(
+          title: nearestPoint.fullLabel,
+          rows: [
+            MapEntry('Value', s.y.toStringAsFixed(3)),
+            MapEntry('FG No.', nearestPoint.fgNo ?? '-')
+          ],
+          chips: chips,
+          accent: hoverColor,
+        );
+
+        _tip.value = _Tip(local: event.localPosition!, content: content);
+      },
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Y SCALE (คงเดิม)
-  // ---------------------------------------------------------------------------
-
-  @override
-  double getMaxY() {
-    if (_cachedInterval == null) _getInterval();
-    return _cachedMaxY ?? 0.0;
-  }
-
-  @override
-  double getMinY() {
+  double _getMinY() {
     if (_cachedInterval == null) _getInterval();
     return _cachedMinY ?? 0.0;
   }
 
+    double _getMaxY() {
+    if (_cachedInterval == null) _getInterval();
+    return _cachedMaxY ?? 0.0;
+  }
+
   double _getInterval() {
-    const divisions = 3; // -> 6 ticks
-    final spotMin = controlChartStats?.yAxisRange?.minYsurfaceHardnessControlChart ?? 0.0;
-    final spotMax = controlChartStats?.yAxisRange?.maxYsurfaceHardnessControlChart ?? spotMin;
+    const divisions = 4; // -> 6 ticks
+    final spotMin = widget.controlChartStats?.yAxisRange?.minYsurfaceHardnessControlChart
+     ?? 0.0;
+    final spotMax = widget.controlChartStats?.yAxisRange?.maxYsurfaceHardnessControlChart
+     ?? spotMin;
 
     if (spotMax <= spotMin) {
       _cachedMinY = spotMin;
@@ -398,6 +694,7 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
     return 10.0 * mag;
   }
 
+
   double _nextNiceStep(double step) {
     final exp = (math.log(step) / math.log(10)).floor();
     final mag = math.pow(10.0, exp).toDouble();
@@ -411,107 +708,86 @@ class ControlChartComponentSmall extends StatelessWidget implements ChartCompone
     if (mant < 1.0) return 2.0 * mag;
     if (mant < 2.0) return 2.5 * mag;
     if (mant < 2.5) return 3.0 * mag;
-    if (mant < 3.0) return 3.5 * mag;
+    // if (mant < 3.0) return 3.5 * mag;
     if (mant < 5.0) return 10.0 * mag;
     return 10.0 * mag;
   }
 
-  // ---------------------------------------------------------------------------
-  // UTIL
-  // ---------------------------------------------------------------------------
 
-  String formatValue(double? value) {
-    if (value == null || value == 0.0) return 'N/A';
-    return value.toStringAsFixed(2);
+  // ---------------------------- HELPERS ----------------------------
+
+  double _xInterval(PeriodType periodType, double minX, double maxX) {
+    final safeRange = (maxX - minX).abs().clamp(1.0, double.infinity);
+    return safeRange / 6.0;
   }
-  
-@override
-Widget build(BuildContext context) {
-  final pts = dataPoints ?? const <ChartDataPoint>[];
+}
 
-  // Empty state
-  if (pts.isEmpty) {
-    return SizedBox(
-      height: height ?? 300,
-      width: width ?? double.infinity,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.data_usage_outlined, size: 48),
-            SizedBox(height: 8),
-            Text('ไม่มีข้อมูลสำหรับแสดงผล', style: TextStyle(fontSize: 14)),
+// ---------- Tooltip UI ----------
+class _Tip {
+  final Offset local;
+  final Widget content;
+  _Tip({required this.local, required this.content});
+}
+
+class TooltipContent extends StatelessWidget {
+  final String title;
+  final List<MapEntry<String, String>> rows;
+  final List<_ChipData> chips;
+  final Color accent;
+
+  const TooltipContent({
+    super.key,
+    required this.title,
+    required this.rows,
+    this.chips = const [],
+    this.accent = Colors.red,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTextStyle(
+      style: AppTypography.textBody4W,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: AppTypography.textBody4WBold),
+          const SizedBox(height: 4),
+          ...rows.map((e) =>
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(e.key, style: AppTypography.textBody4WBold),
+                    Text(e.value, style: AppTypography.textBody4W),
+                  ],
+                )),
+          if (chips.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 4,
+              children: chips
+                  .map((c) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: c.color.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: c.color),
+                        ),
+                        child: Text(c.label, style: AppTypography.textBody4W),
+                      ))
+                  .toList(),
+            ),
           ],
-        ),
+          const SizedBox(height: 6),
+          Container(height: 2, color: accent),
+        ],
       ),
     );
   }
-
-  // Compute time window from the data itself (ms)
-  double minXv = pts.first.collectDate.millisecondsSinceEpoch.toDouble();
-  double maxXv = minXv;
-  for (final p in pts) {
-    final t = p.collectDate.millisecondsSinceEpoch.toDouble();
-    if (t < minXv) minXv = t;
-    if (t > maxXv) maxXv = t;
-  }
-  // Avoid zero-range on single-point data
-  if ((maxXv - minXv).abs() < 1) {
-    const oneDayMs = 24 * 60 * 60 * 1000.0;
-    minXv -= oneDayMs / 2;
-    maxXv += oneDayMs / 2;
-  }
-
-  final safeRange = (maxXv - minXv).abs().clamp(1.0, double.infinity);
-  final desiredTick = (controlChartStats?.xTick ?? 6).clamp(2, 24);
-  final tickInterval = safeRange / (desiredTick - 1);
-
-  final chart = LineChart(
-    LineChartData(
-      extraLinesData: buildControlLines(),
-      gridData: buildGridData(minXv, maxXv, tickInterval),
-      titlesData: buildTitlesData(minXv, maxXv, tickInterval),
-      borderData: buildBorderData(),
-      lineBarsData: buildLineBarsData(),
-      minX: minXv,
-      maxX: maxXv,
-      minY: getMinY(),
-      maxY: getMaxY(),
-      lineTouchData: buildTouchData(),
-      clipData: FlClipData.none(),
-    ),
-  );
-
-  return SizedBox(
-    height: height ?? 300,
-    width: width ?? double.infinity,
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        color: backgroundColor ?? Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Padding(
-        // leave a bit of top padding for grid/tooltip
-        padding: const EdgeInsets.fromLTRB(4.0, 24.0, 16.0, 8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Chart
-            Expanded(child: chart),
-
-            const SizedBox(height: 8),
-
-            // Legend
-            Align(
-              alignment: Alignment.center,
-              child: buildLegend(),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }
 
+class _ChipData {
+  final String label;
+  final Color color;
+  _ChipData(this.label, this.color);
 }
+

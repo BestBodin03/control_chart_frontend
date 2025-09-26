@@ -9,12 +9,7 @@ import 'package:control_chart/ui/core/shared/violations_component.dart';
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
 import 'package:control_chart/utils/app_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-
-import '../../../../screen/screen_content/searching_screen_content/searching_content.dart';
-import '../../../../screen/searching_screen.dart';
-import '../../searching_form.dart';
 
 typedef ZoomBuilder = Widget Function(
   BuildContext context,

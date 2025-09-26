@@ -13,6 +13,8 @@ import 'package:control_chart/ui/screen/screen_content/setting_screen_content/to
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'component/import_data/import_screen.dart';
+
 enum StatusFilter { all, active, inactive }
 enum SortBy { name, date }
 enum TabKey { profiles, importData }
@@ -117,27 +119,10 @@ class _SettingContentState extends State<SettingContent> {
                     );
                   },
                 ),
-                TabKey.importData => Align(
+                TabKey.importData => const Align(
                   alignment: Alignment.centerLeft,
-                  child: ImportPage(
-                    fileName: null,
-                    onPickFile: () {},
-                    dropdown1: 'x',
-                    onDropdown1: (v) {},
-                    dropdown2: 'y',
-                    onDropdown2: (v) {},
-                  
-                    // ฟอร์มด้านล่าง
-                    nameValue: '',                   // จาก state
-                    onNameChanged: (v) => '',
-                    onConfirm: () {
-                      // ทำงานเมื่อกด "ยืนยัน"
-                      // เช่น: context.read<SettingProfileBloc>().add(SubmitImport(...));
-                    },
-                    isSubmitting: false,
-                  ),
-                )
-
+                  child: ImportScreen(),   // <<< ใช้ตัวนี้
+                ),
               },
             ),
           ),

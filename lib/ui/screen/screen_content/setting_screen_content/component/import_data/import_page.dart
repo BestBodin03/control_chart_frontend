@@ -3,28 +3,18 @@ import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/form_component.dart';
 import 'package:control_chart/ui/core/shared/pill_button.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../../../../data/bloc/data_importing/import_bloc.dart';
 
 class ImportPage extends StatelessWidget {
   const ImportPage({
     super.key,
-    required this.fileName,
-    required this.onPickFile,
-    required this.dropdown1,
-    required this.onDropdown1,
-    required this.dropdown2,
-    required this.onDropdown2,
     this.nameValue = '',
     required this.onNameChanged,
     required this.onConfirm,
     this.isSubmitting = false,
   });
-
-  final String? fileName;
-  final VoidCallback onPickFile;
-  final String dropdown1;
-  final ValueChanged<String> onDropdown1;
-  final String dropdown2;
-  final ValueChanged<String> onDropdown2;
 
   final String nameValue;
   final ValueChanged<String> onNameChanged;
@@ -33,13 +23,21 @@ class ImportPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDownloaded = false;
+    // ⬇️ ดึงสถานะจาก ImportBloc เพื่อตัดสินใจแสดง progress
+final st = context.watch<ImportBloc>().state;
+
+// แสดงแถบเมื่อเริ่ม/กำลังโพลล์/ยังมี data ค้าง (ช่วง hold 2 วิ)
+final bool showProgress = st.isSubmitting || st.isPolling || st.data != null;
+
+final int percent = (st.data?.percent ?? 0).clamp(0, 100);
+final bool hasPercent = st.data != null; // มีผลจาก /progress แล้ว
+
     return LayoutBuilder(
       builder: (context, c) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── หัวข้อบน ───────────────────────────────
+            // ── บล็อกบน: การดึงข้อมูล ───────────────────────────────
             SizedBox(
               width: 360,
               child: DecoratedBox(
@@ -64,83 +62,79 @@ class ImportPage extends StatelessWidget {
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    spacing: 16,
                     children: [
                       buildSectionTitle('การดึงข้อมูล'),
-                      isDownloaded
-                        ? Container(
-                            width: double.infinity,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: Colors.grey.shade200),
-                            ),
-                            child: const Center(
-                              child: Text(
-                                'Progress Bar Area',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 8,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ),
-                          )
-                        : const SizedBox.shrink(), // ไม่แสดงอะไรเลย
+                      const SizedBox(height: 16),
 
-                      // ปุ่มด้านบน
-                        Container(
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: AppColors.colorBrand,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.white.withValues(alpha: 0.6),
-                                blurRadius: 2,
-                                offset: const Offset(-2, -2),
-                              ),
-                              BoxShadow(
-                                color: AppColors.colorBrandTp.withValues(alpha: 0.4),
-                                blurRadius: 4,
-                                offset: const Offset(2, 2),
-                              ),
-                            ],
+                    if (showProgress) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          minHeight: 16,
+                          value: hasPercent ? (percent / 100.0) : null, // null = indeterminate ก่อนผลแรกมาถึง
+                          backgroundColor: Colors.grey.shade100,
+                          color: AppColors.colorBrand,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        hasPercent ? 'กำลังดึงข้อมูล... $percent%' : 'กำลังดึงข้อมูล...',
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+
+                      // ปุ่ม “ดึงข้อมูลปัจจุบัน”
+                      Container(
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.colorBrand,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              blurRadius: 2,
+                              offset: const Offset(-2, -2),
+                            ),
+                            BoxShadow(
+                              color: AppColors.colorBrandTp.withValues(alpha: 0.4),
+                              blurRadius: 4,
+                              offset: const Offset(2, 2),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton.icon(
+                          onPressed: isSubmitting
+                              ? null
+                              : () {
+                                  // ยิง Bloc (เริ่ม process + เริ่มโพลล์)
+                                  context.read<ImportBloc>().add(const ImportStartPressed());
+                                },
+                          icon: isSubmitting
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : const Icon(Icons.replay_rounded, size: 20),
+                          label: Text(
+                            isSubmitting ? 'กำลังดำเนินการ...' : 'ดึงข้อมูลปัจจุบัน',
+                            style: AppTypography.textBody2WBold,
                           ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: isSubmitting ? null : onConfirm,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.colorBrand,
+                            foregroundColor: Colors.white,
+                            elevation: 8,
+                            shadowColor: const Color.fromARGB(255, 54, 48, 141).withValues(alpha: 0.4),
+                            shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(24),
-                                child: ElevatedButton.icon(
-                                    onPressed: isSubmitting ? null : onConfirm,
-                                    icon: isSubmitting
-                                        ? const SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                            ),
-                                          )
-                                        : const Icon(Icons.replay_rounded, size: 20),
-                                    label: Text(
-                                      isSubmitting ? 'กำลังดำเนินการ...' : 'ดึงข้อมูลปัจจุบัน',
-                                      style: AppTypography.textBody2WBold
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.colorBrand,
-                                      foregroundColor: Colors.white,
-                                      elevation: 8,
-                                      shadowColor: const Color.fromARGB(255, 54, 48, 141).withValues(alpha: 0.4),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(24),
-                                      ),
-                                    ),
-                              ),
                             ),
                           ),
+                        ),
                       ),
                     ],
                   ),
@@ -177,7 +171,7 @@ class ImportPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       buildSectionTitle('เพิ่มข้อมูลใหม่'),
-                      const SizedBox(height: 16.0),
+                      const SizedBox(height: 16),
                       buildTextField(
                         value: nameValue,
                         hintText: 'Material No. | Example: 24001234',
@@ -185,9 +179,8 @@ class ImportPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
 
-                      // ปุ่มยืนยันชิดซ้าย
                       Align(
-                        alignment: Alignment.centerLeft, // ← CHANGED (center → centerLeft)
+                        alignment: Alignment.centerLeft,
                         child: SizedBox(
                           width: 360,
                           height: 48,
@@ -205,7 +198,7 @@ class ImportPage extends StatelessWidget {
                                 : const Icon(Icons.check_rounded, size: 20),
                             label: Text(
                               isSubmitting ? 'กำลังดำเนินการ...' : 'ยืนยัน',
-                              style: AppTypography.textBody2WBold
+                              style: AppTypography.textBody2WBold,
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.colorSuccess1,

@@ -65,7 +65,9 @@ Widget _buildChartContainerCdeCdt({
                   textAlign: TextAlign.center,
                 ),
               ),
-              _buildSingleChartCdeCdt(searchState: searchState),
+              _buildSingleChartCdeCdt(
+                searchState: searchState,
+                isMovingRange: false),
 
               // MR
               const Padding(
@@ -76,7 +78,9 @@ Widget _buildChartContainerCdeCdt({
                   textAlign: TextAlign.center,
                 ),
               ),
-              _buildMrChartCdeCdt(searchState: searchState),
+              _buildMrChartCdeCdt(
+                searchState: searchState,
+                isMovingRange: true),
             ],
           ),
         ),
@@ -85,134 +89,178 @@ Widget _buildChartContainerCdeCdt({
   );
 }
 
-Widget _buildSingleChartCdeCdt({required SearchState searchState}) {
-  // Loading
-  if (searchState.status == SearchStatus.loading) {
-    return const SizedBox(
-      height: 144,
-      child: Center(
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      ),
-    );
-  }
-
-  // Error
-  if (searchState.status == SearchStatus.failure) {
-    return const SizedBox(
-      height: 144,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 16, color: Colors.red),
-            SizedBox(height: 4),
-            Text(
-              'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
-              style: TextStyle(fontSize: 14, color: Colors.red),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Empty
-  if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
-    return const SizedBox(
-      height: 144,
-      child: Center(
-        child: Text('ไม่มีข้อมูล', style: TextStyle(fontSize: 14, color: Colors.red)),
-      ),
-    );
-  }
-
-  // Unique key for rebuilds per query
-  final q = searchState.currentQuery;
-  final uniqueKey =
-      '${q.startDate?.millisecondsSinceEpoch}-${q.endDate?.millisecondsSinceEpoch}-${q.furnaceNo}-${q.materialNo}';
-
+Widget _buildSingleChartCdeCdt({
+  required SearchState searchState,
+  // required ChartType chartType,
+  required bool isMovingRange,
+}) {
   return SizedBox(
-    height: 144,
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(4),
-      child: ControlChartTemplateSmallCdeCdt(
-        key: ValueKey(uniqueKey.hashCode.toString()),
-        dataPoints: searchState.chartDataPointsCdeCdt,
-        controlChartStats: searchState.controlChartStats!,
-        width: double.infinity,
-        height: 144,
-        isMovingRange: false,
+    width: double.infinity,
+    // width: 100.0,
+    height: 144.0,
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.colorBg, // Changed from black26 to light background
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: _buildMrChartContentCdeCdt(
+        searchState: searchState,
+        // chartType: chartType,
+        isMovingRange: isMovingRange,
       ),
     ),
   );
 }
 
-Widget _buildMrChartCdeCdt({required SearchState searchState}) {
-  // Loading
+Widget _buildMrChartCdeCdt({
+  required SearchState searchState,
+  // required ChartType chartType,
+  required bool isMovingRange,
+}) {
+  return SizedBox(
+    // width: double.infinity,
+    width: 100.0,
+    height: 144.0,
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.colorBg, // Changed from black26 to light background
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: _buildChartContentCdeCdt(
+        searchState: searchState,
+        // chartType: chartType,
+        isMovingRange: true,
+      ),
+    ),
+  );
+}
+
+Widget _buildChartContentCdeCdt({
+  required SearchState searchState,
+  // required ChartType chartType,
+  required bool isMovingRange,
+}) {
+  // Handle loading state
   if (searchState.status == SearchStatus.loading) {
-    return const SizedBox(
-      height: 144,
-      child: Center(
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
+    return const Center(
+      child: SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
       ),
     );
   }
-
-  // Error
+  
+  // Handle error state
   if (searchState.status == SearchStatus.failure) {
-    return const SizedBox(
-      height: 144,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 16, color: Colors.red),
-            SizedBox(height: 4),
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 16, color: Colors.red),
+          SizedBox(height: 4),
             Text(
               'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
               style: TextStyle(fontSize: 14, color: Colors.red),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
-
-  // Empty
+  
+  // Handle empty data
   if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
-    return const SizedBox(
-      height: 144,
+    return Center(
       child: Center(
         child: Text('ไม่มีข้อมูล', style: TextStyle(fontSize: 12, color: Colors.red)),
       ),
     );
   }
 
-  // Unique key for rebuilds per query
-  final q = searchState.currentQuery;
-  final uniqueKey =
-      '${q.startDate?.millisecondsSinceEpoch}-${q.endDate?.millisecondsSinceEpoch}-${q.furnaceNo}-${q.materialNo}-mr';
+  // Generate unique key for chart
+  final query = searchState.currentQuery;
+  final uniqueKey = '${query.startDate?.day}-'
+      '${query.endDate?.millisecondsSinceEpoch}-'
+      '${query.furnaceNo}-'
+      '${query.materialNo}-';
+  final dataPoints = searchState.chartDataPointsCdeCdt;
 
-  return SizedBox(
-    height: 144,
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(4),
-      child: ControlChartTemplateSmallCdeCdt(
-        key: ValueKey(uniqueKey.hashCode.toString()),
-        dataPoints: searchState.chartDataPointsCdeCdt,
-        controlChartStats: searchState.controlChartStats!,
-        width: double.infinity,
-        height: 144,
-        isMovingRange: true,
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(4),
+    child: ControlChartTemplateSmallCdeCdt(
+      key: ValueKey(uniqueKey.hashCode.toString()),
+      dataPoints: dataPoints,
+      controlChartStats: searchState.controlChartStats!,
+      dataLineColor: AppColors.colorBrand,
+      width: double.infinity,
+      // width: 100.0,
+      height: 144.0, 
+      isMovingRange: false,
+    ),
+  );
+}
+
+Widget _buildMrChartContentCdeCdt({
+  required SearchState searchState,
+  // required ChartType chartType,
+  required bool isMovingRange,
+}) {
+  // Handle loading state
+  if (searchState.status == SearchStatus.loading) {
+    return const Center(
+      child: SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
       ),
+    );
+  }
+  
+  // Handle error state
+  if (searchState.status == SearchStatus.failure) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 16, color: Colors.red),
+          SizedBox(height: 4),
+            Text(
+              'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
+              style: TextStyle(fontSize: 14, color: Colors.red),
+            ),
+        ],
+      ),
+    );
+  }
+  
+  // Handle empty data
+  if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
+    return Center(
+      child: Center(
+        child: Text('ไม่มีข้อมูล', style: TextStyle(fontSize: 12, color: Colors.red)),
+      ),
+    );
+  }
+
+  // Generate unique key for chart
+  final query = searchState.currentQuery;
+  final uniqueKey = '${query.startDate?.day}-'
+      '${query.endDate?.millisecondsSinceEpoch}-'
+      '${query.furnaceNo}-'
+      '${query.materialNo}-';
+  final dataPoints = searchState.chartDataPointsCdeCdt;
+
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(4),
+    child: ControlChartTemplateSmallCdeCdt(
+      key: ValueKey(uniqueKey.hashCode.toString()),
+      dataPoints: dataPoints,
+      controlChartStats: searchState.controlChartStats!,
+      dataLineColor: AppColors.colorBrand,
+      width: double.infinity,
+      // width: 100.0,
+      height: 144.0, 
+      isMovingRange: true,
     ),
   );
 }
