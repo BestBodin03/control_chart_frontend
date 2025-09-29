@@ -11,29 +11,22 @@ import 'package:control_chart/domain/models/chart_data_point.dart';
 /// ----------------------------------------------------------------------------
 /// Public builder
 /// ----------------------------------------------------------------------------
-Widget buildChartsSectionSurfaceHardnessSmallLikeMedium(SearchState searchState) {
-  return Row(
-    children: [
-      Expanded(
-        child: _SmallLikeMediumCard(searchState: searchState),
-      ),
-    ],
-  );
+Widget buildChartsSectionSurfaceHardnessSmall(SearchState searchState) {
+  // ❌ อย่าใช้ Row+Expanded ที่นี่ เพราะมักถูกวางใต้ SingleChildScrollView
+  // ✅ คืนการ์ดตรง ๆ ให้พาเรนต์เป็นคนตัดสินใจว่าจะ Expanded หรือไม่
+  return _SmallCard(searchState: searchState);
 }
 
-/// ----------------------------------------------------------------------------
-/// Card
-/// ----------------------------------------------------------------------------
-class _SmallLikeMediumCard extends StatefulWidget {
-  const _SmallLikeMediumCard({required this.searchState});
+class _SmallCard extends StatefulWidget {
+  const _SmallCard({required this.searchState});
   final SearchState searchState;
 
   @override
-  State<_SmallLikeMediumCard> createState() => _SmallLikeMediumCardState();
+  State<_SmallCard> createState() => _SmallCardState();
 }
 
-class _SmallLikeMediumCardState extends State<_SmallLikeMediumCard> {
-  static const double _chartH = 144; // fixed height
+class _SmallCardState extends State<_SmallCard> {
+  static const double _chartH = 144; // fixed height ต่อหนึ่งกราฟ
   static const double _gapV = 4;
 
   bool _showLegend = false;
@@ -58,11 +51,11 @@ class _SmallLikeMediumCardState extends State<_SmallLikeMediumCard> {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min, // ✅ สำคัญเมื่ออยู่ใต้สกอลล์
       children: [
         // Title row (compact)
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          spacing: 8,
           children: [
             Text(title, style: AppTypography.textBody3BBold),
             IconButton(
@@ -74,8 +67,9 @@ class _SmallLikeMediumCardState extends State<_SmallLikeMediumCard> {
             ),
           ],
         ),
+        
+        const SizedBox(height: 8),
 
-        // Legend as a COLUMN (not overlay), above the blue card
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 180),
           child: _showLegend
@@ -101,11 +95,12 @@ class _SmallLikeMediumCardState extends State<_SmallLikeMediumCard> {
             padding: const EdgeInsets.all(8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min, // ✅
               children: [
                 const SizedBox(height: _gapV),
 
                 // --- Control Chart (I) ---
-                _SectionLabel('Control Chart'),
+                const _SectionLabel('Control Chart'),
                 _SmallChartBox(
                   searchState: searchState,
                   dataPoints: dataPoints,
@@ -117,7 +112,7 @@ class _SmallLikeMediumCardState extends State<_SmallLikeMediumCard> {
 
                 // --- MR ---
                 const SizedBox(height: 8),
-                _SectionLabel('Moving Range'),
+                const _SectionLabel('Moving Range'),
                 _SmallChartBox(
                   searchState: searchState,
                   dataPoints: dataPoints,
@@ -133,20 +128,18 @@ class _SmallLikeMediumCardState extends State<_SmallLikeMediumCard> {
   }
 }
 
-
 class _LegendColumn extends StatelessWidget {
   const _LegendColumn({required this.searchState});
   final SearchState searchState;
 
-  static const double _labelColWidth = 120; // ปรับได้ตามต้องการ
+  static const double _labelColWidth = 120;
 
   @override
   Widget build(BuildContext context) {
     final s = searchState.controlChartStats;
-
     String fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
 
-    // --- Control Chart (I) ---
+    // --- I Chart ---
     final usl    = fmt(s?.specAttribute?.surfaceHardnessUpperSpec);
     final lsl    = fmt(s?.specAttribute?.surfaceHardnessLowerSpec);
     final target = fmt(s?.specAttribute?.surfaceHardnessTarget);
@@ -161,22 +154,22 @@ class _LegendColumn extends StatelessWidget {
 
     // --- Violations ---
     final v = s?.surfaceHardnessViolations;
-    final overSpec    = v?.beyondSpecLimit ?? 0;
-    final overControl = v?.beyondControlLimit ?? 0;
+    final overSpec    = v?.beyondSpecLimitLower ?? 0;
+    final overControl = v?.beyondControlLimitLower ?? 0;
     final trend       = v?.trend ?? 0;
 
     final controlEntries = <_LegendEntry>[
       _LegendEntry('Spec',   Colors.red,                 usl),
-      _LegendEntry('UCL',    Colors.orange,              ucl),
-      _LegendEntry('Target', Colors.deepPurple.shade300, target),
-      _LegendEntry('AVG',    Colors.green,               avg),
-      _LegendEntry('LCL',    Colors.orange,              lcl),
       _LegendEntry('Spec',   Colors.red,                 lsl),
+      _LegendEntry('UCL',    Colors.orange,              ucl),
+      _LegendEntry('LCL',    Colors.orange,              lcl),
+      _LegendEntry('AVG',    Colors.green,               avg),
+      _LegendEntry('Target', Colors.deepPurple.shade300, target),
     ].where((e) => e.value != 'N/A').toList();
 
     final mrEntries = <_LegendEntry>[
       _LegendEntry('UCL', Colors.orange, mrUcl),
-      _LegendEntry('AVG',  Colors.green,  mrCl),
+      _LegendEntry('AVG', Colors.green,  mrCl),
       _LegendEntry('LCL', Colors.orange, mrLcl),
     ].where((e) => e.value != 'N/A').toList();
 
@@ -193,7 +186,6 @@ class _LegendColumn extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ===== Control Chart (3 ต่อแถว) =====
             if (controlChunks.isNotEmpty)
               _legendLabeledRow(
                 label: 'Control Chart',
@@ -202,55 +194,44 @@ class _LegendColumn extends StatelessWidget {
               ),
             if (controlChunks.length > 1)
               _legendLabeledRow(
-                label: null, // แถวต่อไปไม่แสดงชื่อซ้ำ
+                label: null,
                 entries: controlChunks[1],
                 labelColWidth: _labelColWidth,
               ),
-
             if (controlChunks.isNotEmpty) ...[
               const SizedBox(height: 4),
-              // const Divider(height: 2),
-              // const SizedBox(height: 4),
+              const Divider(height: 2),
+              const SizedBox(height: 4),
             ],
-
-            // ===== MR (แถวเดียว inline) =====
             if (mrEntries.isNotEmpty) ...[
               _legendLabeledRow(
                 label: 'Moving Range',
                 entries: mrEntries,
                 labelColWidth: _labelColWidth,
-                maxPerRow: mrEntries.length, // ให้แสดงทั้งหมดในบรรทัดเดียว
+                maxPerRow: 3,
               ),
               const SizedBox(height: 4),
               const Divider(height: 2),
               const SizedBox(height: 4),
             ],
-
-            // ===== Violations (กลับมาแล้ว) =====
             if (showViolations)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // คอลัมน์ชื่อ
                     SizedBox(
                       width: _labelColWidth,
                       child: Text('Violations', style: AppTypography.textBody4BBold),
                     ),
-                    // const SizedBox(width: 4),
-                    // เส้นคั่นแนวตั้ง
-                    // Container(width: 1, height: 16, color: Colors.grey.shade400),
-                    // const SizedBox(width: 8),
-                    // ชิป violations
                     Expanded(
                       child: Wrap(
                         spacing: 8,
                         runSpacing: 6,
-                        children: [
-                          _ViolationChip(label: 'Spec',    count: overSpec,    color: Colors.red),
-                          _ViolationChip(label: 'Control', count: overControl, color: Colors.orange),
-                          _ViolationChip(label: 'Trend',   count: trend,       color: Colors.pink),
+                        children: const [
+                          _ViolationChip(label: 'Spec',    count: 0, color: Colors.red),
+                          _ViolationChip(label: 'Control', count: 0, color: Colors.orange),
+                          _ViolationChip(label: 'Trend',   count: 0, color: Colors.pink),
                         ],
                       ),
                     ),
@@ -264,73 +245,51 @@ class _LegendColumn extends StatelessWidget {
   }
 }
 
-
-/// Row ที่มีคอลัมน์ชื่อซ้าย + เส้นกั้นแนวตั้ง + legends ทางขวา
 Widget _legendLabeledRow({
   required String? label,
   required List<_LegendEntry> entries,
   required double labelColWidth,
-  int maxPerRow = 3, // ค่าเริ่มต้น: 3 ชิ้น/แถว
+  int maxPerRow = 3,
+  double gap = 8.0,
 }) {
-  // ถ้าอยากให้ Control บังคับ 3 ชิ้น/แถว ให้ใช้ค่า default
-  // ถ้าเป็น MR อยากให้ต่อแถวเดียว → ส่ง maxPerRow = entries.length
-
-  final rowItems = _padToN(entries, maxPerRow); // เติมช่องว่างให้ครบจำนวนคอลัมน์
-
+  final rowItems = _padToN(entries, maxPerRow);
   return Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    child: Table(
+      columnWidths: <int, TableColumnWidth>{
+        0: FixedColumnWidth(labelColWidth),
+        for (int i = 1; i <= maxPerRow; i++) i: const FlexColumnWidth(1),
+      },
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
       children: [
-        // Label column
-        SizedBox(
-          width: labelColWidth,
-          child: (label == null)
-              ? const SizedBox.shrink()
-              : Text(label, style: AppTypography.textBody4BBold),
-        ),
-
-        // const SizedBox(width: 8),
-
-        // Vertical divider (แทนเครื่องหมาย '|')
-        // Container(width: 1, height: 16, color: Colors.grey.shade400),
-
-        // const SizedBox(width: 8),
-
-        // Legend items (fixed columns)
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: List.generate(rowItems.length, (i) {
-              final item = rowItems[i];
-              final widget = item == null
-                  ? const SizedBox.shrink()
-                  : _LegendItemRow(entry: item);
-              return Expanded(
-                child: Align(alignment: Alignment.centerLeft, child: widget),
-              );
-            }).expand((w) sync* {
-              // แทรกช่องว่างคั่นระหว่างคอลัมน์
-              yield w;
-              if (w != rowItems.isNotEmpty) yield const SizedBox(width: 8);
-            }).toList(),
-          ),
+        TableRow(
+          children: [
+            (label == null)
+                ? const SizedBox.shrink()
+                : Text(label, style: AppTypography.textBody4BBold),
+            for (int c = 0; c < maxPerRow; c++)
+              Padding(
+                padding: EdgeInsets.only(right: c < maxPerRow - 1 ? gap : 0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: rowItems[c] == null
+                      ? const SizedBox.shrink()
+                      : _LegendItemRow(entry: rowItems[c]!),
+                ),
+              ),
+          ],
         ),
       ],
     ),
   );
 }
 
-/// เติมให้ครบ N ช่อง (ถ้ารายการไม่ครบ)
 List<_LegendEntry?> _padToN(List<_LegendEntry> list, int n) {
   final out = List<_LegendEntry?>.from(list);
-  while (out.length < n) {
-    out.add(null);
-  }
+  while (out.length < n) out.add(null);
   return out.take(n).toList();
 }
 
-/// แบ่งลิสต์เป็นก้อนละ 3
 List<List<_LegendEntry>> _chunk3(List<_LegendEntry> list) {
   final chunks = <List<_LegendEntry>>[];
   for (var i = 0; i < list.length; i += 3) {
@@ -339,7 +298,6 @@ List<List<_LegendEntry>> _chunk3(List<_LegendEntry> list) {
   return chunks;
 }
 
-/// แถว legend เดียว (แท่งสี + label + value)
 class _LegendItemRow extends StatelessWidget {
   const _LegendItemRow({required this.entry});
   final _LegendEntry entry;
@@ -352,20 +310,30 @@ class _LegendItemRow extends StatelessWidget {
             width: 9,
             height: 3,
             child: DecoratedBox(
-              decoration: BoxDecoration(color: entry.color, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(
+                color: entry.color,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
           const SizedBox(width: 4),
           Text(entry.label,
-              style: const TextStyle(fontSize: 10, color: AppColors.colorBlack, fontWeight: FontWeight.bold)),
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.colorBlack,
+                fontWeight: FontWeight.bold,
+              )),
           const SizedBox(width: 4),
           Text(entry.value,
-              style: const TextStyle(fontSize: 10, color: AppColors.colorBlack, fontWeight: FontWeight.bold)),
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.colorBlack,
+                fontWeight: FontWeight.bold,
+              )),
         ],
       );
 }
 
-/// โมเดล legend
 class _LegendEntry {
   const _LegendEntry(this.label, this.color, this.value);
   final String label;
@@ -383,8 +351,7 @@ class _ViolationChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final int c = count ?? 0;
     final bool isZero = c == 0;
-    final bool showCount = label != 'Trend'; // 🔹 Trend ไม่แสดงกล่องตัวเลข
-
+    final bool showCount = label != 'Trend';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -397,7 +364,6 @@ class _ViolationChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // tiny dot
           Container(
             width: 8,
             height: 8,
@@ -415,8 +381,6 @@ class _ViolationChip extends StatelessWidget {
               color: AppColors.colorBlack,
             ),
           ),
-
-          // 🔹 ใช้ ternary ให้เว้นระยะ/กล่องตัวเลข เฉพาะเมื่อไม่ใช่ Trend
           showCount ? const SizedBox(width: 4) : const SizedBox(width: 4),
           showCount
               ? Container(
@@ -434,27 +398,12 @@ class _ViolationChip extends StatelessWidget {
                     ),
                   ),
                 )
-              : Container(
-                  padding: EdgeInsets.symmetric( vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    '',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.transparent,
-                    ),
-                  ),
-                )
+              : const SizedBox.shrink(),
         ],
       ),
     );
   }
 }
-
 
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
@@ -525,9 +474,11 @@ class _StateBox extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => SizedBox.expand(
-        child: Center(child: child),
-      );
+  Widget build(BuildContext context) {
+    // ❌ หลีกเลี่ยง SizedBox.expand ใต้ Column/Scroll
+    // ✅ ใช้ Center ธรรมดาแทน
+    return Center(child: child);
+  }
 }
 
 class _Loading extends StatelessWidget {

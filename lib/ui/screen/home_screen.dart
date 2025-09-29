@@ -8,6 +8,7 @@ import 'package:control_chart/ui/screen/searching_screen.dart';
 import 'package:control_chart/ui/screen/setting_screen.dart';
 import 'package:control_chart/utils/app_route.dart';
 import 'package:control_chart/utils/app_store.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -16,10 +17,7 @@ import '../../data/bloc/tv_monitoring/tv_monitoring_bloc.dart';
 
 class MyHomeScreen extends StatefulWidget {
   final dynamic initialParams;
-  const MyHomeScreen({
-    super.key,
-    required this.initialParams,
-  });
+  const MyHomeScreen({super.key, required this.initialParams});
 
   @override
   State<MyHomeScreen> createState() => _MyHomeScreenState();
@@ -28,12 +26,15 @@ class MyHomeScreen extends StatefulWidget {
 class _MyHomeScreenState extends State<MyHomeScreen> {
   late final List<HomeContentVar> _profilesSnapshot;
 
-  // แยก Bloc ของ Home กับของ Search (ไม่ชนกัน)
+  // Bloc ที่ใช้เฉพาะแท็บ Home
   late final TvMonitoringBloc _tvBloc;
-  late final SearchBloc _homeSearchBloc;     // ใช้ใน Home เท่านั้น
-  // SearchScreen จะมี SearchBloc ของตัวเอง
+  late final SearchBloc _homeSearchBloc;
 
-  late final List<Widget> _tabs; // เก็บหน้าที่สร้างครั้งเดียว
+  // ใช้ PageView แทน IndexedStack
+  late final PageController _pageController;
+
+  // เก็บเป็น WidgetBuilder เพื่อ lazy build
+  late final List<WidgetBuilder> _pageBuilders;
 
   @override
   void initState() {
@@ -49,37 +50,75 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
     final effective = store.value.isNotEmpty ? store.value : seeded;
     _profilesSnapshot = List<HomeContentVar>.unmodifiable(effective);
 
-    // ---- สร้าง Bloc ที่ Home จะใช้ ----
+    // ---- Bloc เฉพาะหน้า Home ----
     _tvBloc = TvMonitoringBloc();
     _homeSearchBloc = SearchBloc(/* deps */);
 
-    // ---- สร้างแท็บครั้งเดียว ----
-    _tabs = [
-      MultiBlocProvider(
-        providers: [
-          BlocProvider.value(value: _tvBloc),
-          BlocProvider.value(value: _homeSearchBloc),
-        ],
-        child: HomeContent(
-          profiles: _profilesSnapshot, // snapshot จริง
-          // เพิ่ม callback ให้ Home ยิง snapshot ไป Search
-          onSendSnapshotToSearch: (snap) {
-            AppRoute.instance.searchSnapshot.value = snap;
-            AppRoute.instance.navIndex.value = 1; // ไปแท็บ Search
-          },
-        ),
-      ),
-      const SearchingScreen(),  // ภายในมี SearchBloc ของตัวเอง
-      const SettingScreen(),
-      const ChartDetailScreen(),
+    // ---- Page controller ----
+    _pageController = PageController(initialPage: AppRoute.instance.navIndex.value);
+
+    // ---- กำหนดหน้าต่าง ๆ แบบ builder (สร้างเมื่อถูกเรียกใช้) ----
+    _pageBuilders = [
+      // Home tab (มี Bloc เฉพาะ)
+      (context) => _ActiveAware(
+            isActiveListenable: AppRoute.instance.navIndex,
+            index: 0,
+            child: MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: _tvBloc),
+                BlocProvider.value(value: _homeSearchBloc),
+              ],
+              child: HomeContent(
+                profiles: _profilesSnapshot,
+                onSendSnapshotToSearch: (snap) {
+                  AppRoute.instance.searchSnapshot.value = snap;
+                  _jumpTo(1);
+                },
+              ),
+            ),
+          ),
+      // Search tab (ภายในมี SearchBloc ของตัวเองอยู่แล้ว)
+      (context) => _ActiveAware(
+            isActiveListenable: AppRoute.instance.navIndex,
+            index: 1,
+            child: const SearchingScreen(),
+          ),
+      // Settings
+      (context) => _ActiveAware(
+            isActiveListenable: AppRoute.instance.navIndex,
+            index: 2,
+            child: const SettingScreen(),
+          ),
+      // Chart Detail
+      (context) => _ActiveAware(
+            isActiveListenable: AppRoute.instance.navIndex,
+            index: 3,
+            child: const ChartDetailScreen(),
+          ),
     ];
+
+    // sync เมื่อ navIndex ถูกเปลี่ยนจากที่อื่น (เช่นกดใน Drawer)
+    AppRoute.instance.navIndex.addListener(() {
+      final target = AppRoute.instance.navIndex.value;
+      if (target != _pageController.page?.round()) {
+        _pageController.jumpToPage(target);
+      }
+    });
   }
 
   @override
   void dispose() {
     _homeSearchBloc.close();
     _tvBloc.close();
+    _pageController.dispose();
     super.dispose();
+  }
+
+  void _jumpTo(int i) {
+    if (i != AppRoute.instance.navIndex.value) {
+      AppRoute.instance.navIndex.value = i;
+      _pageController.jumpToPage(i);
+    }
   }
 
   @override
@@ -90,24 +129,73 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
         return Scaffold(
           appBar: AppBar(
             leading: const CollapsedAppDrawer(),
-            actions: const [Padding(
-              padding: EdgeInsets.only(right: 32),
-              child: DateTimeComponent(),
-            )],
+            actions: const [
+              Padding(
+                padding: EdgeInsets.only(right: 32),
+                child: DateTimeComponent(),
+              ),
+            ],
           ),
-          body: IndexedStack(            // ✅ ไม่ทำลาย ไม่ rebuild ลูก
-            index: nav,
-            children: _tabs,
+          body: PageView.builder(
+            controller: _pageController,
+            itemCount: _pageBuilders.length,
+            physics: const NeverScrollableScrollPhysics(), // คุมด้วย Drawer/ปุ่มเอง
+            onPageChanged: (i) {
+              if (i != AppRoute.instance.navIndex.value) {
+                AppRoute.instance.navIndex.value = i;
+              }
+            },
+            // ปรับ cacheExtent ตามความเหมาะสม (0.5~1.0 หน้าพอ) เพื่อลด RAM
+            // note: เป็นหน่วยหน้ากว้าง (pixels) ไม่ใช่จำนวนหน้า
+            // ถ้าอยากเข้มสุดให้ปล่อยค่า default ก็ได้
+            itemBuilder: (context, index) => _pageBuilders[index](context),
           ),
           drawer: SizedBox(
             width: 240,
             child: AppDrawer(
               selectedIndex: nav,
               onItemTapped: (i) {
-                if (i != nav) AppRoute.instance.navIndex.value = i;
                 Navigator.pop(context);
+                _jumpTo(i);
               },
             ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// ---------------------------------------------------------------------------
+/// ห่อหน้าแต่ละหน้าให้ "หยุดงาน" เมื่อไม่ active:
+/// - TickerMode(false): หยุด animation/Controller ที่ผูกกับ Ticker
+/// - IgnorePointer(true): กัน gesture/touch ตอนไม่ active
+/// - RepaintBoundary: ลดผลกระทบการวาดข้ามขอบเขต
+/// ---------------------------------------------------------------------------
+class _ActiveAware extends StatelessWidget {
+  final ValueListenable<int> isActiveListenable;
+  final int index;
+  final Widget child;
+
+  const _ActiveAware({
+    required this.isActiveListenable,
+    required this.index,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<int>(
+      valueListenable: isActiveListenable,
+      builder: (_, current, __) {
+        final active = current == index;
+        return TickerMode(
+          enabled: active,
+          child: IgnorePointer(
+            ignoring: !active,
+            child: const RepaintBoundary().runtimeType == RepaintBoundary // keeps analyzer calm
+                ? RepaintBoundary(child: child)
+                : child,
           ),
         );
       },

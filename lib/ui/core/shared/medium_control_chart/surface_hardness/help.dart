@@ -126,13 +126,17 @@ class _MediumContainer extends StatelessWidget {
 
     final violations = state.controlChartStats?.surfaceHardnessViolations;
     final bgColor = _getViolationBgColor(
-      violations?.beyondControlLimit ?? 0,
-      violations?.beyondSpecLimit ?? 0,
+      violations?.beyondControlLimitLower ?? 0,
+      violations?.beyondControlLimitUpper ?? 0,
+      violations?.beyondSpecLimitLower ?? 0,
+      violations?.beyondSpecLimitUpper ?? 0,
       violations?.trend ?? 0,
     );
     final borderColor = _getViolationBorderColor(
-      violations?.beyondControlLimit ?? 0,
-      violations?.beyondSpecLimit ?? 0,
+      violations?.beyondControlLimitLower ?? 0,
+      violations?.beyondControlLimitUpper ?? 0,
+      violations?.beyondSpecLimitLower ?? 0,
+      violations?.beyondSpecLimitUpper ?? 0,
       violations?.trend ?? 0,
     );
 
@@ -163,8 +167,10 @@ class _MediumContainer extends StatelessWidget {
       color: Colors.transparent,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV) * 2 - 108) / 2)
+          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV) * 2 - 120) / 2)
               .clamp(0.0, double.infinity);
+          final combineControlLimit = (violations?.beyondControlLimitLower ?? 0) + (violations?.beyondControlLimitUpper ?? 0);
+          final combineSpecLimit    = (violations?.beyondSpecLimitLower ?? 0) + (violations?.beyondSpecLimitUpper ?? 0);
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,105 +215,101 @@ class _MediumContainer extends StatelessWidget {
                   child: Column(
                     children: [
                       // Header Top
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
+                      IntrinsicHeight(
+                      child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
 
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Surface Hardness",
-                                  style: AppTypography.textBody3BBold,
-                                  textAlign: TextAlign.start,
-                                ),
-                                Text(
-                                  "Control Chart",
-                                  style: AppTypography.textBody3B,
-                                  textAlign: TextAlign.start,
-                                ),
+                      // LEFT: title/subtitle on top, Records at bottom
+                      Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween, // ⬅️ push Records to bottom
+                      children: [
+                        // Top block
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Surface Hardness",
+                              style: AppTypography.textBody3BBold,
+                              textAlign: TextAlign.start,
+                            ),
+                            Text(
+                              "Control Chart",
+                              style: AppTypography.textBody3B,
+                              textAlign: TextAlign.start,
+                            ),
+                          ],
+                        ),
 
-
-
-                                const SizedBox(height: 8,),
-
-                                SizedBox(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.6),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(width: 1, color: Colors.grey.shade500),
-                                    ),
-                                    child: Text(
-                                      '$spotCount Records',
-                                      style: AppTypography.textBody3BBold,
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                )
-                              ],
+                        // Bottom: Records chip
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4.0),
+                          child: SizedBox(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha:0.6),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(width: 1, color: Colors.grey.shade500),
+                              ),
+                              child: Text(
+                                '$spotCount Records',
+                                style: AppTypography.textBody3BBold,
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
-
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 4), // margin เดิม
-                                child: SizedBox(
-                                  width: 220,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.2),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(width: 1, color: Colors.grey.shade500),
-                                      boxShadow: [
-                                        // BoxShadow(
-                                        //   color: Colors.grey.shade100,
-                                        //   blurRadius: 10,
-                                        //   spreadRadius: 0,
-                                        //   offset: const Offset(0, 8),
-                                        // ),
-                                        BoxShadow(
-                                          color: Colors.white.withValues(alpha: 0.8),
-                                          // blurRadius: 12,
-                                          // spreadRadius: 6,
-                                          offset: const Offset(0, -2),
-                                        ),
-                                      ]
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8),
-                                      child: ViolationsColumn(
-                                        beyondControlLimit: state.controlChartStats?.surfaceHardnessViolations?.beyondControlLimit ?? 0,
-                                        beyondSpecLimit: state.controlChartStats?.surfaceHardnessViolations?.beyondSpecLimit ?? 0,
-                                        trend: state.controlChartStats?.surfaceHardnessViolations?.trend ?? 0,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                              ),
-
-                            // ...[
-                            //   IconButton(
-                            //     tooltip: 'Zoom',
-                            //     icon: const Icon(
-                            //       Icons.fullscreen, 
-                            //       size: 18),
-                            //     splashRadius: 8,
-                            //     onPressed: () => onZoom(context)
-                            //   ),
-                            // ],
-                            ],
-                          ),
-                        ],
+                        ),
+                      ],
                       ),
+                      ),
+
+                      // RIGHT: violations card (unchanged)
+                      Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                      Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: SizedBox(
+                          width: 292,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha:0.2),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(width: 1, color: Colors.grey.shade500),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.white.withValues(alpha:0.8),
+                                  offset: const Offset(0, -2),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: ViolationsColumn(
+                                combinedControlLimit: combineControlLimit,
+                                combinedSpecLimit:    combineSpecLimit,
+                                trend: violations?.trend ?? 0,
+                                overCtrlLower: violations?.beyondControlLimitLower ?? 0,
+                                overCtrlUpper: violations?.beyondControlLimitUpper ?? 0,
+                                overSpecLower: violations?.beyondSpecLimitLower ?? 0,
+                                overSpecUpper: violations?.beyondSpecLimitUpper ?? 0,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      ],
+                      ),
+                      ],
+                      ),
+                      ),
+
 
                       const SizedBox(height: 4),
 
@@ -359,11 +361,12 @@ class _MediumContainer extends StatelessWidget {
   }
 }
 
-Color _getViolationBgColor(int overControl, int overSpec, int trend) {
-  if (overSpec > 0) {
+Color _getViolationBgColor(int overControlLower, int overControlUpper, 
+int overSpecLower, int overSpecUpper, int trend) {
+  if (overSpecUpper > 0 || overSpecLower > 0) {
     return Colors.red.withValues(alpha: 0.15);
     // return Colors.pink.shade200.withValues(alpha: 0.15);
-  } else if (overControl > 0) {
+  } else if (overControlUpper > 0 || overControlLower > 0) {
     return Colors.orange.withValues(alpha: 0.15);
     // return Colors.red.shade200.withValues(alpha: 0.15);
   } else if (trend > 0) {
@@ -373,11 +376,12 @@ Color _getViolationBgColor(int overControl, int overSpec, int trend) {
 }
 
 // Decide border color in same hierarchy
-Color _getViolationBorderColor(int overControl, int overSpec, int trend) {
-  if (overSpec > 0) {
+Color _getViolationBorderColor(int overControlLower, int overControlUpper, 
+int overSpecLower, int overSpecUpper, int trend) {
+  if (overSpecUpper > 0 || overSpecLower > 0) {
     return Colors.red.withValues(alpha: 0.70);
     // return Colors.pink.shade200.withValues(alpha: 0.15);
-  } else if (overControl > 0) {
+  } else if (overControlUpper > 0 || overControlLower > 0) {
     return Colors.orange.withValues(alpha: 0.70);
     // return Colors.red.shade200.withValues(alpha: 0.15);
   } else if (trend > 0) {

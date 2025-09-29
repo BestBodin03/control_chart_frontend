@@ -15,15 +15,17 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 /// CDE/CDT MR Chart — Surface-like time axis with xStart/xEnd
-class MrChartComponentSmall extends StatelessWidget implements ChartComponent {
+class MrChartComponentSmallCdeCdt extends StatelessWidget implements ChartComponent {
   final List<ChartDataPointCdeCdt>? dataPoints;
   final ControlChartStats? controlChartStats;
   final Color? dataLineColor;
   final Color? backgroundColor;
   final double? height;
   final double? width;
+  final DateTime xStart;
+  final DateTime xEnd;
 
-  MrChartComponentSmall({
+  MrChartComponentSmallCdeCdt({
     super.key,
     this.dataPoints,
     this.controlChartStats,
@@ -31,6 +33,8 @@ class MrChartComponentSmall extends StatelessWidget implements ChartComponent {
     this.backgroundColor,
     this.height,
     this.width = 560,
+    required this.xStart,
+    required this.xEnd,
   });
 
   // cached Y scale

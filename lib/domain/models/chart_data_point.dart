@@ -40,6 +40,10 @@ class ChartDataPointCdeCdt {
   final double value;
   final double mrValue;
   final bool isViolatedR3;
+  final bool isViolatedR1BeyondLCL;
+  final bool isViolatedR1BeyondUCL;
+  final bool isViolatedR1BeyondLSL;
+  final bool isViolatedR1BeyondUSL;
   final String? fgNo;
 
   ChartDataPointCdeCdt({
@@ -50,6 +54,10 @@ class ChartDataPointCdeCdt {
     this.matNo,
     this.value = 0.0,
     this.mrValue = 0.0,
+    required this.isViolatedR1BeyondLCL,
+    required this.isViolatedR1BeyondUCL,
+    required this.isViolatedR1BeyondLSL,
+    required this.isViolatedR1BeyondUSL,
     required this.isViolatedR3,
     this.fgNo
   });

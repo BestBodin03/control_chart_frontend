@@ -8,8 +8,7 @@ class SearchShowChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return 
-      Expanded(
-        child: SizedBox(
+        Flexible(
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: AppColors.colorBg,
@@ -30,8 +29,7 @@ class SearchShowChart extends StatelessWidget {
             child: FurnaceReportLayout(),
             
           ),
-        ),
-    );
+        );
   }
 
 }

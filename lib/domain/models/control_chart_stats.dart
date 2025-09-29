@@ -179,11 +179,18 @@ class ControlLimitIChart {
 /// ==================== Violations ====================
 @JsonSerializable()
 class Violations{
-  final int? beyondControlLimit;
-  final int? beyondSpecLimit;
+  final int? beyondControlLimitLower;
+  final int? beyondControlLimitUpper;
+  final int? beyondSpecLimitLower;
+  final int? beyondSpecLimitUpper;
   final int? trend;
 
-  const Violations({this.beyondControlLimit, this.beyondSpecLimit, this.trend});
+  const Violations({
+    this.beyondControlLimitLower,
+    this.beyondControlLimitUpper,
+    this.beyondSpecLimitLower,
+    this.beyondSpecLimitUpper,
+    this.trend});
 
   factory Violations.fromJson(Map<String, dynamic> json) =>
       _$ViolationsFromJson(json);

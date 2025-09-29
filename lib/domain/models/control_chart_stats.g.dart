@@ -253,15 +253,19 @@ Map<String, dynamic> _$ControlLimitIChartToJson(ControlLimitIChart instance) =>
     };
 
 Violations _$ViolationsFromJson(Map<String, dynamic> json) => Violations(
-  beyondControlLimit: (json['beyondControlLimit'] as num?)?.toInt(),
-  beyondSpecLimit: (json['beyondSpecLimit'] as num?)?.toInt(),
+  beyondControlLimitLower: (json['beyondControlLimitLower'] as num?)?.toInt(),
+  beyondControlLimitUpper: (json['beyondControlLimitUpper'] as num?)?.toInt(),
+  beyondSpecLimitLower: (json['beyondSpecLimitLower'] as num?)?.toInt(),
+  beyondSpecLimitUpper: (json['beyondSpecLimitUpper'] as num?)?.toInt(),
   trend: (json['trend'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$ViolationsToJson(Violations instance) =>
     <String, dynamic>{
-      'beyondControlLimit': instance.beyondControlLimit,
-      'beyondSpecLimit': instance.beyondSpecLimit,
+      'beyondControlLimitLower': instance.beyondControlLimitLower,
+      'beyondControlLimitUpper': instance.beyondControlLimitUpper,
+      'beyondSpecLimitLower': instance.beyondSpecLimitLower,
+      'beyondSpecLimitUpper': instance.beyondSpecLimitUpper,
       'trend': instance.trend,
     };
 

@@ -26,7 +26,7 @@ class Toast {
           height: size.height,
           child: Center( // toast อยู่กึ่งกลาง widget เลย
             child: Material(
-              color: Colors.black.withOpacity(0.75),
+              color: Colors.black.withValues(alpha: 0.75),
               borderRadius: BorderRadius.circular(8),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

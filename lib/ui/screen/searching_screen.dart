@@ -13,7 +13,7 @@ class SearchingScreen extends StatelessWidget {
 }
 
 class _SearchingScreenBody extends StatefulWidget {
-  const _SearchingScreenBody({super.key});
+  const _SearchingScreenBody();
   @override
   State<_SearchingScreenBody> createState() => _SearchingScreenBodyState();
 }

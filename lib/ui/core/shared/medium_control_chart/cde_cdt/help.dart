@@ -151,18 +151,40 @@ class _MediumContainerCdeCdt extends StatelessWidget {
 
     final xStart = q.startDate;
     final xEnd = q.endDate;
+    
+    final compoundControlUpper = state.controlChartStats?.compoundLayerViolations?.beyondControlLimitUpper;
+    final compoundControlLower = state.controlChartStats?.compoundLayerViolations?.beyondControlLimitLower;
+    final compoundSpecUpper    = state.controlChartStats?.compoundLayerViolations?.beyondSpecLimitUpper;
+    final compoundSpecLower    = state.controlChartStats?.compoundLayerViolations?.beyondSpecLimitLower;
+    final combinedCompoundControlLimit = (compoundControlUpper ?? 0) + (compoundControlLower ?? 0);
+    final combinedCompoundSpecLimit    = (compoundSpecUpper ?? 0) + (compoundSpecLower ?? 0);
+
+    final cdeControlUpper = state.controlChartStats?.cdeViolations?.beyondControlLimitUpper;
+    final cdeControlLower = state.controlChartStats?.cdeViolations?.beyondControlLimitLower;
+    final cdeSpecUpper    = state.controlChartStats?.cdeViolations?.beyondSpecLimitUpper;
+    final cdeSpecLower    = state.controlChartStats?.cdeViolations?.beyondSpecLimitLower;
+    final combinedCdeControlLimit = (cdeControlUpper ?? 0) + (cdeControlLower ?? 0);
+    final combinedCdeSpecLimit    = (cdeSpecUpper ?? 0) + (cdeSpecLower ?? 0);
+
+    final cdtControlUpper = state.controlChartStats?.cdtViolations?.beyondControlLimitUpper;
+    final cdtControlLower = state.controlChartStats?.cdtViolations?.beyondControlLimitLower;
+    final cdtSpecUpper    = state.controlChartStats?.cdtViolations?.beyondSpecLimitUpper;
+    final cdtSpecLower    = state.controlChartStats?.cdtViolations?.beyondSpecLimitLower;
+    final combinedCdtControlLimit = (cdtControlUpper ?? 0) + (cdtControlLower ?? 0);
+    final combinedCdtSpecLimit    = (cdtSpecUpper ?? 0) + (cdtSpecLower ?? 0);
+
 
     final int vOverControl = _sel(
-          state.controlChartStats?.cdeViolations?.beyondControlLimit,
-          state.controlChartStats?.cdtViolations?.beyondControlLimit,
-          state.controlChartStats?.compoundLayerViolations?.beyondControlLimit,
+          combinedCompoundControlLimit,
+          combinedCdeControlLimit,
+          combinedCdtControlLimit,
         ) ??
         0;
 
     final int vOverSpec = _sel(
-          state.controlChartStats?.cdeViolations?.beyondSpecLimit,
-          state.controlChartStats?.cdtViolations?.beyondSpecLimit,
-          state.controlChartStats?.compoundLayerViolations?.beyondSpecLimit,
+          combinedCompoundSpecLimit,
+          combinedCdeSpecLimit,
+          combinedCdtSpecLimit,
         ) ??
         0;
 
@@ -173,17 +195,42 @@ class _MediumContainerCdeCdt extends StatelessWidget {
         ) ??
         0;
 
+    final int vUpperControl = _sel(
+          compoundControlUpper,
+          cdeControlUpper,
+          cdtControlUpper,
+        ) ??
+        0;
+
+    final int vLowerControl = _sel(
+          compoundControlLower,
+          cdeControlLower,
+          cdtControlLower,
+        ) ?? 0;
+
+    final int vUpperSpec = _sel(
+          compoundSpecUpper,
+          cdeSpecUpper,
+          cdtSpecUpper,
+        ) ?? 0;
+
+    final int vLowerSpec = _sel(
+          compoundSpecLower,
+          cdeSpecLower,
+          cdtSpecLower,
+        ) ?? 0;
+
     final bgColor = _getViolationBgColor(vOverControl, vOverSpec, vTrend);
     final borderColor = _getViolationBorderColor(vOverControl, vOverSpec, vTrend);
 
-    const sectionLabelH = 20.0;
+    const sectionLabelH = 24.0;
     const gapV = 8.0;
 
     return Container(
       color: Colors.transparent,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV) * 2 - 108) / 2)
+          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV) * 2 - 116) / 2)
               .clamp(0.0, double.infinity);
 
           return Column(
@@ -230,78 +277,100 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                   child: Column(
                     children: [
                       // Header Top
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "$selectedLabel",
-                                  style: AppTypography.textBody3BBold,
-                                ),
-                                Text(
-                                  "Control Chart",
-                                  style: AppTypography.textBody3B,
-                                ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.6),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(width: 1, color: Colors.grey.shade500),
-                                  ),
-                                  child: Text(
-                                    '$records Records',
-                                    style: AppTypography.textBody3BBold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                    IntrinsicHeight(
+                    child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
 
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                width: 220,
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(width: 1, color: Colors.grey.shade500),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.white.withValues(alpha: 0.8),
-                                        offset: const Offset(0, -2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8),
-                                    child: ViolationsColumn(
-                                      beyondControlLimit: vOverControl,
-                                      beyondSpecLimit: vOverSpec,
-                                      trend: vTrend,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              // IconButton(
-                              //   tooltip: 'Zoom',
-                              //   icon: const Icon(Icons.fullscreen, size: 18),
-                              //   splashRadius: 8,
-                              //   onPressed: onZoom == null ? null : () => onZoom!(context),
-                              // ),
-                            ],
+                    // LEFT: title/subtitle on top, Records at bottom
+                    Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween, // ⬅️ push Records to bottom
+                    children: [
+                      // Top block
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            selectedLabel,
+                            style: AppTypography.textBody3BBold,
+                            textAlign: TextAlign.start,
+                          ),
+                          Text(
+                            "Control Chart",
+                            style: AppTypography.textBody3B,
+                            textAlign: TextAlign.start,
                           ),
                         ],
                       ),
 
+                      // Bottom: Records chip
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4.0),
+                        child: SizedBox(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha:0.6),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(width: 1, color: Colors.grey.shade500),
+                            ),
+                            child: Text(
+                              '$records Records',
+                              style: AppTypography.textBody3BBold,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                    ),
+                    ),
+
+                    // RIGHT: violations card (unchanged)
+                    Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                    Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: SizedBox(
+                        width: 292,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha:0.2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(width: 1, color: Colors.grey.shade500),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.white.withValues(alpha:0.8),
+                                offset: const Offset(0, -2),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: ViolationsColumn(
+                              combinedControlLimit: vOverControl,
+                              combinedSpecLimit:    vOverSpec,
+                              trend: vTrend,
+                              overCtrlLower: vLowerControl,
+                              overCtrlUpper: vUpperControl,
+                              overSpecLower: vLowerSpec,
+                              overSpecUpper: vUpperSpec,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    ],
+                    ),
+                    ],
+                    ),
+                    ),
                       const SizedBox(height: 8),
 
                       // Control Chart
