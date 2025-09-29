@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:control_chart/data/bloc/data_importing/extension/data_importing_copy.dart';
+import 'package:control_chart/domain/models/chart_detail.dart';
 import 'package:equatable/equatable.dart';
 
 import '../../../apis/api_response.dart';
@@ -37,82 +38,103 @@ class ImportBloc extends Bloc<ImportEvent, ImportState> {
     on<ImportNameChanged>((e, emit) {
       emit(state.copyWith(nameValue: e.value, error: state.error));
     });
-    on<ImportDropdown1Changed>((e, emit) {
-      emit(state.copyWith(dropdown1: e.value, error: state.error));
-    });
-    on<ImportDropdown2Changed>((e, emit) {
-      emit(state.copyWith(dropdown2: e.value, error: state.error));
-    });
 
     on<_ImportProgressArrived>(_onProgressArrived);
     on<_ImportProgressFailed>(_onProgressFailed);
   }
 
- Future<void> _onSubmit(ImportSubmitPressed event, Emitter<ImportState> emit) async {
-    if (state.isBusy) return; // กันกดระหว่างกำลัง process/polling/submitting
+void _emitSnack(Emitter<ImportState> emit, String msg, {bool error = false}) {
+  emit(state.copyWith(
+    snackId: state.snackId + 1, // ✅ บังคับให้ state เปลี่ยนทุกครั้ง
+    snackMsg: msg,
+    snackIsError: error,
+  ));
+}
 
-    final String mat = state.nameValue.trim();
+  Future<void> _onSubmit(ImportSubmitPressed event, Emitter<ImportState> emit) async {
+    if (state.isBusy) return;
+
+    final mat = state.nameValue.trim();
+
+    // 1) empty
     if (mat.isEmpty) {
       emit(state.copyWith(error: 'กรุณากรอก Material No.'));
       return;
     }
 
-    emit(state.copyWith(isSubmitting: true, error: null));
-
-    final resp = await _apis.addNewMaterial(mat);
-    if (!resp.success) {
-      emit(state.copyWith(isSubmitting: false, error: resp.error ?? 'ส่งข้อมูลไม่สำเร็จ'));
+    // ตัวอย่างการใช้ใน validate
+    if (!RegExp(r'^\d{8}$').hasMatch(mat)) {
+      _emitSnack(emit, 'Material No. ต้องเป็นตัวเลข 8 หลักเท่านั้น', error: true);
       return;
     }
 
-    // สำเร็จ: เคลียร์ฟิลด์ / ปิดโหลด
+    // proceed
+    emit(state.copyWith(isAdding: true, error: null));
+    final resp = await _apis.addNewMaterial(mat);
+    final newMatLenght = resp.data.length;
+
+    if (!resp.success) {
+      emit(state.copyWith(isAdding: false, error: resp.error ?? 'ส่งข้อมูลไม่สำเร็จ'));
+      return;
+    }
+
+    if (resp.success) {
     emit(state.copyWith(
-      isSubmitting: false,
-      nameValue: '',   // ล้างช่องกรอก
+      isAdding: true,
+      nameValue: '',
+      data: resp.data, // เก็บทั้ง object ตามที่คุณต้องการ
+    ));
+    _emitSnack(emit, 'เพิ่มข้อมูลใหม่ $newMatLenght รายการ');
+    }
+
+
+    emit(state.copyWith(
+      isAdding: false,
+      nameValue: '',
+      data: resp.data, // เก็บทั้ง object ตามที่คุณต้องการ
     ));
   }
 
-// ==== START: ไม่อัด percent จาก process ====
-Future<void> _onStart(ImportStartPressed event, Emitter<ImportState> emit) async {
-  if (state.isBusy) return;
 
-  // เริ่มใหม่: ล้าง data เพื่อให้ UI เป็น indeterminate ก่อน
+Future<void> _onStart(ImportStartPressed event, Emitter<ImportState> emit) async {
+  // กันกดซ้ำขณะกำลังทำงาน
+  if (state.isWaiting || state.isPolling) return;
+
+  _stopPolling();
   _postCompleteHideTimer?.cancel();
-  emit(state.copyWith(isSubmitting: true, isPolling: false, data: null, error: null));
+
+  // ✅ รีเซ็ตสถานะภาพรอบก่อน: ลบ percent เดิม/100% เดิม
+  emit(state.copyWith(
+    isWaiting: true,
+    isPolling: false,
+    importData: null,   // <-- สำคัญ: เคลียร์เพื่อไม่ให้ progress determinate ทันที
+    error: null,
+    // ถ้าอยากล้างผลก่อนหน้าในจออื่น ๆ ก็ล้าง data ด้วยได้ แต่ไม่จำเป็น
+    // data: null,
+  ));
 
   final resp = await _apis.process();
   if (!resp.success || resp.data.isEmpty) {
-    emit(state.copyWith(isSubmitting: false, error: resp.error ?? 'ไม่สามารถเริ่มการประมวลผลได้'));
+    emit(state.copyWith(isWaiting: false, error: resp.error ?? 'ไม่สามารถเริ่มการประมวลผลได้'));
     return;
   }
 
-  // อย่าแตะ data/percent ที่ได้จาก process
-  emit(state.copyWith(isSubmitting: false, isPolling: true, error: null));
-  _startPolling(); // ยิง /progress ทุกวินาที (มียิงรอบแรกทันที)
+  emit(state.copyWith(isWaiting: false, isPolling: true, error: null));
+  _startPolling(); // จะมีการยิง progress ครั้งแรกตามที่คุณเขียนไว้
 }
 
 
 
-  void _onCancel(ImportCancelPressed event, Emitter<ImportState> emit) {
-    _stopPolling();
-    emit(state.copyWith(isPolling: false, isSubmitting: false, error: null));
-  }
-
-  void _onReset(ImportResetPressed event, Emitter<ImportState> emit) {
-    _stopPolling();
-    emit(const ImportState());
-  }
 
 
-// ==== มาถึง progress ====
-void _onProgressArrived(_ImportProgressArrived event, Emitter<ImportState> emit) {
+ void _onProgressArrived(_ImportProgressArrived event, Emitter<ImportState> emit) {
   final d = event.data;
   final done = d.isDone || d.hasError || d.status == 'cancelled';
 
   emit(state.copyWith(
-    data: d,                 // ใช้ percent ที่มาจาก /progress เท่านั้น
+    importData: d,
     isPolling: !done,
-    isSubmitting: false,
+    isWaiting: false,
     error: d.hasError
         ? (d.errors.isNotEmpty ? d.errors.join('\n') : 'เกิดข้อผิดพลาดในการนำเข้า')
         : null,
@@ -121,7 +143,6 @@ void _onProgressArrived(_ImportProgressArrived event, Emitter<ImportState> emit)
   if (done) {
     _stopPolling();
     _postCompleteHideTimer?.cancel();
-    // ซ่อนแถบภายใน 2 วินาที
     _postCompleteHideTimer = Timer(const Duration(seconds: 2), () {
       add(const _ImportProgressUiClear());
     });
@@ -129,13 +150,22 @@ void _onProgressArrived(_ImportProgressArrived event, Emitter<ImportState> emit)
 }
 
 void _onProgressFailed(_ImportProgressFailed event, Emitter<ImportState> emit) {
-  emit(state.copyWith(isPolling: false, isSubmitting: false, error: event.message));
+  emit(state.copyWith(isPolling: false, isWaiting: false, error: event.message));
   _stopPolling();
   _postCompleteHideTimer?.cancel();
-  // ซ่อนหลัง 2 วิ เช่นกัน
   _postCompleteHideTimer = Timer(const Duration(seconds: 2), () {
     add(const _ImportProgressUiClear());
   });
+}
+
+void _onCancel(ImportCancelPressed event, Emitter<ImportState> emit) {
+  _stopPolling();
+  emit(state.copyWith(isPolling: false, isWaiting: false, error: null));
+}
+
+void _onReset(ImportResetPressed event, Emitter<ImportState> emit) {
+  _stopPolling();
+  emit(const ImportState());
 }
 
 void _onProgressUiClear(_ImportProgressUiClear event, Emitter<ImportState> emit) {

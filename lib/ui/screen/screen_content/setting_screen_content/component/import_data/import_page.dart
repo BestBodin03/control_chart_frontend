@@ -1,11 +1,12 @@
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/form_component.dart';
-import 'package:control_chart/ui/core/shared/pill_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../../data/bloc/data_importing/import_bloc.dart';
+
+// ... imports เดิมของคุณ
 
 class ImportPage extends StatelessWidget {
   const ImportPage({
@@ -13,31 +14,38 @@ class ImportPage extends StatelessWidget {
     this.nameValue = '',
     required this.onNameChanged,
     required this.onConfirm,
-    this.isSubmitting = false,
+    this.isAdding = false, // only for the Confirm button
   });
 
   final String nameValue;
   final ValueChanged<String> onNameChanged;
   final VoidCallback onConfirm;
-  final bool isSubmitting;
+  final bool isAdding;
 
   @override
   Widget build(BuildContext context) {
-    // ⬇️ ดึงสถานะจาก ImportBloc เพื่อตัดสินใจแสดง progress
-final st = context.watch<ImportBloc>().state;
+    // ไม่ใช้ SnackBar กลางแอปแล้ว ตัด BlocListener ออกได้
+    return _body(context);
+  }
 
-// แสดงแถบเมื่อเริ่ม/กำลังโพลล์/ยังมี data ค้าง (ช่วง hold 2 วิ)
-final bool showProgress = st.isSubmitting || st.isPolling || st.data != null;
+  Widget _body(BuildContext context) {
+    final st = context.watch<ImportBloc>().state;
 
-final int percent = (st.data?.percent ?? 0).clamp(0, 100);
-final bool hasPercent = st.data != null; // มีผลจาก /progress แล้ว
+    // ระหว่าง flow “ดึงข้อมูลปัจจุบัน”
+    final bool importBusy = st.isWaiting || st.isPolling;
+
+    // แสดง progress เฉพาะตอน import flow เท่านั้น
+    final bool showProgress = importBusy;
+
+  final bool hasPercent = st.isPolling && st.importData != null;
+  final int percent = (st.importData?.percent ?? 0).clamp(0, 100);
 
     return LayoutBuilder(
       builder: (context, c) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── บล็อกบน: การดึงข้อมูล ───────────────────────────────
+            // ── Import block ───────────────────────────────
             SizedBox(
               width: 360,
               child: DecoratedBox(
@@ -63,55 +71,43 @@ final bool hasPercent = st.data != null; // มีผลจาก /progress แ�
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      buildSectionTitle('การดึงข้อมูล'),
+                      // ⬇️ หัวข้อ + สถานะในบรรทัดเดียว
+                      Row(
+                        children: [
+                          buildSectionTitle('การดึงข้อมูล'),
+                          const Spacer(),
+                          _buildImportStatusChip(st, percent: percent),
+                        ],
+                      ),
                       const SizedBox(height: 16),
 
-                    if (showProgress) ...[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: LinearProgressIndicator(
-                          minHeight: 16,
-                          value: hasPercent ? (percent / 100.0) : null, // null = indeterminate ก่อนผลแรกมาถึง
-                          backgroundColor: Colors.grey.shade100,
-                          color: AppColors.colorBrand,
+                      if (showProgress) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: LinearProgressIndicator(
+                            minHeight: 16,
+                            value: hasPercent ? (percent / 100.0) : null, // null = indeterminate
+                            backgroundColor: Colors.grey.shade100,
+                            color: AppColors.colorBrand,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        hasPercent ? 'กำลังดึงข้อมูล... $percent%' : 'กำลังดึงข้อมูล...',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
+                        const SizedBox(height: 8),
+                        Text(
+                          hasPercent ? 'กำลังดึงข้อมูล... $percent%' : 'กำลังดึงข้อมูล...',
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
 
-
-                      // ปุ่ม “ดึงข้อมูลปัจจุบัน”
-                      Container(
+                      SizedBox(
                         height: 48,
-                        decoration: BoxDecoration(
-                          color: AppColors.colorBrand,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.white.withValues(alpha: 0.6),
-                              blurRadius: 2,
-                              offset: const Offset(-2, -2),
-                            ),
-                            BoxShadow(
-                              color: AppColors.colorBrandTp.withValues(alpha: 0.4),
-                              blurRadius: 4,
-                              offset: const Offset(2, 2),
-                            ),
-                          ],
-                        ),
                         child: ElevatedButton.icon(
-                          onPressed: isSubmitting
+                          onPressed: importBusy
                               ? null
                               : () {
-                                  // ยิง Bloc (เริ่ม process + เริ่มโพลล์)
                                   context.read<ImportBloc>().add(const ImportStartPressed());
                                 },
-                          icon: isSubmitting
+                          icon: importBusy
                               ? const SizedBox(
                                   width: 16,
                                   height: 16,
@@ -122,7 +118,7 @@ final bool hasPercent = st.data != null; // มีผลจาก /progress แ�
                                 )
                               : const Icon(Icons.replay_rounded, size: 20),
                           label: Text(
-                            isSubmitting ? 'กำลังดำเนินการ...' : 'ดึงข้อมูลปัจจุบัน',
+                            importBusy ? 'กำลังดำเนินการ...' : 'ดึงข้อมูลปัจจุบัน',
                             style: AppTypography.textBody2WBold,
                           ),
                           style: ElevatedButton.styleFrom(
@@ -144,7 +140,7 @@ final bool hasPercent = st.data != null; // มีผลจาก /progress แ�
 
             const SizedBox(height: 32),
 
-            // ── บล็อกฟอร์ม ──────────────────────────
+            // ── Add material form ──────────────────────────
             SizedBox(
               width: 360,
               child: DecoratedBox(
@@ -185,8 +181,8 @@ final bool hasPercent = st.data != null; // มีผลจาก /progress แ�
                           width: 360,
                           height: 48,
                           child: ElevatedButton.icon(
-                            onPressed: isSubmitting ? null : onConfirm,
-                            icon: isSubmitting
+                            onPressed: isAdding ? null : onConfirm,
+                            icon: isAdding
                                 ? const SizedBox(
                                     width: 16,
                                     height: 16,
@@ -197,7 +193,7 @@ final bool hasPercent = st.data != null; // มีผลจาก /progress แ�
                                   )
                                 : const Icon(Icons.check_rounded, size: 20),
                             label: Text(
-                              isSubmitting ? 'กำลังดำเนินการ...' : 'ยืนยัน',
+                              isAdding ? 'กำลังดำเนินการ...' : 'ยืนยัน',
                               style: AppTypography.textBody2WBold,
                             ),
                             style: ElevatedButton.styleFrom(
@@ -222,4 +218,63 @@ final bool hasPercent = st.data != null; // มีผลจาก /progress แ�
       },
     );
   }
+
+  // ---------- Helpers ----------
+
+Widget _buildImportStatusChip(ImportState st, {required int percent}) {
+  final d = st.importData;
+  final bool running  = st.isWaiting || st.isPolling;
+  final bool hasError = (st.error?.isNotEmpty ?? false) || (d?.hasError ?? false);
+
+  String text;
+  Color bg;
+  Color fg = Colors.white;
+
+  if (running) {
+    // ✅ โชว์ % เฉพาะช่วงโพลล์ และต้อง > 0
+    final bool showPct = st.isPolling && percent > 0;
+    text = showPct ? 'กำลังดึง… $percent%' : 'กำลังดึง…';
+    bg = AppColors.colorBrand;
+
+  } else if (d != null && (d.isDone || d.finishedAt != null)) {
+    if (hasError) {
+      final msg = (st.error?.isNotEmpty ?? false)
+          ? st.error!
+          : ((d.errors.isNotEmpty) ? d.errors.first : 'ล้มเหลว');
+      text = _truncate(msg, 24);
+      bg = AppColors.colorAlert1;
+    } else {
+      text = 'สำเร็จ';
+      bg = AppColors.colorSuccess1;
+    }
+
+  } else if (hasError) {
+    text = _truncate(st.error!, 24);
+    bg = AppColors.colorAlert1;
+
+  } else {
+    text = 'พร้อม';
+    bg = Colors.grey.shade500;
+  }
+
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Text(
+      text,
+      style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w600),
+      overflow: TextOverflow.ellipsis,
+    ),
+  );
 }
+
+
+  String _truncate(String s, int max) {
+    if (s.length <= max) return s;
+    return '${s.substring(0, max - 1)}…';
+  }
+}
+

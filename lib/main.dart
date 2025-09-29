@@ -10,6 +10,8 @@ import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
 import 'package:control_chart/ui/screen/home_screen.dart';
 
+import 'data/bloc/data_importing/import_bloc.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -33,15 +35,21 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   const MyApp({
     super.key,
-    this.initialParams, 
-    }); // <- รับค่าไว้
+    this.initialParams,
+  });
+
   final dynamic initialParams;
 
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<SearchBloc>(create: (_) => SearchBloc()),
+        BlocProvider<SearchBloc>(
+          create: (_) => SearchBloc(),
+        ),
+        BlocProvider<ImportBloc>(          // ✅ provide ImportBloc at app root
+          create: (_) => ImportBloc(),
+        ),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -53,7 +61,7 @@ class MyApp extends StatelessWidget {
             systemOverlayStyle: SystemUiOverlayStyle.light,
           ),
         ),
-        home: MyHomeScreen(initialParams: initialParams), // <-- ส่งต่อให้ HomeScreen
+        home: MyHomeScreen(initialParams: initialParams),
       ),
     );
   }

@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:control_chart/apis/api_response.dart';
 import 'package:control_chart/config/api_config.dart';
+import 'package:control_chart/domain/models/chart_detail.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 
 class ImportDataApis {
   final ApiConfig _api;
@@ -29,20 +31,20 @@ class ImportDataApis {
     }
   }
 
-
- Future<ApiResponse<Map<String, dynamic>>> addNewMaterial(String matcp) async {
+  Future<ApiResponse<dynamic>> addNewMaterial(String matcp) async {
     try {
-      final Response res = await _api.post(
+      // post<T> คืน JSON ที่ body เป็น Map<String,dynamic>
+      final Map<String, dynamic> root = await _api.post<Map<String, dynamic>>(
         '/master/process-master-data',
         {'MATCP': matcp},
       );
-      if (res.statusCode == 200 || res.statusCode == 201) {
-        final data = (res.data is Map<String, dynamic>) ? res.data as Map<String, dynamic> : <String, dynamic>{};
-        return ApiResponse<Map<String, dynamic>>(success: true, data: [data]);
-      }
-      return ApiResponse.fail<Map<String, dynamic>>('ส่งข้อมูลไม่สำเร็จ (รหัส ${res.statusCode})');
+
+      // คาดหวังโครงสร้าง: { data: { chartDetails: [ {...}, {...} ] } }
+      final dataSection = root['data'];
+      final rawList = (dataSection is Map) ? dataSection['chartDetails'] : null;
+
+      return ApiResponse<dynamic>(success: true, data: rawList);
     } on DioException catch (e) {
-      // ใช้ตัว map error เดิมของคุณถ้ามี
       final msg = e.message ?? 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้';
       return ApiResponse.fail<Map<String, dynamic>>(msg);
     } catch (e) {
