@@ -27,7 +27,6 @@ class SearchShowChart extends StatelessWidget {
               ],
             ),
             child: FurnaceReportLayout(),
-            
           ),
         );
   }

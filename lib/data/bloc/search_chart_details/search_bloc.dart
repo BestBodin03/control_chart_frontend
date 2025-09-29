@@ -1,5 +1,6 @@
 // search_bloc.dart
 import 'package:control_chart/apis/search_chart_details/search_chart_details_apis.dart';
+import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/domain/models/chart_detail.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_filter_query.dart';
@@ -14,22 +15,26 @@ part 'search_state.dart';
 
 class SearchBloc extends Bloc<SearchEvent, SearchState> {
   final SearchChartDetailsApis _searchApiService;
+  final SettingApis _settingApis;
 
   SearchBloc({
     SearchChartDetailsApis? searchApiService,
-  }) : _searchApiService = searchApiService ?? SearchChartDetailsApis(),
-       super(const SearchState()) {
-    
+    SettingApis? settingApiService,
+  })  : _searchApiService = searchApiService ?? SearchChartDetailsApis(),
+        _settingApis = settingApiService ?? SettingApis(),
+        super(const SearchState()) {
     on<LoadFilteredChartData>(_onLoadFilteredChartData);
     on<LoadTvChartData>(_onLoadTvChartData);
-    // on<UpdateFurnaceNo>(_onUpdateFurnaceNo);
-    // on<UpdatePeriodStartDate>(_onUpdatePeriodStartDate);
-    // on<UpdatePeriodEndDate>(_onUpdatePeriodEndDate);
-    // on<UpdateMaterialNo>(_onUpdateMaterialNo);
     on<ClearFilters>(_onClearFilters);
     on<UpdateDateRange>(_onUpdateDateRange);
 
+    // ▼ NEW: dropdown events
+    on<LoadDropdownOptions>(_onLoadDropdownOptions);
+    on<SelectFurnace>(_onSelectFurnace);
+    on<SelectMaterial>(_onSelectMaterial);
   }
+
+  // ---------------- existing handlers ----------------
 
   Future<void> _onLoadTvChartData(
     LoadTvChartData event,
@@ -48,7 +53,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         _searchApiService.getTvControlChartStat(newQuery),
       ]);
 
-      final (chartDetails, searchTables) = results[0] as (List<ChartDetail>, List<SearchTable>); // แก้การ cast
+      final (chartDetails, searchTables) =
+          results[0] as (List<ChartDetail>, List<SearchTable>);
       final chartStatistics = results[1] as ControlChartStats;
 
       emit(state.copyWith(
@@ -91,7 +97,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         _searchApiService.getControlChartStat(newQuery),
       ]);
 
-      final (chartDetails, searchTables) = results[0] as (List<ChartDetail>, List<SearchTable>); // แก้การ cast
+      final (chartDetails, searchTables) =
+          results[0] as (List<ChartDetail>, List<SearchTable>);
       final chartStatistics = results[1] as ControlChartStats;
 
       emit(state.copyWith(
@@ -130,12 +137,20 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       materialNo: event.materialNo,
     );
     debugPrint('$defaultQuery');
+
     emit(SearchState(
       status: SearchStatus.initial,
       currentQuery: defaultQuery,
-      errorMessage: ''));
+      errorMessage: '',
+      // reset dropdowns to defaults
+      furnaceOptions: const ["0"],
+      materialOptions: const ["All Material No."],
+      optionsLoading: false,
+      optionsError: null,
+    ));
+    // Optionally trigger reload of options here:
+    add(const LoadDropdownOptions());
   }
-
 
   Future<void> _onUpdateDateRange(
     UpdateDateRange event,
@@ -144,25 +159,25 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     print('🔄 SearchBloc received UpdateDateRange');
     print('Start: ${event.startDate}');
     print('End: ${event.endDate}');
-    
+
     await _updateQueryAndFetch(
       emit,
       state.currentQuery.copyWith(
         startDate: event.startDate,
         endDate: event.endDate,
-        // page: 1,
       ),
     );
+
+    // Refresh dropdowns after date change (if API depends on filters/time window)
+    add(const LoadDropdownOptions());
   }
 
-  // 🔥 Helper method to reduce code duplication
+  // 🔥 Helper to reduce duplication
   Future<void> _updateQueryAndFetch(
     Emitter<SearchState> emit,
     ChartFilterQuery newQuery,
   ) async {
-    // Keep existing data while loading (smooth UX)
     emit(state.copyWith(status: () => SearchStatus.loading));
-
     try {
       print('📋 Updated query: $newQuery');
       print('Query params: ${newQuery.toQueryParams()}');
@@ -176,7 +191,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       final chartStatistics = results[1] as ControlChartStats;
 
       print('✅ API call successful, emitting success state $chartStatistics');
-      
+
       emit(state.copyWith(
         status: () => SearchStatus.success,
         chartDetails: () => chartDetails,
@@ -186,7 +201,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       ));
     } catch (e) {
       print('❌ API call failed: $e');
-      
+
       emit(state.copyWith(
         status: () => SearchStatus.failure,
         errorMessage: () => e.toString(),
@@ -194,246 +209,157 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       ));
     }
   }
+
+  // ---------------- dropdown helpers & handlers (NEW) ----------------
+
+  // Normalize “All” between UI ↔ Query ↔ API
+  String? _normFurnaceForApi(String? v) =>
+      (v == null || v.isEmpty || v == '0') ? null : v;
+
+  String? _normCpForApi(String? v) =>
+      (v == null || v.isEmpty || v == 'All Material No.') ? null : v;
+
+  // Fetch options from SettingApis and return sorted lists with “All” items
+  Future<({List<String> furnaces, List<String> materials})> _fetchDropdowns({
+    String? furnaceNo,
+    String? materialNo,
+  }) async {
+    final json = await _settingApis.getSettingFormDropdown(
+      furnaceNo: _normFurnaceForApi(furnaceNo),
+      cpNo: _normCpForApi(materialNo),
+    );
+
+    final payload = (json['data'] is Map<String, dynamic>)
+        ? json['data'] as Map<String, dynamic>
+        : json;
+
+    List<String> toStringList(dynamic v) {
+      if (v == null) return <String>[];
+      if (v is List) {
+        return v.map((e) => e?.toString()).whereType<String>().toList();
+      }
+      return <String>[v.toString()];
+    }
+
+    final furnaces = toStringList(payload['furnaceNo'])..sort();
+    final cps = toStringList(payload['cpNo'])..sort();
+
+    return (
+      furnaces: ['0', ...furnaces], // "0" = All
+      materials: ['All Material No.', ...cps],
+    );
+  }
+
+  // Ensure current selections are present in the lists (so dropdowns can show them)
+  ({List<String> furnaces, List<String> materials}) _ensureSelectedPresent(
+    List<String> furnaces,
+    List<String> materials, {
+    String? furnaceSel,
+    String? materialSel,
+  }) {
+    final f = List<String>.from(furnaces);
+    final m = List<String>.from(materials);
+
+    if (furnaceSel != null && furnaceSel.isNotEmpty && !f.contains(furnaceSel)) {
+      f.add(furnaceSel);
+    }
+    if (materialSel != null &&
+        materialSel.isNotEmpty &&
+        materialSel != 'All Material No.' &&
+        !m.contains(materialSel)) {
+      m.add(materialSel);
+    }
+    return (furnaces: f, materials: m);
+  }
+
+  // Load dropdown options (call on init / date change / after selection)
+  Future<void> _onLoadDropdownOptions(
+    LoadDropdownOptions event,
+    Emitter<SearchState> emit,
+  ) async {
+    emit(state.copyWith(optionsLoading: () => true, optionsError: () => null));
+    try {
+      final furnaceUi = event.furnaceNo ?? state.currentQuery.furnaceNo;
+      final materialUi = event.materialNo ?? state.currentQuery.materialNo;
+
+      final res = await _fetchDropdowns(
+        furnaceNo: furnaceUi,
+        materialNo: materialUi,
+      );
+
+      final added = _ensureSelectedPresent(
+        res.furnaces,
+        res.materials,
+        furnaceSel: (furnaceUi == null || furnaceUi.isEmpty) ? '0' : furnaceUi,
+        materialSel: (materialUi == null || materialUi.isEmpty)
+            ? 'All Material No.'
+            : materialUi,
+      );
+
+      emit(state.copyWith(
+        optionsLoading: () => false,
+        furnaceOptions: () => added.furnaces..sort((a, b) {
+          // keep "0" first
+          if (a == '0') return -1;
+          if (b == '0') return 1;
+          return a.compareTo(b);
+        }),
+        materialOptions: () => added.materials..sort((a, b) {
+          // keep "All Material No." first
+          if (a == 'All Material No.') return -1;
+          if (b == 'All Material No.') return 1;
+          return a.compareTo(b);
+        }),
+        optionsError: () => null,
+      ));
+    } catch (e) {
+      emit(state.copyWith(
+        optionsLoading: () => false,
+        optionsError: () => e.toString(),
+      ));
+    }
+  }
+
+  // User selected furnace
+  Future<void> _onSelectFurnace(
+    SelectFurnace event,
+    Emitter<SearchState> emit,
+  ) async {
+    final normalizedForQuery = (event.furnaceNo == '0') ? '' : event.furnaceNo;
+
+    final newQuery = state.currentQuery.copyWith(
+      furnaceNo: normalizedForQuery,
+    );
+
+    // 1) Reload charts for the new selection
+    await _updateQueryAndFetch(emit, newQuery);
+
+    // 2) Refresh options (filtered by new selection)
+    add(LoadDropdownOptions(
+      furnaceNo: event.furnaceNo, // UI value ("0" allowed)
+      materialNo: state.currentMaterialUiValue,
+    ));
+  }
+
+  // User selected material
+  Future<void> _onSelectMaterial(
+    SelectMaterial event,
+    Emitter<SearchState> emit,
+  ) async {
+    final normalizedForQuery =
+        (event.materialNo == 'All Material No.') ? '' : event.materialNo;
+
+    final newQuery = state.currentQuery.copyWith(
+      materialNo: normalizedForQuery,
+    );
+
+    // 1) Reload charts
+    await _updateQueryAndFetch(emit, newQuery);
+
+    // 2) Refresh options (filtered by new selection)
+    add(LoadDropdownOptions(
+      furnaceNo: state.currentFurnaceUiValue, // "0" allowed
+      materialNo: event.materialNo,           // UI value
+    ));
+  }
 }
-
-  // Future<void> _onUpdateFurnaceNo(
-  //   UpdateFurnaceNo event,
-  //   Emitter<SearchState> emit,
-  // ) async {
-  //   print('🔄 Updating furnace no: ${event.furnaceNo}');
-    
-  //   await _updateQueryAndFetch(
-  //     emit,
-  //     state.currentQuery.copyWith(
-  //       furnaceNo: event.furnaceNo,
-  //       page: 1, // Reset to first page
-  //     ),
-  //   );
-  // }
-
-  // Future<void> _onUpdatePeriodStartDate(
-  //   UpdatePeriodStartDate event,
-  //   Emitter<SearchState> emit,
-  // ) async {
-  //   print('🔄 Updating start date: ${event.startDate}');
-    
-  //   await _updateQueryAndFetch(
-  //     emit,
-  //     state.currentQuery.copyWith(
-  //       startDate: event.startDate,
-  //       page: 1,
-  //     ),
-  //   );
-  // }
-
-  // Future<void> _onUpdatePeriodEndDate(
-  //   UpdatePeriodEndDate event,
-  //   Emitter<SearchState> emit,
-  // ) async {
-  //   print('🔄 Updating end date: ${event.endDate}');
-    
-  //   await _updateQueryAndFetch(
-  //     emit,
-  //     state.currentQuery.copyWith(
-  //       endDate: event.endDate,
-  //       page: 1,
-  //     ),
-  //   );
-  // }
-
-  // Future<void> _onUpdateMaterialNo(
-  //   UpdateMaterialNo event,
-  //   Emitter<SearchState> emit,
-  // ) async {
-  //   print('🔄 Updating material no: ${event.materialNo}');
-    
-  //   await _updateQueryAndFetch(
-  //     emit,
-  //     state.currentQuery.copyWith(
-  //       materialNo: event.materialNo,
-  //       page: 1,
-  //     ),
-  //   );
-  // }
-
-
-// import 'package:control_chart/apis/search_chart_details/search_chart_details_apis.dart';
-// import 'package:control_chart/data/bloc/search_chart_details/search_event.dart';
-// import 'package:control_chart/data/bloc/search_chart_details/search_state.dart';
-// import 'package:control_chart/domain/models/control_chart_stat.dart';
-// import 'package:control_chart/domain/types/chart_filter_query.dart';
-// import 'package:flutter_bloc/flutter_bloc.dart';
-
-// class SearchBloc extends Bloc<SearchEvent, SearchState> {
-//   final SearchChartDetailsApis _searchApiService = SearchChartDetailsApis();
-  
-//   // เก็บ current filter state
-//   ChartFilterQuery _currentQuery = const ChartFilterQuery();
-
-//   SearchBloc() : super(SearchInitial()) {
-//     on<LoadFilteredChartData>(_onLoadFilteredChartData);
-//     on<UpdateFurnaceNo>(_onUpdateFurnaceNo);
-//     // on<UpdatePeriod>(_onUpdatePeriod);
-//     on<UpdatePeriodStartDate>(_onUpdatePeriodStartDate);
-//     on<UpdatePeriodEndDate>(_onUpdatePeriodEndDate);
-//     on<UpdateMaterialNo>(_onUpdateMaterialNo);
-//     on<ClearFilters>(_onClearFilters);
-//     on<UpdateDateRange>(_onUpdateDateRange);
-//   }
-
-//   Future<void> _onLoadFilteredChartData(
-//     LoadFilteredChartData event,
-//     Emitter<SearchState> emit,
-//   ) async {
-//     emit(SearchLoading());
-
-//     try {
-//       _currentQuery = ChartFilterQuery(
-//         startDate: event.startDate,
-//         endDate: event.endDate,
-//         furnaceNo: event.furnaceNo,
-//         materialNo: event.materialNo,
-//         page: event.page ?? 1,
-//         limit: event.limit ?? 50,
-//       );
-
-//       final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
-//       final chartStatistics = await _searchApiService.getControlChartStat(_currentQuery);
-//       emit(SearchLoaded(chartDetails, chartStatistics, _currentQuery));
-//     } catch (e) {
-//       emit(SearchError(e.toString()));
-//     }
-//   }
-
-//   Future<void> _onUpdateFurnaceNo(
-//     UpdateFurnaceNo event,
-//     Emitter<SearchState> emit,
-//   ) async {
-//     emit(SearchLoading());
-//     print(event.furnaceNo);
-
-
-//     try {
-//       _currentQuery = _currentQuery.copyWith(
-//         furnaceNo: event.furnaceNo,
-//         page: 1, // reset to first page
-//       );
-
-//       final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
-//       final chartStatistics = await _searchApiService.getControlChartStat(_currentQuery);
-//       emit(SearchLoaded(chartDetails, chartStatistics, _currentQuery));
-//     } catch (e) {
-//       emit(SearchError(e.toString()));
-//     }
-//   }
-
-//   Future<void> _onUpdatePeriodStartDate(
-//     UpdatePeriodStartDate event,
-//     Emitter<SearchState> emit,
-//   ) async {
-//     emit(SearchLoading());
-//     // print('QUERY: $event.startDate');
-
-//     try {
-//       _currentQuery = _currentQuery.copyWith(
-//         startDate: event.startDate,
-//         page: 1, // reset to first page
-//       );
-
-//       final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
-//       final chartStatistics = await _searchApiService.getControlChartStat(_currentQuery);
-//       emit(SearchLoaded(chartDetails, chartStatistics, _currentQuery));
-//     } catch (e) {
-//       emit(SearchError(e.toString()));
-//     }
-//   }
-
-//   Future<void> _onUpdatePeriodEndDate(
-//     UpdatePeriodEndDate event,
-//     Emitter<SearchState> emit,
-//   ) async {
-//     emit(SearchLoading());
-//     // print('QUERY: $event.endDate');
-
-//     try {
-//       _currentQuery = _currentQuery.copyWith(
-//         endDate: event.endDate,
-//         page: 1, // reset to first page
-//       );
-
-//       final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
-//       final chartStatistics = await _searchApiService.getControlChartStat(_currentQuery);
-//       emit(SearchLoaded(chartDetails, chartStatistics, _currentQuery));
-//     } catch (e) {
-//       emit(SearchError(e.toString()));
-//     }
-//   }
-
-//   Future<void> _onUpdateMaterialNo(
-//     UpdateMaterialNo event,
-//     Emitter<SearchState> emit,
-//   ) async {
-//     emit(SearchLoading());
-
-//     try {
-//       _currentQuery = _currentQuery.copyWith(
-//         materialNo: event.materialNo,
-//         page: 1, // reset to first page
-//       );
-
-//       final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
-//       final chartStatistics = await _searchApiService.getControlChartStat(_currentQuery);
-//       emit(SearchLoaded(chartDetails, chartStatistics, _currentQuery));
-//     } catch (e) {
-//       emit(SearchError(e.toString()));
-//     }
-//   }
-
-//   Future<void> _onClearFilters(
-//     ClearFilters event,
-//     Emitter<SearchState> emit,
-//   ) async {
-//     emit(SearchLoading());
-
-//     try {
-//       _currentQuery = const ChartFilterQuery(page: 1, limit: 50);
-//       final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
-//       final chartStatistics = await _searchApiService.getControlChartStat(_currentQuery);
-//       emit(SearchLoaded(chartDetails, chartStatistics, _currentQuery));
-//     } catch (e) {
-//       emit(SearchError(e.toString()));
-//     }
-//   }
-
-//     Future<void> _onUpdateDateRange(
-//     UpdateDateRange event,
-//     Emitter<SearchState> emit,
-//   ) async {
-//   print('🔄 SearchBloc received UpdateDateRange');
-//   print('Start: ${event.startDate}');
-//   print('End: ${event.endDate}');
-  
-//     emit(SearchLoading());
-
-//     try {
-//       _currentQuery = _currentQuery.copyWith(
-//         startDate: event.startDate,
-//         endDate: event.endDate,
-//         page: 1,
-//       );
-    
-//     print('📋 Updated _currentQuery: $_currentQuery');
-//     print('Query params: ${_currentQuery.toQueryParams()}');
-
-//       final chartDetails = await _searchApiService.getFilteringChartDetails(_currentQuery);
-//       final chartStatistics = await _searchApiService.getControlChartStat(_currentQuery);
-    
-//     print('✅ API call successful, emitting SearchLoaded');
-//       emit(SearchLoaded(chartDetails, chartStatistics, _currentQuery));
-//     } catch (e) {
-//     print('❌ API call failed: $e');
-//       emit(SearchError(e.toString()));
-//     }
-//   }
-
-// }

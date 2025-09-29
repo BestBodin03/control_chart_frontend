@@ -35,13 +35,13 @@ class _SearchingScreenBodyState extends State<_SearchingScreenBody> {
     AppRoute.instance.searchSnapshot.removeListener(_consumeSnapshot);
     super.dispose();
   }
+  
 
   void _consumeSnapshot() {
     final v = AppRoute.instance.searchSnapshot.value;
     if (v == null) return;
-    _frozen = v;                                // เก็บไว้ใช้ภายในหน้า Search เท่านั้น
-    AppRoute.instance.searchSnapshot.value = null; // ตัดสาย one-shot
-
+    _frozen = v;      
+    debugPrint('Frozen in Searching Screen: ${_frozen}');                          // เก็บไว้ใช้ภายในหน้า Search เท่านั้น
     // ยิงโหลดตาม snapshot
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -52,8 +52,6 @@ class _SearchingScreenBodyState extends State<_SearchingScreenBody> {
         materialNo: v.materialNo,
       ));
     });
-
-    if (mounted) setState(() {}); // ให้ SearchingContent เห็นค่าเริ่ม (ถ้าจำเป็น)
   }
 
   @override

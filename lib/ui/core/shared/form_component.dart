@@ -141,7 +141,7 @@ Widget buildTextField({
         items: items.map((String item) {
           return DropdownMenuItem<String>(
             value: item,
-            child: Text(item == "0" ? "เลือกเตา" : item),
+            child: Text(item == "0" ? "All Furnaces" : item),
           );
         }).toList(),
         onChanged: onChanged,

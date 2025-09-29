@@ -1,8 +1,4 @@
-import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
-import 'package:control_chart/data/bloc/setting/setting_bloc.dart';
-import 'package:control_chart/domain/models/customer_product.dart';
-import 'package:control_chart/domain/models/furnace.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/shared/form_component.dart';
 import 'package:control_chart/ui/core/shared/gradient_background.dart';
@@ -13,343 +9,352 @@ import 'package:intl/intl.dart';
 import '../../screen/screen_content/home_screen_content/home_content_var.dart';
 
 class SearchingForm extends StatefulWidget {
-  const SearchingForm({
-    super.key,
-    this.initialProfile});
-
-  final HomeContentVar? initialProfile; 
+  const SearchingForm({super.key, this.initialProfile});
+  final HomeContentVar? initialProfile;
 
   @override
   State<SearchingForm> createState() => _SearchingFormState();
 }
 
 class _SearchingFormState extends State<SearchingForm> {
-  late final SettingBloc _settingBloc;
-  static const _periodItems = ['1 เดือน', '3 เดือน', '6 เดือน', '1 ปี', 'ตลอดเวลา', 'กำหนดเอง'];
-  final double backgroundOpacity = 0.2;
-
-@override
-void initState() {
-  super.initState();
-  _settingBloc = SettingBloc(settingApis: SettingApis())..add(InitializeForm());
-
-  // Prefill once when coming from a tapped title
-  if (widget.initialProfile != null) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final p = widget.initialProfile!;
-
-      // Keep SettingBloc in sync with explicit dates
-      _settingBloc
-        ..add(UpdatePeriodS('กำหนดเอง'))
-        ..add(UpdateStartDate(startDate: p.startDate!))
-        ..add(UpdateEndDate(endDate: p.endDate!));
-
-      // Kick off SearchBloc with the incoming profile
-      context.read<SearchBloc>().add(LoadFilteredChartData(
-        startDate: p.startDate,
-        endDate:   p.endDate,
-        furnaceNo: p.furnaceNo,
-        materialNo:p.materialNo,
-      ));
-    });
-  }
-}
-
+  // Local UI state (same UX as before)
+  String _periodValue = 'กำหนดเอง';
+  DateTime? _startDate;
+  DateTime? _endDate;
+  HomeContentVar? _lastAppliedProfile;
 
   @override
-  void dispose() {
-    _settingBloc.close();
-    super.dispose();
+  void initState() {
+    super.initState();
+    // Sync initial UI with current query and load dropdown options
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final q = context.read<SearchBloc>().state.currentQuery;
+      setState(() {
+        _startDate = q.startDate ?? _startDate;
+        _endDate   = q.endDate   ?? _endDate;
+      });
+      _applyInitialProfileIfNeeded(widget.initialProfile);
+      context.read<SearchBloc>().add(const LoadDropdownOptions());
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchingForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialProfile != widget.initialProfile) {
+      _applyInitialProfileIfNeeded(widget.initialProfile);
+    }
+  }
+
+  void _applyInitialProfileIfNeeded(HomeContentVar? p) {
+    if (p == null) return;
+    if (_isSameProfile(p, _lastAppliedProfile)) return;
+
+    setState(() {
+      _periodValue = 'กำหนดเอง';
+      _startDate   = p.startDate;
+      _endDate     = p.endDate;
+      _lastAppliedProfile = p;
+    });
+
+    final s = context.read<SearchBloc>().state;
+    _dispatchSearch(
+      start: _startDate,
+      end: _endDate,
+      furnaceInt: _furnaceIntFromState(s),      // int?
+      materialStr: _materialStrFromState(s),    // String?
+    );
+
+    context.read<SearchBloc>().add(const LoadDropdownOptions());
+  }
+
+  bool _isSameProfile(HomeContentVar? a, HomeContentVar? b) {
+    if (a == null || b == null) return false;
+    return _isSameDate(a.startDate, b.startDate) &&
+           _isSameDate(a.endDate,   b.endDate)   &&
+           (a.furnaceNo?.toString() == b.furnaceNo?.toString()) &&
+           (a.materialNo?.toString() ?? '') == (b.materialNo?.toString() ?? '');
+  }
+
+  bool _isSameDate(DateTime? a, DateTime? b) {
+    if (a == null || b == null) return false;
+    return a.toUtc().millisecondsSinceEpoch == b.toUtc().millisecondsSinceEpoch;
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _settingBloc,
-      child: MultiBlocListener(
-        listeners: [
+    return BlocBuilder<SearchBloc, SearchState>(
+      builder: (context, state) {
+        final sDate = _startDate ?? state.currentQuery.startDate;
+        final eDate = _endDate   ?? state.currentQuery.endDate;
 
-          BlocListener<SettingBloc, SettingState>(
-            listenWhen: (prev, curr) =>
-                prev.formState.startDate != curr.formState.startDate ||
-                prev.formState.endDate != curr.formState.endDate,
-            listener: (context, state) {
-              final start = _toDateTime(state.formState.startDate);
-              final end   = _toDateTime(state.formState.endDate);
-              if (start == null || end == null) return;
+        return GradientBackground(
+          opacity: 0.2,
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 332,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.colorBg,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.white.withValues(alpha: 0.6), blurRadius: 10, offset: const Offset(-5, -5)),
+                    BoxShadow(color: AppColors.colorBrandTp.withValues(alpha: 0.4), blurRadius: 15, offset: const Offset(5, 5)),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header with refresh
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            buildSectionTitle('ระยะเวลา'),
+IconButton(
+  tooltip: 'Refresh',
+  padding: const EdgeInsets.all(8),
+  constraints: const BoxConstraints(),
+  splashRadius: 16,
+  onPressed: () {
+    final now = DateTime.now();
+    final newStart = DateTime(now.year, now.month - 1, now.day);
 
-              final search = context.read<SearchBloc>().state.currentQuery;
-              context.read<SearchBloc>().add(LoadFilteredChartData(
-                startDate: start,
-                endDate: end,
-                furnaceNo: search.furnaceNo,
-                materialNo: search.materialNo,
-              ));
-            },
-          ),
-        ],
-        child: BlocBuilder<SettingBloc, SettingState>(
-          builder: (context, state) {
-            if (state.status == SettingStatus.loading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (state.status == SettingStatus.error) {
-              return Center(child: Text('Error: ${'เกิดข้อผิดผลาด'}'));
-            }
+    // 1) ตั้ง period = '1 เดือน' + อัปเดตช่วงวัน
+    setState(() {
+      _periodValue = '1 เดือน';
+      _startDate = newStart;
+      _endDate   = now;
+    });
 
-            final form = state.formState;
-            final furnaces = state.furnaces;
-            final matNumbers = state.matNumbers;
+    // 2) ยิงค้นหาโดยรีเซ็ตเตา/วัสดุเป็น All (ส่ง null)
+    _dispatchSearch(
+      start: _startDate,
+      end: _endDate,
+      furnaceInt: null,        // ← All
+      materialStr: null,       // ← All
+    );
 
-            return GradientBackground(
-              opacity: backgroundOpacity,
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: SizedBox(
-                  width: 332,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: AppColors.colorBg,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(color: Colors.white.withValues(alpha: 0.6), blurRadius: 10, offset: const Offset(-5, -5)),
-                        BoxShadow(color: AppColors.colorBrandTp.withValues(alpha: 0.4), blurRadius: 15, offset: const Offset(5, 5)),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Flex(
-                            direction: Axis.horizontal,
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              buildSectionTitle('ระยะเวลา'),
-                              BlocSelector<SettingBloc, SettingState, SettingStatus>(
-                                selector: (s) => s.status,
-                                builder: (context, status) {
-                                  final isBusy = status == SettingStatus.loading;
-                                  return IconButton(
-                                    tooltip: isBusy ? 'กำลังรีเฟรช…' : 'รีเฟรช',
-                                    padding: EdgeInsets.all(8),
-                                    constraints: const BoxConstraints(),
-                                    splashRadius: 16,
-                                    onPressed: isBusy
-                                        ? null
-                                        : () {
-                                            context.read<SearchBloc>().add(ClearFilters());
-                                            context.read<SettingBloc>().add(UpdatePeriodS('1 เดือน'));
-                                            // หรือ: context.read<SettingBloc>().add(InitializeForm());
-                                          },
-                                    icon: isBusy
-                                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                                        : const Icon(Icons.refresh_rounded, size: 24, color: AppColors.colorBrand),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
+    // 3) รีโหลดรายการดรอปดาวน์ (ภายใต้เงื่อนไข All)
+    context.read<SearchBloc>().add(const LoadDropdownOptions());
+  },
+  icon: const Icon(Icons.refresh_rounded, size: 24, color: AppColors.colorBrand),
+),
 
+                          ],
+                        ),
 
-                          const SizedBox(height: 8),
+                        const SizedBox(height: 8),
 
-                          buildDropdownField(
-                            context: context,
-                            value: form.periodValue,
-                            items: _periodItems,
-                            onChanged: (value) {
-                              if (value == null) return;
-                              context.read<SettingBloc>().add(UpdatePeriodS(value));
-                              _updateDateRangeByPeriod(context, value); // เดิม
-                            },
-                          ),
+                        // Period dropdown
+                        buildDropdownField(
+                          context: context,
+                          value: _periodValue,
+                          items: const ['1 เดือน', '3 เดือน', '6 เดือน', '1 ปี', 'ตลอดเวลา', 'กำหนดเอง'],
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() => _periodValue = value);
+                            final now = DateTime.now();
+                            DateTime? newStart;
+                            DateTime? newEnd = now;
 
-                          const SizedBox(height: 16),
+                            switch (value) {
+                              case '1 เดือน': newStart = DateTime(now.year, now.month - 1, now.day); break;
+                              case '3 เดือน': newStart = DateTime(now.year, now.month - 3, now.day); break;
+                              case '6 เดือน': newStart = DateTime(now.year, now.month - 6, now.day); break;
+                              case '1 ปี':    newStart = DateTime(now.year - 1, now.month, now.day); break;
+                              case 'ตลอดเวลา': newStart = DateTime(2020, 1, 1); break;
+                              default: // 'กำหนดเอง'
+                                newStart = _startDate;
+                                newEnd   = _endDate ?? now;
+                                break;
+                            }
 
-                          Row(
-                            children: [
-                              // Start Date
-                              BlocBuilder<SearchBloc, SearchState>(
-                                builder: (context, searchState) {
-                                  final sDate = searchState.currentQuery.startDate ?? _toDateTime(form.startDate);
-                                  return Expanded(
-                                    child: buildDateField(
-                                      context: context,
-                                      value: sDate,
-                                      label: _dateLabel(sDate) ?? 'Select Date',
-                                      date: sDate ?? DateTime.now(),
-                                      onTap: () => _selectDate(context, true),
-                                      onChanged: (date) {
-                                        if (date == null) return;
-                                        context.read<SettingBloc>().add(UpdateStartDate(startDate: date));
-                                        _dispatchSearchWith(context, start: date, end: form.endDate ?? searchState.currentQuery.endDate);
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
-                              const SizedBox(width: 16),
-                              const Text('ถึง', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87)),
-                              const SizedBox(width: 16),
-
-                              // End Date
-                              BlocBuilder<SearchBloc, SearchState>(
-                                builder: (context, searchState) {
-                                  final eDate = searchState.currentQuery.endDate ?? _toDateTime(form.endDate);
-                                  return Expanded(
-                                    child: buildDateField(
-                                      context: context,
-                                      value: eDate,
-                                      label: _dateLabel(eDate) ?? 'Select Date',
-                                      date: eDate ?? DateTime.now(),
-                                      onTap: () => _selectDate(context, false),
-                                      onChanged: (date) {
-                                        if (date == null) return;
-                                        context.read<SettingBloc>().add(UpdateEndDate(endDate: date));
-                                        _dispatchSearchWith(context, start: form.startDate ?? searchState.currentQuery.startDate, end: date);
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Furnace
-                          buildSectionTitle('หมายเลขเตา'),
-                          const SizedBox(height: 8),
-                          BlocBuilder<SearchBloc, SearchState>(
-                            builder: (context, searchState) {
-                              return buildDropdownField(
-                                context: context,
-                                value: searchState.currentQuery.furnaceNo ?? form.selectedItem,
-                                items: _getFurnaceNumbers(furnaces),
-                                hint: "All Furnaces",
-                                onChanged: (selected) {
-                                  final val = selected == "0" ? "" : selected;
-                                  _dispatchSearchWith(
-                                    context,
-                                    start: form.startDate ?? searchState.currentQuery.startDate,
-                                    end:   form.endDate   ?? searchState.currentQuery.endDate,
-                                    furnace: val,
-                                    material: searchState.currentQuery.materialNo,
-                                  );
-                                },
+                            if (value != 'กำหนดเอง') {
+                              setState(() {
+                                _startDate = newStart;
+                                _endDate   = newEnd;
+                              });
+                              _dispatchSearch(
+                                start: _startDate,
+                                end: _endDate,
+                                furnaceInt: _furnaceIntFromState(state),
+                                materialStr: _materialStrFromState(state),
                               );
-                            },
-                          ),
+                              context.read<SearchBloc>().add(const LoadDropdownOptions());
+                            }
+                          },
+                        ),
 
-                          const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                          // Material
-                          buildSectionTitle('Material No.'),
-                          const SizedBox(height: 8),
-                          BlocBuilder<SearchBloc, SearchState>(
-                            builder: (context, searchState) {
-                              return buildDropdownField(
+                        // Date range row
+                        Row(
+                          children: [
+                            Expanded(
+                              child: buildDateField(
                                 context: context,
-                                value: searchState.currentQuery.materialNo,
-                                items: _getMatNumbers(matNumbers),
-                                hint: "All Material No.",
-                                onChanged: (selected) {
-                                  final val = selected == "All Material No." ? "" : selected;
-                                  _dispatchSearchWith(
-                                    context,
-                                    start: form.startDate ?? searchState.currentQuery.startDate,
-                                    end:   form.endDate   ?? searchState.currentQuery.endDate,
-                                    furnace: searchState.currentQuery.furnaceNo,
-                                    material: val,
+                                value: sDate,
+                                label: _dateLabel(sDate) ?? 'Select Date',
+                                date: sDate ?? DateTime.now(),
+                                onTap: () => _selectDate(context, true, state),
+                                onChanged: (d) {
+                                  if (d == null) return;
+                                  setState(() {
+                                    _periodValue = 'กำหนดเอง';
+                                    _startDate = d;
+                                  });
+                                  _dispatchSearch(
+                                    start: _startDate,
+                                    end: _endDate ?? state.currentQuery.endDate ?? DateTime.now(),
+                                    furnaceInt: _furnaceIntFromState(state),
+                                    materialStr: _materialStrFromState(state),
                                   );
+                                  context.read<SearchBloc>().add(const LoadDropdownOptions());
                                 },
-                              );
-                            },
-                          )
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            const Text('ถึง', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87)),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: buildDateField(
+                                context: context,
+                                value: eDate,
+                                label: _dateLabel(eDate) ?? 'Select Date',
+                                date: eDate ?? DateTime.now(),
+                                onTap: () => _selectDate(context, false, state),
+                                onChanged: (d) {
+                                  if (d == null) return;
+                                  setState(() {
+                                    _periodValue = 'กำหนดเอง';
+                                    _endDate = d;
+                                  });
+                                  _dispatchSearch(
+                                    start: _startDate ?? state.currentQuery.startDate ?? d,
+                                    end: _endDate,
+                                    furnaceInt: _furnaceIntFromState(state),
+                                    materialStr: _materialStrFromState(state),
+                                  );
+                                  context.read<SearchBloc>().add(const LoadDropdownOptions());
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Furnace
+                        buildSectionTitle('หมายเลขเตา'),
+                        const SizedBox(height: 8),
+                        AbsorbPointer(
+                          absorbing: state.optionsLoading,
+                          child: Opacity(
+                            opacity: state.optionsLoading ? 0.6 : 1,
+                            child: buildDropdownField(
+                              context: context,
+                              hint: "All Furnaces",
+                              value: state.currentFurnaceUiValue,    // UI uses "0" for All
+                              items: state.furnaceOptions,
+                              onChanged: (v) => context.read<SearchBloc>().add(SelectFurnace(v)),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Material
+                        buildSectionTitle('Material No.'),
+                        const SizedBox(height: 8),
+                        AbsorbPointer(
+                          absorbing: state.optionsLoading,
+                          child: Opacity(
+                            opacity: state.optionsLoading ? 0.6 : 1,
+                            child: buildDropdownField(
+                              context: context,
+                              hint: "All Material No.",
+                              value: state.currentMaterialUiValue,   // UI uses "All Material No." for All
+                              items: state.materialOptions,
+                              onChanged: (v) => context.read<SearchBloc>().add(SelectMaterial(v)),
+                            ),
+                          ),
+                        ),
+
+                        if (state.optionsError != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            state.optionsError!,
+                            style: const TextStyle(color: Colors.red, fontSize: 12),
+                          ),
                         ],
-                      ),
+                      ],
                     ),
                   ),
                 ),
               ),
-            );
-          },
-        ),
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 
-  // ============== Helpers ==============
+  // ==== Helpers ====
 
-  // แปลง dynamic -> DateTime?
   static DateTime? _toDateTime(dynamic v) {
     if (v == null) return null;
     if (v is DateTime) return v;
-    if (v is String)  return DateTime.tryParse(v);
+    if (v is String) return DateTime.tryParse(v);
     return null;
   }
 
   static String? _dateLabel(DateTime? d) => d == null ? null : DateFormat('MM/dd/yy').format(d);
 
-  void _dispatchSearchWith(
-    BuildContext context, {
+  /// แปลงค่าจาก state (ที่เป็นค่า UI) → ชนิดจริงที่ต้องส่งให้ Bloc/Search API
+  /// Furnace: "0" (All) -> null, อย่างอื่น -> int.tryParse(...)
+  int? _furnaceIntFromState(SearchState s) {
+    final ui = s.currentFurnaceUiValue;
+    if (ui == '0' || ui.isEmpty) return null;
+    return int.tryParse(ui);
+  }
+
+  /// Material: "All Material No." (All) -> null, อย่างอื่น -> String เดิม
+  String? _materialStrFromState(SearchState s) {
+    final ui = s.currentMaterialUiValue;
+    if (ui == 'All Material No.' || ui.isEmpty) return null;
+    return ui;
+  }
+
+  void _dispatchSearch({
     required dynamic start,
     required dynamic end,
-    String? furnace,
-    String? material,
+    int? furnaceInt,
+    String? materialStr,
   }) {
     final startDT = start is DateTime ? start : _toDateTime(start);
     final endDT   = end   is DateTime ? end   : _toDateTime(end);
     if (startDT == null || endDT == null) return;
 
-    final q = context.read<SearchBloc>().state.currentQuery;
+    // ⚠️ หมายเหตุ:
+    // - ถ้า Event ของคุณกำหนด furnaceNo เป็น int? แล้ว → ส่ง furnaceInt ตรง ๆ
+    // - ถ้ายังเป็น String? อยู่ → เปลี่ยนเป็น furnaceInt?.toString()
     context.read<SearchBloc>().add(LoadFilteredChartData(
       startDate: startDT,
-      endDate: endDT,
-      furnaceNo: furnace ?? q.furnaceNo,
-      materialNo: material ?? q.materialNo,
+      endDate:   endDT,
+      furnaceNo: furnaceInt?.toString(), // << ถ้าคุณแก้ event เป็น int? ให้เปลี่ยนบรรทัดนี้เป็น furnaceNo: furnaceInt,
+      materialNo: materialStr,           // String? อยู่แล้ว OK
     ));
   }
 
-  // Update by period (เดิม)
-  void _updateDateRangeByPeriod(BuildContext context, String period) {
-    final now = DateTime.now();
-    DateTime startDate;
-    switch (period) {
-      case '1 เดือน':   startDate = DateTime(now.year, now.month - 1, now.day); break;
-      case '3 เดือน':   startDate = DateTime(now.year, now.month - 3, now.day); break;
-      case '6 เดือน':   startDate = DateTime(now.year, now.month - 6, now.day); break;
-      case '1 ปี':      startDate = DateTime(now.year - 1, now.month, now.day); break;
-      case 'ตลอดเวลา':  startDate = DateTime(2020, 1, 1); break;
-      default: // 'กำหนดเอง'
-        return; // ไม่ auto-update
-    }
-    context.read<SettingBloc>()
-      ..add(UpdateStartDate(startDate: startDate))
-      ..add(UpdateEndDate(endDate: now));
-    // SearchBloc จะถูกอัปเดตผ่าน BlocListener อยู่แล้ว
-  }
-
-  List<String> _getFurnaceNumbers(List<Furnace> furnaces) {
-    final sorted = (furnaces.map((f) => f.furnaceNo).toList()..sort());
-    return ["0", ...sorted.map((n) => n.toString())];
-  }
-
-  List<String> _getMatNumbers(List<CustomerProduct> mats) {
-    final sorted = (mats.map((m) => m.cpNo).toList()..sort());
-    return ["All Material No.", ...sorted.map((n) => n.toString())];
-  }
-
-
-  Future<void> _selectDate(BuildContext context, bool isStartDate) async {
-    final settingState = _settingBloc.state;
-    final searchState = context.read<SearchBloc>().state;
-
+  Future<void> _selectDate(BuildContext context, bool isStartDate, SearchState searchState) async {
     final initial = isStartDate
-        ? (searchState.currentQuery.startDate ?? _toDateTime(settingState.formState.startDate) ?? DateTime.now())
-        : (searchState.currentQuery.endDate   ?? _toDateTime(settingState.formState.endDate)   ?? DateTime.now());
+        ? (_startDate ?? searchState.currentQuery.startDate ?? DateTime.now())
+        : (_endDate   ?? searchState.currentQuery.endDate   ?? DateTime.now());
 
     final picked = await showDatePicker(
       context: context,
@@ -357,26 +362,24 @@ void initState() {
       firstDate: DateTime(2020),
       lastDate: DateTime(2050),
     );
-
     if (picked == null) return;
 
-    // Rule 1: เมื่อผู้ใช้เลือกวันเอง -> บังคับ period = "กำหนดเอง" + อัปเดตทั้งสอง Bloc
-    final q = searchState.currentQuery;
-    final newStart = isStartDate ? picked : (q.startDate ?? picked);
-    final newEnd   = isStartDate ? (q.endDate ?? picked) : picked;
+    setState(() {
+      _periodValue = 'กำหนดเอง';
+      if (isStartDate) {
+        _startDate = picked;
+      } else {
+        _endDate = picked;
+      }
+    });
 
-    if(!context.mounted) return;
+    _dispatchSearch(
+      start: _startDate ?? picked,
+      end: _endDate ?? picked,
+      furnaceInt: _furnaceIntFromState(searchState),
+      materialStr: _materialStrFromState(searchState),
+    );
 
-    context.read<SettingBloc>().add(UpdatePeriodS('กำหนดเอง'));
-    context.read<SettingBloc>()
-      ..add(UpdateStartDate(startDate: newStart))
-      ..add(UpdateEndDate(endDate: newEnd));
-
-    context.read<SearchBloc>().add(LoadFilteredChartData(
-      startDate: newStart,
-      endDate: newEnd,
-      furnaceNo: q.furnaceNo,
-      materialNo: q.materialNo,
-    ));
+    context.read<SearchBloc>().add(const LoadDropdownOptions());
   }
 }

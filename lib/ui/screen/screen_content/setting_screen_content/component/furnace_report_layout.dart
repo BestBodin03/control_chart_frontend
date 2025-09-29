@@ -15,6 +15,7 @@ class FurnaceReportLayout extends StatelessWidget {
     // Single top-level BlocBuilder provides the right SearchBloc state once
     return BlocBuilder<SearchBloc, SearchState>(
       builder: (context, smallSearchState) {
+        debugPrint(smallSearchState.currentQuery.startDate.toString());
         return Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
           child: CustomScrollView(

@@ -4,6 +4,7 @@ import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/domain/types/chart_filter_query.dart';
 import 'package:control_chart/domain/types/search_table.dart';
 import 'package:control_chart/domain/types/tv_query.dart';
+import 'package:flutter/foundation.dart';
 // import 'package:dio/dio.dart';
 
 class SearchChartDetailsApis {
@@ -82,13 +83,15 @@ class SearchChartDetailsApis {
         '/chart-details/calculate',
         queryParameters: query.toQueryParams(),
       );
+
+      debugPrint('in bloc: ${query.toQueryParams()}');
       
-      // Handle null response or null data
+      // // Handle null response or null data
       if (response.isEmpty || response['data'] == null) {
         throw Exception('No data available for chart statistics');
       }
       
-      final data = response['data'] as Map<String, dynamic>;
+      final data = response['data'];
       final stats = ControlChartStats.fromJson(data);
 
       // print(stats.yAxisRange?.maxYsurfaceHardnessControlChart.toString());   
