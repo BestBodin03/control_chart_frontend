@@ -12,12 +12,6 @@ import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 
-/// ----------------------------------------------------------------------------
-/// ControlChartComponentSmallCdeCdt (one-file)
-/// - หน้าตา/พฤติกรรมเหมือน Surface Hardness Small
-/// - รองรับการเลือกค่าตาม secondChartSelected (CDE/CDT/Compound Layer)
-/// - มี _sel สำหรับ Spec/Target, ControlLimit(I), Avg, และ Y-range
-/// ----------------------------------------------------------------------------
 class ControlChartComponentSmallCdeCdt extends StatefulWidget implements ChartComponent {
   final List<ChartDataPointCdeCdt>? dataPoints; // กรองแล้วหรือทั้งหมดก็ได้
   final ControlChartStats? controlChartStats;

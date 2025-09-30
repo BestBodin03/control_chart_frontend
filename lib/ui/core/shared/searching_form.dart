@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import '../../../data/cubit/searching/filters_cubit.dart';
 import '../../../data/cubit/searching/options_cubit.dart';
 import '../../../data/cubit/searching/utils/mapper.dart';
+import '../../../utils/date_convertor.dart';
 import '../../screen/screen_content/home_screen_content/home_content_var.dart';
 
 class SearchingForm extends StatelessWidget {
@@ -31,13 +32,13 @@ class SearchingForm extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => FiltersCubit()),
-        BlocProvider(
-          create: (_) => OptionsCubit(
-            loadFurnaces: loadFurnaces ?? () async => ['0', '1', '2'],
-            loadMaterials: loadMaterials ?? () async => ['All Material No.'],
-            loadCpNames: loadCpNames, // อาจเป็น null ได้
-          )..load(),
-        ),
+BlocProvider(
+  create: (_) => OptionsCubit(
+    loadFurnaces: loadFurnaces ?? () async => ['0', '1', '2'],
+    loadMaterials: loadMaterials ?? () async => [],
+    loadCpNames: loadCpNames, // อาจเป็น null ได้
+  )..load(),
+),
       ],
       child: _SearchingFormBody(initialProfile: initialProfile),
     );
@@ -148,6 +149,9 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
           builder: (context, filters) {
             final sDate = filters.startDate ?? searchState.currentQuery.startDate;
             final eDate = filters.endDate ?? searchState.currentQuery.endDate;
+            final dateNow = DateTime.now();
+            final dateOneM = oneMonthAgo(dateNow);
+
 
             return GradientBackground(
               opacity: 0.2,
@@ -182,10 +186,9 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                   constraints: const BoxConstraints(),
                                   splashRadius: 16,
                                   onPressed: () {
+                                    context.read<FiltersCubit>().setPeriod('1 เดือน', start: oneMonthAgo(dateNow), end: dateNow);
                                     context.read<SearchBloc>().add(LoadFilteredChartData());
-                                    final now = DateTime.now();
-                                    final start = DateTime(now.year, now.month - 1, now.day);
-                                    context.read<FiltersCubit>().setPeriod('1 เดือน', start: start, end: now);
+                                    // context.read<FiltersCubit>().setPeriod('1 เดือน', start: oneMonthAgo(dateNow), end: dateNow);
                                   },
                                   icon: const Icon(Icons.refresh_rounded, size: 24, color: AppColors.colorBrand),
                                 ),
@@ -218,7 +221,7 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                     newStart = DateTime(now.year - 1, now.month, now.day);
                                     break;
                                   case 'ตลอดเวลา':
-                                    newStart = DateTime(2020, 1, 1);
+                                    newStart = DateTime(2024, 1, 1);
                                     break;
                                   default:
                                     newStart = filters.startDate;
@@ -231,13 +234,12 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                   final int? furnace = furnaceIntFromUi(searchState.currentFurnaceUiValue);
                                   final String? mat = materialFromUi(searchState.currentMaterialUiValue);
 
-                                  SearchControl.run(
-                                    ctx: context,
-                                    start: newStart,
-                                    end: newEnd,
-                                    furnaceInt: furnace,
-                                    materialStr: mat,
-                                  );
+                                  context.read<SearchBloc>().add(LoadFilteredChartData(
+                                    startDate: newStart,
+                                    endDate: newEnd,
+                                    furnaceNo: furnace.toString(),
+                                    materialNo: mat,
+                                  ));
                                   context.read<SearchBloc>().add(const LoadDropdownOptions());
                                 }
                               },
@@ -263,13 +265,12 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                       final String? mat = materialFromUi(searchState.currentMaterialUiValue);
 
                                       final fs = context.read<FiltersCubit>().state;
-                                      SearchControl.run(
-                                        ctx: context,
-                                        start: fs.startDate,
-                                        end: fs.endDate ?? DateTime.now(),
-                                        furnaceInt: furnace,
-                                        materialStr: mat,
-                                      );
+                                      context.read<SearchBloc>().add(LoadFilteredChartData(
+                                        startDate: fs.startDate,
+                                        endDate: fs.endDate,
+                                        furnaceNo: furnace.toString(),
+                                        materialNo: mat,
+                                      ));
                                       context.read<SearchBloc>().add(const LoadDropdownOptions());
                                     },
                                   ),
@@ -292,13 +293,12 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                       final String? mat = materialFromUi(searchState.currentMaterialUiValue);
 
                                       final fs = context.read<FiltersCubit>().state;
-                                      SearchControl.run(
-                                        ctx: context,
-                                        start: fs.startDate ?? d,
-                                        end: fs.endDate,
-                                        furnaceInt: furnace,
-                                        materialStr: mat,
-                                      );
+                                      context.read<SearchBloc>().add(LoadFilteredChartData(
+                                        startDate: fs.startDate,
+                                        endDate: fs.endDate,
+                                        furnaceNo: furnace.toString(),
+                                        materialNo: mat,
+                                      ));
                                       context.read<SearchBloc>().add(const LoadDropdownOptions());
                                     },
                                   ),
@@ -308,137 +308,170 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
 
                             const SizedBox(height: 16),
 
-                            // Furnace
-                            buildSectionTitle('หมายเลขเตา'),
-                            const SizedBox(height: 8),
-                            BlocBuilder<OptionsCubit, OptionsState>(
-                              builder: (context, opts) {
-                                // Assuming furnaceOptions is List<String> or List<dynamic>
-                                final sortedFurnaceOptions = searchState.furnaceOptions
-                                    .map((e) => int.tryParse(e.toString()) ?? 0) // convert to int
-                                    .toList()
-                                  ..sort(); // sort ascending
+buildSectionTitle('หมายเลขเตา'),
+const SizedBox(height: 8),
+BlocBuilder<OptionsCubit, OptionsState>(
+  builder: (context, opts) {
+    const allFurnacesLabel = 'All Furnaces';
 
-                                final sortedStringList = sortedFurnaceOptions.map((e) => e.toString()).toList();
+    // 1) Get furnace options and sort numerically
+    debugPrint('🔵 [Furnace] Raw opts.furnaceOptions: ${opts.furnaceOptions}');
+    final furnaces = opts.furnaceOptions
+        .map((e) => e.toString())
+        .where((e) => e.isNotEmpty && e != allFurnacesLabel) // Remove duplicates
+        .toSet()
+        .toList()
+      ..sort((a, b) {
+        final ai = int.tryParse(a);
+        final bi = int.tryParse(b);
+        if (ai == null && bi == null) return a.compareTo(b);
+        if (ai == null) return 1;
+        if (bi == null) return -1;
+        return ai.compareTo(bi);
+      });
+    
+    // Add "All" label at the beginning
+    furnaces.insert(0, allFurnacesLabel);
+    debugPrint('🔵 [Furnace] Final furnaces list: $furnaces');
 
-                                return AbsorbPointer(
-                                  absorbing: searchState.optionsLoading || opts.loading,
-                                  child: Opacity(
-                                    opacity: (searchState.optionsLoading || opts.loading) ? 0.6 : 1,
-                                    child: buildDropdownField(
-                                      key: ValueKey(searchState.currentFurnaceUiValue),
-                                      context: context,
-                                      hint: "All Furnaces",
-                                      value: searchState.currentFurnaceUiValue.isEmpty
-                                          ? null
-                                          : searchState.currentFurnaceUiValue,
-                                      items: sortedStringList,
-                                      onChanged: (v) {
-                                        context.read<SearchBloc>().add(SelectFurnace(v));
-                                        final int? furnace = furnaceIntFromUi(v ?? '0');
-                                        final String? mat = materialFromUi(searchState.currentMaterialUiValue);
-                                        final fs = context.read<FiltersCubit>().state;
-                                        SearchControl.run(
-                                          ctx: context,
-                                          start: fs.startDate ?? searchState.currentQuery.startDate ?? DateTime.now(),
-                                          end: fs.endDate ?? searchState.currentQuery.endDate ?? DateTime.now(),
-                                          furnaceInt: furnace,
-                                          materialStr: mat,
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+    // 2) Safe current value
+    String? current = searchState.currentFurnaceUiValue.isEmpty
+        ? allFurnacesLabel
+        : searchState.currentFurnaceUiValue;
+    if (!furnaces.contains(current)) current = allFurnacesLabel;
+    debugPrint('🔵 [Furnace] Current value: $current');
 
-                            const SizedBox(height: 16),
+    return AbsorbPointer(
+      absorbing: opts.loading,
+      child: Opacity(
+        opacity: opts.loading ? 0.6 : 1,
+        child: buildDropdownField(
+          key: ValueKey('furnace_$current'),
+          context: context,
+          hint: allFurnacesLabel,
+          value: current == allFurnacesLabel ? null : current,
+          items: furnaces,
+          onChanged: (selected) {
+            final val = (selected == null || selected == allFurnacesLabel)
+                ? null
+                : selected;
+            
+            context.read<SearchBloc>().add(SelectFurnace(val));
+            
+            // Reload material options based on selected furnace
+            context.read<OptionsCubit>().loadMaterialsForFurnace(val);
 
-                            // Material (custom dropdown to show "matNo | cpName", value = matNo)
-                            buildSectionTitle('Material No.'),
-                            const SizedBox(height: 8),
-                            BlocBuilder<OptionsCubit, OptionsState>(
-                              builder: (context, opts) {
-                                const allLabel = 'All Material No.';
-                                final cpNames = opts.cpNames; // Map<String,String> : matNo -> cpName
+            // Update chart data
+            final now = DateTime.now();
+            final fallbackStart = now.subtract(const Duration(days: 30));
+            final fs = context.read<FiltersCubit>().state;
 
-                                // 1) Collect, dedupe, numeric-sort + keep All on top
-                                final List<String> options = [
-                                  ...searchState.materialOptions.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty),
-                                ];
-                                final unique = options.toSet().toList()
-                                  ..sort((a, b) {
-                                    final ai = int.tryParse(a);
-                                    final bi = int.tryParse(b);
-                                    if (ai == null && bi == null) return a.compareTo(b);
-                                    if (ai == null) return 1;
-                                    if (bi == null) return -1;
-                                    return ai.compareTo(bi);
-                                  });
-                                if (!unique.contains(allLabel)) unique.insert(0, allLabel);
+            context.read<SearchBloc>().add(LoadFilteredChartData(
+              startDate: fs.startDate ?? fallbackStart,
+              endDate: fs.endDate ?? now,
+              furnaceNo: val,
+              materialNo: null,
+            ));
+          },
+        ),
+      ),
+    );
+  },
+),
 
-                                // 2) Items: value = matNo/All, label = "matNo | cpName"
-                                final List<DropdownMenuItem<String>> items = unique.map((matNo) {
-                                  if (matNo == allLabel) {
-                                    return const DropdownMenuItem<String>(
-                                      value: allLabel,
-                                      child: Text(allLabel),
-                                    );
-                                  }
-                                  final name = cpNames[matNo];
-                                  return DropdownMenuItem<String>(
-                                    value: matNo,
-                                    child: Text(
-                                      (name != null && name.isNotEmpty) ? '$matNo | $name' : matNo,
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
-                                  );
-                                }).toList();
+const SizedBox(height: 16),
 
-                                // 3) Safe value: normalize "123 | Name" → "123", ensure it exists
-                                String? raw = searchState.currentMaterialUiValue.isEmpty
-                                    ? null
-                                    : searchState.currentMaterialUiValue;
-                                if (raw != null && raw != allLabel && raw.contains(' | ')) {
-                                  raw = raw.split(' | ').first; // normalize to matNo
-                                }
-                                final safeValue = (raw == null || !unique.contains(raw)) ? allLabel : raw;
+// ============== Material Dropdown ==============
+buildSectionTitle('Material No.'),
+const SizedBox(height: 8),
+BlocBuilder<OptionsCubit, OptionsState>(
+  builder: (context, opts) {
+    const allLabel = 'All Material Nos.';
 
-                                return AbsorbPointer(
-                                  absorbing: searchState.optionsLoading || opts.loading,
-                                  child: Opacity(
-                                    opacity: (searchState.optionsLoading || opts.loading) ? 0.6 : 1,
-                                    child: DropdownButtonFormField<String>(
-                                      key: ValueKey(searchState.currentMaterialUiValue),
-                                      value: safeValue,
-                                      isExpanded: true,
-                                      style: const TextStyle(fontSize: 16.0),
-                                      decoration: const InputDecoration(
-                                        border: OutlineInputBorder(),
-                                        isDense: true,
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                      ),
-                                      hint: const Text(allLabel),
-                                      items: items,
-                                      onChanged: (v) {
-                                        context.read<SearchBloc>().add(SelectMaterial(v));
-                                        final int? furnace = furnaceIntFromUi(searchState.currentFurnaceUiValue);
-                                        final String? mat = materialFromUi(v ?? allLabel); // your existing helper
-                                        final fs = context.read<FiltersCubit>().state;
-                                        SearchControl.run(
-                                          ctx: context,
-                                          start: fs.startDate ?? searchState.currentQuery.startDate ?? DateTime.now(),
-                                          end: fs.endDate ?? searchState.currentQuery.endDate ?? DateTime.now(),
-                                          furnaceInt: furnace,
-                                          materialStr: mat,
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+    // 1) Get material options and sort numerically
+    debugPrint('🟢 [Material] Raw opts.materialOptions: ${opts.materialOptions}');
+    debugPrint('🟢 [Material] Raw opts.cpNames: ${opts.cpNames}');
+    final materials = opts.materialOptions
+        .map((e) => e.toString())
+        .where((e) => e.isNotEmpty && e != allLabel) // Remove duplicates
+        .toSet()
+        .toList()
+      ..sort((a, b) {
+        final ai = int.tryParse(a);
+        final bi = int.tryParse(b);
+        if (ai == null && bi == null) return a.compareTo(b);
+        if (ai == null) return 1;
+        if (bi == null) return -1;
+        return ai.compareTo(bi);
+      });
+    
+    // Add "All" label at the beginning
+    materials.insert(0, allLabel);
+    debugPrint('🟢 [Material] Final materials list: $materials');
+
+    // 2) Build display items with cpName (matNo - cpName)
+    final items = materials.map((matNo) {
+      if (matNo == allLabel) return allLabel;
+      final cpNames = opts.cpNames;
+      final idx = opts.materialOptions.indexOf(matNo);
+      debugPrint('🟢 [Material] matNo: $matNo, idx: $idx, cpName: ${idx >= 0 && idx < cpNames.length ? cpNames[idx] : "NOT FOUND"}');
+      return (idx >= 0 && idx < cpNames.length && cpNames[idx].isNotEmpty)
+          ? "$matNo - ${cpNames[idx]}"
+          : matNo;
+    }).toList();
+    debugPrint('🟢 [Material] Final items with cpNames: $items');
+
+    // 3) Safe current value (strip cpName if present)
+    String? current = searchState.currentMaterialUiValue.isEmpty
+        ? allLabel
+        : searchState.currentMaterialUiValue;
+    if (current != null && current != allLabel && current.contains(' - ')) {
+      current = current.split(' - ').first;
+    }
+    if (!materials.contains(current)) current = allLabel;
+    debugPrint('🟢 [Material] Current value: $current');
+
+    return AbsorbPointer(
+      absorbing: opts.loading,
+      child: Opacity(
+        opacity: opts.loading ? 0.6 : 1,
+        child: buildDropdownField(
+          key: ValueKey('material_$current'),
+          context: context,
+          hint: allLabel,
+          value: current == allLabel ? null : current,
+          items: items,
+          onChanged: (selected) {
+            final val = (selected == null || selected == allLabel)
+                ? null
+                : selected?.split(' - ').first; // Strip cpName
+            
+            context.read<SearchBloc>().add(SelectMaterial(val));
+
+            // Update chart data
+            final now = DateTime.now();
+            final fallbackStart = now.subtract(const Duration(days: 30));
+            final fs = context.read<FiltersCubit>().state;
+            final furnace = searchState.currentFurnaceUiValue.isEmpty
+                ? null
+                : searchState.currentFurnaceUiValue;
+
+            context.read<SearchBloc>().add(LoadFilteredChartData(
+              startDate: fs.startDate ?? fallbackStart,
+              endDate: fs.endDate ?? now,
+              furnaceNo: furnace,
+              materialNo: val,
+            ));
+          },
+        ),
+      ),
+    );
+  },
+),
+
+
+
+
 
                             if (searchState.optionsError != null) ...[
                               const SizedBox(height: 8),
@@ -471,7 +504,7 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
-      firstDate: DateTime(2020),
+      firstDate: DateTime(2024),
       lastDate: DateTime(2050),
     );
     if (picked == null) return;
@@ -486,13 +519,12 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
     final String? mat = materialFromUi(s.currentMaterialUiValue);
 
     final fs = context.read<FiltersCubit>().state;
-    SearchControl.run(
-      ctx: context,
-      start: fs.startDate ?? picked,
-      end: fs.endDate ?? picked,
-      furnaceInt: furnace,
-      materialStr: mat,
-    );
+    context.read<SearchBloc>().add(LoadFilteredChartData(
+      startDate: fs.startDate,
+      endDate: fs.endDate,
+      furnaceNo: furnace.toString(),
+      materialNo: mat,
+    ));
 
     context.read<SearchBloc>().add(const LoadDropdownOptions());
   }

@@ -1,71 +1,41 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:bloc/bloc.dart';
+import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
 
-class OptionsState {
-  final bool loading;
-  final String? error;
-  final List<String> furnaceOptions;   // e.g. ["0","1","2"]
-  final List<String> materialOptions;  // e.g. ["All Material No.","24009254"]
-  final Map<String, String> cpNames;   // matNo -> cpName
-
-  const OptionsState({
-    required this.loading,
-    required this.error,
-    required this.furnaceOptions,
-    required this.materialOptions,
-    this.cpNames = const <String, String>{},
-  });
-
-  factory OptionsState.initial() => const OptionsState(
-        loading: false,
-        error: null,
-        furnaceOptions: <String>[],
-        materialOptions: <String>[],
-        cpNames: <String, String>{},
-      );
-
-  OptionsState copyWith({
-    bool? loading,
-    String? error,
-    List<String>? furnaceOptions,
-    List<String>? materialOptions,
-    Map<String, String>? cpNames,
-  }) {
-    return OptionsState(
-      loading: loading ?? this.loading,
-      error: error,
-      furnaceOptions: furnaceOptions ?? this.furnaceOptions,
-      materialOptions: materialOptions ?? this.materialOptions,
-      cpNames: cpNames ?? this.cpNames,
-    );
-  }
-}
-
-typedef LoadFurnaces  = Future<List<String>> Function();
-typedef LoadMaterials = Future<List<String>> Function();
-typedef LoadCpNames   = Future<Map<String, String>> Function(); // cpNo -> cpName
+import '../../../apis/settings/setting_apis.dart';
 
 class OptionsCubit extends Cubit<OptionsState> {
+  final Future<List<String>> Function() loadFurnaces;
+  final Future<List<String>> Function() loadMaterials;
+  final Future<Map<String, String>>? Function()? loadCpNames;
+
   OptionsCubit({
     required this.loadFurnaces,
     required this.loadMaterials,
-    this.loadCpNames, // optional
+    this.loadCpNames,
   }) : super(OptionsState.initial());
 
-  final LoadFurnaces loadFurnaces;
-  final LoadMaterials loadMaterials;
-  final LoadCpNames? loadCpNames;
-
+  /// Initial load - loads all furnaces and materials
   Future<void> load() async {
-    emit(state.copyWith(loading: true, error: null));
+    debugPrint('🟡 [OptionsCubit] Starting initial load...');
+    emit(state.copyWith(loading: true));
     try {
-      // load in parallel
-      final furnacesF  = loadFurnaces();
-      final materialsF = loadMaterials();
-      final cpNamesF   = loadCpNames?.call();
-
-      final furnaces  = await furnacesF;
-      final materials = await materialsF;
-      final cpNames   = cpNamesF != null ? await cpNamesF : state.cpNames;
+      final furnaces = await loadFurnaces();
+      debugPrint('🟡 [OptionsCubit] Loaded furnaces: $furnaces');
+      
+      final materials = await loadMaterials();
+      debugPrint('🟡 [OptionsCubit] Loaded materials: $materials');
+      
+      // Load cpNames if function is provided
+      Map<String, String> cpNamesMap = {};
+      if (loadCpNames != null) {
+        cpNamesMap = await loadCpNames!() ?? {};
+        debugPrint('🟡 [OptionsCubit] Loaded cpNamesMap: $cpNamesMap');
+      }
+      
+      // Convert map to parallel list matching materialOptions
+      final cpNames = materials.map((matNo) => cpNamesMap[matNo] ?? '').toList();
+      debugPrint('🟡 [OptionsCubit] Converted cpNames list: $cpNames');
 
       emit(state.copyWith(
         loading: false,
@@ -73,8 +43,80 @@ class OptionsCubit extends Cubit<OptionsState> {
         materialOptions: materials,
         cpNames: cpNames,
       ));
+      debugPrint('🟡 [OptionsCubit] Initial load complete!');
     } catch (e) {
-      emit(state.copyWith(loading: false, error: '$e'));
+      debugPrint('🔴 [OptionsCubit] Error during load: $e');
+      emit(state.copyWith(loading: false));
     }
   }
+
+  /// Load materials filtered by furnace
+  Future<void> loadMaterialsForFurnace(String? furnaceNo) async {
+    debugPrint('🟡 [OptionsCubit] Loading materials for furnace: $furnaceNo');
+    emit(state.copyWith(loading: true));
+    try {
+      // You can implement filtered loading here if needed
+      // For now, just reload all materials
+      final materials = await loadMaterials();
+      debugPrint('🟡 [OptionsCubit] Reloaded materials: $materials');
+      
+      Map<String, String> cpNamesMap = {};
+      if (loadCpNames != null) {
+        cpNamesMap = await loadCpNames!() ?? {};
+        debugPrint('🟡 [OptionsCubit] Reloaded cpNamesMap: $cpNamesMap');
+      }
+      
+      final cpNames = materials.map((matNo) => cpNamesMap[matNo] ?? '').toList();
+      debugPrint('🟡 [OptionsCubit] Converted cpNames list: $cpNames');
+
+      emit(state.copyWith(
+        loading: false,
+        materialOptions: materials,
+        cpNames: cpNames,
+      ));
+      debugPrint('🟡 [OptionsCubit] Material reload complete!');
+    } catch (e) {
+      debugPrint('🔴 [OptionsCubit] Error during material reload: $e');
+      emit(state.copyWith(loading: false));
+    }
+  }
+}
+
+// ============== OptionsState ==============
+class OptionsState extends Equatable {
+  final bool loading;
+  final List<String> furnaceOptions;
+  final List<String> materialOptions;
+  final List<String> cpNames; // Parallel to materialOptions
+
+  const OptionsState({
+    required this.loading,
+    required this.furnaceOptions,
+    required this.materialOptions,
+    required this.cpNames,
+  });
+
+  factory OptionsState.initial() => const OptionsState(
+        loading: false,
+        furnaceOptions: [],
+        materialOptions: [],
+        cpNames: [],
+      );
+
+  OptionsState copyWith({
+    bool? loading,
+    List<String>? furnaceOptions,
+    List<String>? materialOptions,
+    List<String>? cpNames,
+  }) {
+    return OptionsState(
+      loading: loading ?? this.loading,
+      furnaceOptions: furnaceOptions ?? this.furnaceOptions,
+      materialOptions: materialOptions ?? this.materialOptions,
+      cpNames: cpNames ?? this.cpNames,
+    );
+  }
+
+  @override
+  List<Object?> get props => [loading, furnaceOptions, materialOptions, cpNames];
 }

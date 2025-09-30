@@ -1,3 +1,5 @@
+import 'dart:core';
+
 import 'package:control_chart/domain/models/setting.dart';
 
 class SettingFormState {
@@ -20,6 +22,7 @@ class SettingFormState {
   final bool dropdownLoading;
   final Map<int, List<String>> furnaceOptionsByIndex;
   final Map<int, List<String>> cpOptionsByIndex;
+  final Map<int, List<String>> cpNameOptionsByIndex;
 
   const SettingFormState({
     this.profileId = '',
@@ -39,6 +42,7 @@ class SettingFormState {
     this.dropdownLoading = false,
     this.furnaceOptionsByIndex = const {},
     this.cpOptionsByIndex = const {},
+    this.cpNameOptionsByIndex = const {}
   });
 
   bool get isValid {
@@ -78,6 +82,7 @@ class SettingFormState {
     bool? dropdownLoading,
     Map<int, List<String>>? furnaceOptionsByIndex,
     Map<int, List<String>>? cpOptionsByIndex,
+    Map<int, List<String>>? cpNameOptionsByIndex
   }) {
     return SettingFormState(
       profileId: profileId ?? this.profileId,
@@ -95,6 +100,7 @@ class SettingFormState {
       dropdownLoading: dropdownLoading ?? this.dropdownLoading,
       furnaceOptionsByIndex: furnaceOptionsByIndex ?? this.furnaceOptionsByIndex,
       cpOptionsByIndex: cpOptionsByIndex ?? this.cpOptionsByIndex,
+      cpNameOptionsByIndex: cpNameOptionsByIndex ?? this.cpNameOptionsByIndex
     );
   }
 

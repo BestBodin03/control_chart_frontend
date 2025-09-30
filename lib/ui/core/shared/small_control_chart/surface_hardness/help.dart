@@ -128,282 +128,282 @@ class _SmallCardState extends State<_SmallCard> {
   }
 }
 
-// class _LegendColumn extends StatelessWidget {
-//   const _LegendColumn({required this.searchState});
-//   final SearchState searchState;
+class _LegendColumn extends StatelessWidget {
+  const _LegendColumn({required this.searchState});
+  final SearchState searchState;
 
-//   static const double _labelColWidth = 120;
+  static const double _labelColWidth = 120;
 
-//   @override
-//   Widget build(BuildContext context) {
-//     final s = searchState.controlChartStats;
-//     String fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
+  @override
+  Widget build(BuildContext context) {
+    final s = searchState.controlChartStats;
+    String fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
 
-//     // --- I Chart ---
-//     final usl    = fmt(s?.specAttribute?.surfaceHardnessUpperSpec);
-//     final lsl    = fmt(s?.specAttribute?.surfaceHardnessLowerSpec);
-//     final target = fmt(s?.specAttribute?.surfaceHardnessTarget);
-//     final ucl    = fmt(s?.controlLimitIChart?.ucl);
-//     final lcl    = fmt(s?.controlLimitIChart?.lcl);
-//     final avg    = fmt(s?.average);
+    // --- I Chart ---
+    final usl    = fmt(s?.specAttribute?.surfaceHardnessUpperSpec);
+    final lsl    = fmt(s?.specAttribute?.surfaceHardnessLowerSpec);
+    final target = fmt(s?.specAttribute?.surfaceHardnessTarget);
+    final ucl    = fmt(s?.controlLimitIChart?.ucl);
+    final lcl    = fmt(s?.controlLimitIChart?.lcl);
+    final avg    = fmt(s?.average);
 
-//     // --- MR ---
-//     final mrUcl  = fmt(s?.controlLimitMRChart?.ucl);
-//     final mrCl   = fmt(s?.controlLimitMRChart?.cl);
-//     final mrLcl  = fmt(s?.controlLimitMRChart?.lcl);
+    // --- MR ---
+    final mrUcl  = fmt(s?.controlLimitMRChart?.ucl);
+    final mrCl   = fmt(s?.controlLimitMRChart?.cl);
+    final mrLcl  = fmt(s?.controlLimitMRChart?.lcl);
 
-//     // --- Violations ---
-//     final v = s?.surfaceHardnessViolations;
-//     final overSpec    = v?.beyondSpecLimitLower ?? 0;
-//     final overControl = v?.beyondControlLimitLower ?? 0;
-//     final trend       = v?.trend ?? 0;
+    // --- Violations ---
+    final v = s?.surfaceHardnessViolations;
+    final overSpec    = v?.beyondSpecLimitLower ?? 0;
+    final overControl = v?.beyondControlLimitLower ?? 0;
+    final trend       = v?.trend ?? 0;
 
-//     final controlEntries = <_LegendEntry>[
-//       _LegendEntry('Spec',   Colors.red,                 usl),
-//       _LegendEntry('Spec',   Colors.red,                 lsl),
-//       _LegendEntry('UCL',    Colors.orange,              ucl),
-//       _LegendEntry('LCL',    Colors.orange,              lcl),
-//       _LegendEntry('AVG',    Colors.green,               avg),
-//       _LegendEntry('Target', Colors.deepPurple.shade300, target),
-//     ].where((e) => e.value != 'N/A').toList();
+    final controlEntries = <_LegendEntry>[
+      _LegendEntry('Spec',   Colors.red,                 usl),
+      _LegendEntry('Spec',   Colors.red,                 lsl),
+      _LegendEntry('UCL',    Colors.orange,              ucl),
+      _LegendEntry('LCL',    Colors.orange,              lcl),
+      _LegendEntry('AVG',    Colors.green,               avg),
+      _LegendEntry('Target', Colors.deepPurple.shade300, target),
+    ].where((e) => e.value != 'N/A').toList();
 
-//     final mrEntries = <_LegendEntry>[
-//       _LegendEntry('UCL', Colors.orange, mrUcl),
-//       _LegendEntry('AVG', Colors.green,  mrCl),
-//       _LegendEntry('LCL', Colors.orange, mrLcl),
-//     ].where((e) => e.value != 'N/A').toList();
+    final mrEntries = <_LegendEntry>[
+      _LegendEntry('UCL', Colors.orange, mrUcl),
+      _LegendEntry('AVG', Colors.green,  mrCl),
+      _LegendEntry('LCL', Colors.orange, mrLcl),
+    ].where((e) => e.value != 'N/A').toList();
 
-//     final controlChunks = _chunk3(controlEntries);
-//     final showViolations =
-//         searchState.currentQuery.materialNo != null || searchState.currentQuery.furnaceNo != null;
+    final controlChunks = _chunk3(controlEntries);
+    final showViolations =
+        searchState.currentQuery.materialNo != null || searchState.currentQuery.furnaceNo != null;
 
-//     return Material(
-//       color: Colors.white,
-//       elevation: 1.5,
-//       borderRadius: BorderRadius.circular(8),
-//       child: Padding(
-//         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-//         child: Column(
-//           mainAxisSize: MainAxisSize.min,
-//           children: [
-//             if (controlChunks.isNotEmpty)
-//               _legendLabeledRow(
-//                 label: 'Control Chart',
-//                 entries: controlChunks[0],
-//                 labelColWidth: _labelColWidth,
-//               ),
-//             if (controlChunks.length > 1)
-//               _legendLabeledRow(
-//                 label: null,
-//                 entries: controlChunks[1],
-//                 labelColWidth: _labelColWidth,
-//               ),
-//             if (controlChunks.isNotEmpty) ...[
-//               const SizedBox(height: 4),
-//               const Divider(height: 2),
-//               const SizedBox(height: 4),
-//             ],
-//             if (mrEntries.isNotEmpty) ...[
-//               _legendLabeledRow(
-//                 label: 'Moving Range',
-//                 entries: mrEntries,
-//                 labelColWidth: _labelColWidth,
-//                 maxPerRow: 3,
-//               ),
-//               const SizedBox(height: 4),
-//               const Divider(height: 2),
-//               const SizedBox(height: 4),
-//             ],
-//             if (showViolations)
-//               Padding(
-//                 padding: const EdgeInsets.symmetric(vertical: 4),
-//                 child: Row(
-//                   crossAxisAlignment: CrossAxisAlignment.center,
-//                   children: [
-//                     SizedBox(
-//                       width: _labelColWidth,
-//                       child: Text('Violations', style: AppTypography.textBody4BBold),
-//                     ),
-//                     Expanded(
-//                       child: Wrap(
-//                         spacing: 8,
-//                         runSpacing: 6,
-//                         children: const [
-//                           _ViolationChip(label: 'Spec',    count: 0, color: Colors.red),
-//                           _ViolationChip(label: 'Control', count: 0, color: Colors.orange),
-//                           _ViolationChip(label: 'Trend',   count: 0, color: Colors.pink),
-//                         ],
-//                       ),
-//                     ),
-//                   ],
-//                 ),
-//               ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
+    return Material(
+      color: Colors.white,
+      elevation: 1.5,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (controlChunks.isNotEmpty)
+              _legendLabeledRow(
+                label: 'Control Chart',
+                entries: controlChunks[0],
+                labelColWidth: _labelColWidth,
+              ),
+            if (controlChunks.length > 1)
+              _legendLabeledRow(
+                label: null,
+                entries: controlChunks[1],
+                labelColWidth: _labelColWidth,
+              ),
+            if (controlChunks.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              const Divider(height: 2),
+              const SizedBox(height: 4),
+            ],
+            if (mrEntries.isNotEmpty) ...[
+              _legendLabeledRow(
+                label: 'Moving Range',
+                entries: mrEntries,
+                labelColWidth: _labelColWidth,
+                maxPerRow: 3,
+              ),
+              const SizedBox(height: 4),
+              const Divider(height: 2),
+              const SizedBox(height: 4),
+            ],
+            if (showViolations)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: _labelColWidth,
+                      child: Text('Violations', style: AppTypography.textBody4BBold),
+                    ),
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: const [
+                          _ViolationChip(label: 'Spec',    count: 0, color: Colors.red),
+                          _ViolationChip(label: 'Control', count: 0, color: Colors.orange),
+                          _ViolationChip(label: 'Trend',   count: 0, color: Colors.pink),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-// Widget _legendLabeledRow({
-//   required String? label,
-//   required List<_LegendEntry> entries,
-//   required double labelColWidth,
-//   int maxPerRow = 3,
-//   double gap = 8.0,
-// }) {
-//   final rowItems = _padToN(entries, maxPerRow);
-//   return Padding(
-//     padding: const EdgeInsets.symmetric(vertical: 4),
-//     child: Table(
-//       columnWidths: <int, TableColumnWidth>{
-//         0: FixedColumnWidth(labelColWidth),
-//         for (int i = 1; i <= maxPerRow; i++) i: const FlexColumnWidth(1),
-//       },
-//       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-//       children: [
-//         TableRow(
-//           children: [
-//             (label == null)
-//                 ? const SizedBox.shrink()
-//                 : Text(label, style: AppTypography.textBody4BBold),
-//             for (int c = 0; c < maxPerRow; c++)
-//               Padding(
-//                 padding: EdgeInsets.only(right: c < maxPerRow - 1 ? gap : 0),
-//                 child: Align(
-//                   alignment: Alignment.centerLeft,
-//                   child: rowItems[c] == null
-//                       ? const SizedBox.shrink()
-//                       : _LegendItemRow(entry: rowItems[c]!),
-//                 ),
-//               ),
-//           ],
-//         ),
-//       ],
-//     ),
-//   );
-// }
+Widget _legendLabeledRow({
+  required String? label,
+  required List<_LegendEntry> entries,
+  required double labelColWidth,
+  int maxPerRow = 3,
+  double gap = 8.0,
+}) {
+  final rowItems = _padToN(entries, maxPerRow);
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Table(
+      columnWidths: <int, TableColumnWidth>{
+        0: FixedColumnWidth(labelColWidth),
+        for (int i = 1; i <= maxPerRow; i++) i: const FlexColumnWidth(1),
+      },
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      children: [
+        TableRow(
+          children: [
+            (label == null)
+                ? const SizedBox.shrink()
+                : Text(label, style: AppTypography.textBody4BBold),
+            for (int c = 0; c < maxPerRow; c++)
+              Padding(
+                padding: EdgeInsets.only(right: c < maxPerRow - 1 ? gap : 0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: rowItems[c] == null
+                      ? const SizedBox.shrink()
+                      : _LegendItemRow(entry: rowItems[c]!),
+                ),
+              ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
-// List<_LegendEntry?> _padToN(List<_LegendEntry> list, int n) {
-//   final out = List<_LegendEntry?>.from(list);
-//   while (out.length < n) out.add(null);
-//   return out.take(n).toList();
-// }
+List<_LegendEntry?> _padToN(List<_LegendEntry> list, int n) {
+  final out = List<_LegendEntry?>.from(list);
+  while (out.length < n) out.add(null);
+  return out.take(n).toList();
+}
 
-// List<List<_LegendEntry>> _chunk3(List<_LegendEntry> list) {
-//   final chunks = <List<_LegendEntry>>[];
-//   for (var i = 0; i < list.length; i += 3) {
-//     chunks.add(list.sublist(i, (i + 3).clamp(0, list.length)));
-//   }
-//   return chunks;
-// }
+List<List<_LegendEntry>> _chunk3(List<_LegendEntry> list) {
+  final chunks = <List<_LegendEntry>>[];
+  for (var i = 0; i < list.length; i += 3) {
+    chunks.add(list.sublist(i, (i + 3).clamp(0, list.length)));
+  }
+  return chunks;
+}
 
-// class _LegendItemRow extends StatelessWidget {
-//   const _LegendItemRow({required this.entry});
-//   final _LegendEntry entry;
+class _LegendItemRow extends StatelessWidget {
+  const _LegendItemRow({required this.entry});
+  final _LegendEntry entry;
 
-//   @override
-//   Widget build(BuildContext context) => Row(
-//         mainAxisSize: MainAxisSize.min,
-//         children: [
-//           SizedBox(
-//             width: 9,
-//             height: 3,
-//             child: DecoratedBox(
-//               decoration: BoxDecoration(
-//                 color: entry.color,
-//                 borderRadius: BorderRadius.circular(2),
-//               ),
-//             ),
-//           ),
-//           const SizedBox(width: 4),
-//           Text(entry.label,
-//               style: const TextStyle(
-//                 fontSize: 10,
-//                 color: AppColors.colorBlack,
-//                 fontWeight: FontWeight.bold,
-//               )),
-//           const SizedBox(width: 4),
-//           Text(entry.value,
-//               style: const TextStyle(
-//                 fontSize: 10,
-//                 color: AppColors.colorBlack,
-//                 fontWeight: FontWeight.bold,
-//               )),
-//         ],
-//       );
-// }
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 9,
+            height: 3,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: entry.color,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(entry.label,
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.colorBlack,
+                fontWeight: FontWeight.bold,
+              )),
+          const SizedBox(width: 4),
+          Text(entry.value,
+              style: const TextStyle(
+                fontSize: 10,
+                color: AppColors.colorBlack,
+                fontWeight: FontWeight.bold,
+              )),
+        ],
+      );
+}
 
-// class _LegendEntry {
-//   const _LegendEntry(this.label, this.color, this.value);
-//   final String label;
-//   final Color color;
-//   final String value;
-// }
+class _LegendEntry {
+  const _LegendEntry(this.label, this.color, this.value);
+  final String label;
+  final Color color;
+  final String value;
+}
 
-// class _ViolationChip extends StatelessWidget {
-//   const _ViolationChip({required this.label, this.count, required this.color});
-//   final String label;
-//   final int? count;
-//   final Color color;
+class _ViolationChip extends StatelessWidget {
+  const _ViolationChip({required this.label, this.count, required this.color});
+  final String label;
+  final int? count;
+  final Color color;
 
-//   @override
-//   Widget build(BuildContext context) {
-//     final int c = count ?? 0;
-//     final bool isZero = c == 0;
-//     final bool showCount = label != 'Trend';
-//     return Container(
-//       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-//       decoration: BoxDecoration(
-//         color: isZero ? Colors.white : color.withValues(alpha: 0.10),
-//         borderRadius: BorderRadius.circular(999),
-//         border: Border.all(
-//           color: isZero ? Colors.grey.shade400 : color.withValues(alpha: 0.8),
-//         ),
-//       ),
-//       child: Row(
-//         mainAxisSize: MainAxisSize.min,
-//         children: [
-//           Container(
-//             width: 8,
-//             height: 8,
-//             decoration: BoxDecoration(
-//               color: isZero ? Colors.grey.shade500 : color,
-//               shape: BoxShape.circle,
-//             ),
-//           ),
-//           const SizedBox(width: 6),
-//           Text(
-//             label,
-//             style: const TextStyle(
-//               fontSize: 10,
-//               fontWeight: FontWeight.bold,
-//               color: AppColors.colorBlack,
-//             ),
-//           ),
-//           showCount ? const SizedBox(width: 4) : const SizedBox(width: 4),
-//           showCount
-//               ? Container(
-//                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-//                   decoration: BoxDecoration(
-//                     color: isZero ? Colors.grey.shade300 : Colors.white,
-//                     borderRadius: BorderRadius.circular(6),
-//                   ),
-//                   child: Text(
-//                     '$c',
-//                     style: TextStyle(
-//                       fontSize: 10,
-//                       fontWeight: FontWeight.bold,
-//                       color: isZero ? Colors.grey.shade700 : AppColors.colorBlack,
-//                     ),
-//                   ),
-//                 )
-//               : const SizedBox.shrink(),
-//         ],
-//       ),
-//     );
-//   }
-// }
+  @override
+  Widget build(BuildContext context) {
+    final int c = count ?? 0;
+    final bool isZero = c == 0;
+    final bool showCount = label != 'Trend';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isZero ? Colors.white : color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: isZero ? Colors.grey.shade400 : color.withValues(alpha: 0.8),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: isZero ? Colors.grey.shade500 : color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: AppColors.colorBlack,
+            ),
+          ),
+          showCount ? const SizedBox(width: 4) : const SizedBox(width: 4),
+          showCount
+              ? Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isZero ? Colors.grey.shade300 : Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '$c',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: isZero ? Colors.grey.shade700 : AppColors.colorBlack,
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ],
+      ),
+    );
+  }
+}
 
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
