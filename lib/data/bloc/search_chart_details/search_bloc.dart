@@ -84,22 +84,22 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     LoadFilteredChartData event,
     Emitter<SearchState> emit,
   ) async {
+    emit(state.copyWith(status: () => SearchStatus.loading, errorMessage: () => null));
+
+    final newQuery = ChartFilterQuery(
+      startDate:  event.startDate ?? state.currentQuery.startDate,
+      endDate:    event.endDate   ?? state.currentQuery.endDate,
+      furnaceNo:  (event.furnaceNo?.trim().isEmpty ?? true) ? null : event.furnaceNo,
+      materialNo: (event.materialNo?.trim().isEmpty ?? true) ? null : event.materialNo,
+    );
+
     try {
-      final newQuery = ChartFilterQuery(
-        startDate: event.startDate,
-        endDate: event.endDate,
-        furnaceNo: event.furnaceNo,
-        materialNo: event.materialNo,
-      );
+      // run concurrently, await with types (no List<dynamic> cast)
+      final detailsF = _searchApiService.getFilteringChartDetails(newQuery); // -> (List<ChartDetail>, List<SearchTable>)
+      final statsF   = _searchApiService.getControlChartStat(newQuery);      // -> ControlChartStats
 
-      final results = await Future.wait([
-        _searchApiService.getFilteringChartDetails(newQuery),
-        _searchApiService.getControlChartStat(newQuery),
-      ]);
-
-      final (chartDetails, searchTables) =
-          results[0] as (List<ChartDetail>, List<SearchTable>);
-      final chartStatistics = results[1] as ControlChartStats;
+      final (chartDetails, searchTables) = await detailsF;
+      final chartStatistics = await statsF;
 
       emit(state.copyWith(
         status: () => SearchStatus.success,
@@ -110,12 +110,6 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         errorMessage: () => null,
       ));
     } catch (e) {
-      final newQuery = ChartFilterQuery(
-        startDate: event.startDate,
-        endDate: event.endDate,
-        furnaceNo: event.furnaceNo,
-        materialNo: event.materialNo,
-      );
       emit(state.copyWith(
         status: () => SearchStatus.failure,
         currentQuery: () => newQuery,
@@ -123,6 +117,9 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       ));
     }
   }
+
+
+
 
   Future<void> _onClearFilters(
     ClearFilters event,
@@ -334,11 +331,11 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     // 1) Reload charts for the new selection
     await _updateQueryAndFetch(emit, newQuery);
 
-    // 2) Refresh options (filtered by new selection)
-    add(LoadDropdownOptions(
-      furnaceNo: event.furnaceNo, // UI value ("0" allowed)
-      materialNo: state.currentMaterialUiValue,
-    ));
+    // // 2) Refresh options (filtered by new selection)
+    // add(LoadDropdownOptions(
+    //   furnaceNo: event.furnaceNo, // UI value ("0" allowed)
+    //   materialNo: state.currentMaterialUiValue,
+    // ));
   }
 
   // User selected material
@@ -357,9 +354,9 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     await _updateQueryAndFetch(emit, newQuery);
 
     // 2) Refresh options (filtered by new selection)
-    add(LoadDropdownOptions(
-      furnaceNo: state.currentFurnaceUiValue, // "0" allowed
-      materialNo: event.materialNo,           // UI value
-    ));
+    // add(LoadDropdownOptions(
+    //   furnaceNo: state.currentFurnaceUiValue, // "0" allowed
+    //   materialNo: event.materialNo,           // UI value
+    // ));
   }
 }

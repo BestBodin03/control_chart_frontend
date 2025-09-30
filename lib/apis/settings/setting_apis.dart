@@ -127,10 +127,7 @@ Future<Map<String, dynamic>> getSettingFormDropdown({
   String? cpNo,
 }) async {
   // ถ้าส่งทั้งคู่ → ไม่ส่ง query เลย
-  final query = <String, dynamic>{
-    if (furnaceNo?.isNotEmpty ?? false) 'furnaceNo': furnaceNo,
-    if (cpNo?.isNotEmpty ?? false) 'cpNo': cpNo,
-  };
+final query = <String, dynamic>{ if (furnaceNo?.isNotEmpty ?? false) 'furnaceNo': furnaceNo, if (cpNo?.isNotEmpty ?? false) 'cpNo': cpNo, };
 
   debugPrint('[API] GET /furnace-cache/search query=$query');
 
@@ -138,8 +135,20 @@ Future<Map<String, dynamic>> getSettingFormDropdown({
     '/furnace-cache/search',
     queryParameters: query,
   );
-  return res;
+
+  // ✅ Transform cpName to a flat list of strings
+  final cpNames = (res['cpName'] as List<dynamic>?)
+          ?.map((e) => (e as List<dynamic>)[1].toString())
+          .toList() ??
+      [];
+
+  // ✅ Return the same structure but with cpName cleaned up
+  return {
+    ...res,
+    'cpName': cpNames,
+  };
 }
+
 
 
 

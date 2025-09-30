@@ -170,14 +170,14 @@ class _ControlChartTemplateState extends State<ControlChartTemplateSmall> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // Legend
-                  // SizedBox(
-                  //   height: legendHeight,
-                  //   child: Align(
-                  //     alignment: Alignment.center,
-                  //     // child: selectedWidget.buildLegend(),
-                  //   ),
-                  // ),
-                  // const SizedBox(height: gapLegendToChart),
+                  SizedBox(
+                    height: legendHeight,
+                    child: Align(
+                      alignment: Alignment.center,
+                      // child: selectedWidget.buildLegend(),
+                    ),
+                  ),
+                  const SizedBox(height: gapLegendToChart),
 
                   // ✅ ใช้ component ที่มี LineChart ภายในอยู่แล้ว
                   Expanded(child: selectedWidget as Widget),

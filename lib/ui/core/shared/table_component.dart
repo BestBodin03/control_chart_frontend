@@ -83,15 +83,27 @@ return SizedBox(
               child: InkWell(
                 onTap: () {
                   final q = context.read<SearchBloc>().state.currentQuery;
-                  context.read<SearchBloc>().add(LoadFilteredChartData(
-                    startDate: q.startDate, // คงช่วงเดิม (หรือจะเปลี่ยนจากแถวก็ได้)
+                  final fn = chartDetail.furnaceNo?.toString();
+                  final mat = chartDetail.matNo;
+
+                  final bloc = context.read<SearchBloc>();
+
+                  // 1) sync ค่า UI ของ dropdown ให้ตรงกับที่ผู้ใช้คลิก
+                  if (fn != null) bloc.add(SelectFurnace(fn));
+                  bloc.add(SelectMaterial(mat ?? 'All Material No.'));
+
+                  // 2) ยิงค้นหา
+                  bloc.add(LoadFilteredChartData(
+                    startDate: q.startDate,
                     endDate: q.endDate,
-                    furnaceNo: chartDetail.furnaceNo?.toString() ?? q.furnaceNo,
-                    materialNo: chartDetail.matNo ?? q.materialNo,
+                    furnaceNo: fn ?? q.furnaceNo,
+                    materialNo: mat ?? q.materialNo,
                   ));
 
-                  // หรือเรียก callback/SettingBloc อื่น ๆ ได้ที่นี่
+                  // 3) โหลดรายการดรอปดาวน์ใหม่ เพื่อให้ items มีค่าที่เพิ่งเลือกแน่ ๆ
+                  bloc.add(const LoadDropdownOptions());
                 },
+
                 child: _buildTableRow(
                   [
                     chartDetail.furnaceNo?.toString() ?? '-',
