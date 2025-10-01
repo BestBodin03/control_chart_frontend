@@ -216,77 +216,85 @@ class _ControlChartComponentState extends State<ControlChartComponent> {
               ),
 
               // Tooltip (local-only, quadrant placement + clamp)
-              ValueListenableBuilder<_Tip?>(
-                valueListenable: _tip,
-                builder: (context, tip, _) {
-                  if (tip == null) return const SizedBox.shrink();
+            ValueListenableBuilder<_Tip?>(
+              valueListenable: _tip,
+              builder: (context, tip, _) {
+                if (tip == null) return const SizedBox.shrink();
 
-                  const double maxWidth = 200;
-                  const double boxH = 120;
-                  const double dotR = 8;
-                  const double gap = 8;
-                  const double pad = 8;
+                const double maxWidth = 240;
+                const double boxH = 120;
+                const double dotR = 8;
+                const double gap = 8;
+                const double pad = 8;
 
-                  final dx = tip.local.dx;
-                  final dy = tip.local.dy;
+                final dx = tip.local.dx;
+                final dy = tip.local.dy;
 
-                  final bool canAbove = dy - (dotR + gap + boxH) >= pad;
-                  final bool canBelow = dy + (dotR + gap + boxH) <= chartSize.height - pad;
-                  final bool canRight = dx + (dotR + gap + maxWidth) <= chartSize.width  - 6*pad;
-                  final bool canLeft  = dx - (dotR + gap + maxWidth) >= pad;
+                // available room checks
+                final bool canAbove = dy - (dotR + gap + boxH) >= pad;
+                final bool canBelow = dy + (dotR + gap + boxH) <= chartSize.height - pad;
+                final bool canRight = dx + (dotR + gap + maxWidth) <= chartSize.width  - 6*pad;
+                final bool canLeft  = dx - (dotR + gap + maxWidth) >= pad; // ✅ fix
 
-                  double left, top;
-                  if (canAbove) {
-                    left = dx - maxWidth / 2;
-                    top  = dy - dotR - gap - boxH;
-                    final hiX = chartSize.width - maxWidth - pad;
-                    left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
-                  } else if (canBelow) {
-                    left = dx - maxWidth / 2;
-                    top  = dy + dotR + gap;
-                    final hiX = chartSize.width - maxWidth - pad;
-                    left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
-                  } else if (canRight) {
-                    left = dx + dotR + 4*gap;
-                    top  = dy - boxH / 2;
-                    final hiY = chartSize.height - boxH - pad;
-                    top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
-                  } else if (canLeft) {
-                    left = dx - dotR - gap - maxWidth;
-                    top  = dy - boxH / 2;
-                    final hiY = chartSize.height - boxH - pad;
-                    top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
-                  } else {
-                    left = (chartSize.width  - maxWidth) / 2;
-                    top  = (chartSize.height - boxH) / 2;
-                  }
+                double left, top;
 
+                if (canAbove) {
+                  // above
+                  left = dx - maxWidth / 2;
+                  top  = dy - dotR - gap - boxH;
                   final hiX = chartSize.width - maxWidth - pad;
+                  left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
+                } else if (canBelow) {
+                  // below
+                  left = dx - maxWidth / 2;
+                  top  = dy + dotR + gap;
+                  final hiX = chartSize.width - maxWidth - pad;
+                  left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
+                } else if (canRight) {
+                  // right (vertically centered)
+                  left = dx + dotR + 4*gap;
+                  top  = dy - boxH / 2;
                   final hiY = chartSize.height - boxH - pad;
-                  if (hiX > pad) left = left.clamp(pad, hiX);
-                  if (hiY > pad) top  = top.clamp(pad, hiY);
+                  top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
+                } else if (canLeft) {
+                  // left (vertically centered)
+                  left = dx - dotR - gap - maxWidth;
+                  top  = dy - boxH / 2;
+                  final hiY = chartSize.height - boxH - pad;
+                  top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
+                } else {
+                  // very tight: center in the box
+                  left = (chartSize.width  - maxWidth) / 2;
+                  top  = (chartSize.height - boxH) / 2;
+                }
 
-                  return Positioned(
-                    left: left,
-                    top: top,
-                    width: maxWidth,
-                    child: IgnorePointer(
-                      ignoring: true,
-                      child: Material(
-                        color: Colors.transparent,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.colorBrand.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: tip.content,
+                // final clamp (safety)
+                final hiX = chartSize.width - maxWidth - pad;
+                final hiY = chartSize.height - boxH - pad;
+                if (hiX > pad) left = left.clamp(pad, hiX);
+                if (hiY > pad) top  = top.clamp(pad, hiY);
+
+                return Positioned(
+                  left: left,
+                  top: top,
+                  width: maxWidth,
+                  child: IgnorePointer(
+                    ignoring: true,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.colorBrand.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(8),
                         ),
+                        child: tip.content,
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
+            ),
             ],
           ),
         );

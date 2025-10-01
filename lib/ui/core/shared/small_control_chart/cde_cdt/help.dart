@@ -1,33 +1,51 @@
-import 'package:control_chart/domain/models/chart_data_point.dart';
-import 'package:flutter/material.dart';
 import 'package:control_chart/domain/extension/map.dart';
+import 'package:flutter/material.dart';
+import 'package:control_chart/domain/models/chart_data_point.dart' show ChartDataPointCdeCdt;
+import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
+
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/control_chart_template_small_cde_cdt.dart';
-import '../../../../../domain/models/control_chart_stats.dart';
 
-// ---------- Builder ----------
+/// ============================================================================
+/// Public builder
+/// ============================================================================
 Widget buildChartsSectionCdeCdtSmall(SearchState searchState) {
-  final title = searchState.controlChartStats?.secondChartSelected?.label ?? 'N/A';
-  return _CdeCdtSmallCard(title: title, searchState: searchState);
+  return _SmallCardCdeCdt(searchState: searchState);
 }
 
-// ---------- Card (เหมือน Surface Hardness) ----------
-class _CdeCdtSmallCard extends StatefulWidget {
-  const _CdeCdtSmallCard({required this.title, required this.searchState});
-  final String title;
+/// ============================================================================
+/// Card (CDE/CDT/Compound Layer) — same design as Surface Hardness
+/// ============================================================================
+class _SmallCardCdeCdt extends StatefulWidget {
+  const _SmallCardCdeCdt({required this.searchState});
   final SearchState searchState;
 
   @override
-  State<_CdeCdtSmallCard> createState() => _CdeCdtSmallCardState();
+  State<_SmallCardCdeCdt> createState() => _SmallCardCdeCdtState();
 }
 
-class _CdeCdtSmallCardState extends State<_CdeCdtSmallCard> {
+class _SmallCardCdeCdtState extends State<_SmallCardCdeCdt> {
   static const double _chartH = 144; // fixed height ต่อหนึ่งกราฟ
   static const double _gapV = 4;
+
   bool _showLegend = false;
+
+  String _titleFromSelected(SecondChartSelected? sel, String? labelFromModel) {
+    if (labelFromModel != null && labelFromModel.isNotEmpty) return labelFromModel;
+    switch (sel) {
+      case SecondChartSelected.cde:
+        return 'CDE';
+      case SecondChartSelected.cdt:
+        return 'CDT';
+      case SecondChartSelected.compoundLayer:
+        return 'Compound Layer';
+      default:
+        return 'CDE/CDT';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,12 +61,16 @@ class _CdeCdtSmallCardState extends State<_CdeCdtSmallCard> {
     if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
       return const _StateBox(child: _Empty());
     }
+    if (searchState.chartDataPointsCdeCdt.isEmpty) {
+      return const _StateBox(child: _Empty());
+    }
 
-    final title = widget.title;
+    final stats = searchState.controlChartStats;
+    final title = _titleFromSelected(stats?.secondChartSelected, stats?.secondChartSelected?.label);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min, // ✅ เหมือนตัวบน
+      mainAxisSize: MainAxisSize.min, // สำคัญเมื่ออยู่ใต้สกอลล์
       children: [
         // Title row (compact)
         Row(
@@ -67,19 +89,19 @@ class _CdeCdtSmallCardState extends State<_CdeCdtSmallCard> {
 
         const SizedBox(height: 8),
 
-        // Legend toggle (ใช้คลาสเดียวกับของคุณ)
+        // Legend toggle
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 180),
           child: _showLegend
               ? Padding(
-                  key: const ValueKey('legend-on'),
+                  key: const ValueKey('legend-on-cde'),
                   padding: const EdgeInsets.only(bottom: 8),
                   child: _LegendColumnCdeCdt(searchState: searchState),
                 )
-              : const SizedBox.shrink(key: ValueKey('legend-off')),
+              : const SizedBox.shrink(key: ValueKey('legend-off-cde')),
         ),
 
-        // Blue card (charts only)
+        // Blue card (charts only) — same as non-CDE
         DecoratedBox(
           decoration: BoxDecoration(
             color: AppColors.colorBrandTp.withValues(alpha: 0.15),
@@ -93,7 +115,7 @@ class _CdeCdtSmallCardState extends State<_CdeCdtSmallCard> {
             padding: const EdgeInsets.all(8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min, // ✅
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const SizedBox(height: _gapV),
 
@@ -124,70 +146,6 @@ class _CdeCdtSmallCardState extends State<_CdeCdtSmallCard> {
   }
 }
 
-// ---------- SmallChartBox (ยกพฤติกรรมให้เหมือน _SmallChartBox) ----------
-class _SmallChartBoxCdeCdt extends StatelessWidget {
-  const _SmallChartBoxCdeCdt({
-    required this.searchState,
-    required this.isMr,
-    required this.fixedHeight,
-  });
-
-  final SearchState searchState;
-  final bool isMr;
-  final double fixedHeight;
-
-  (DateTime? start, DateTime? end) _resolveRange() {
-    DateTime? start = searchState.currentQuery.startDate;
-    DateTime? end = searchState.currentQuery.endDate;
-
-    final pts = searchState.chartDataPointsCdeCdt;
-    if ((start == null || end == null) && pts.isNotEmpty) {
-      final sorted = [...pts]..sort((a, b) => a.collectDate.compareTo(b.collectDate));
-      start ??= sorted.first.collectDate;
-      end ??= sorted.last.collectDate;
-    }
-    return (start, end);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final (start, end) = _resolveRange();
-    final q = searchState.currentQuery;
-
-    // ✅ คีย์ seed ให้เหมือน Surface Hardness เพื่อบังคับ rebuild ถูกต้อง
-    final keySeed =
-        '${start?.millisecondsSinceEpoch}-${end?.millisecondsSinceEpoch}-${q.furnaceNo}-${q.materialNo}-${isMr ? 'mr' : 'i'}';
-
-    return SizedBox(
-      width: double.infinity,
-      height: fixedHeight, // ✅ fixed เหมือนกัน
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: ControlChartTemplateSmallCdeCdt(
-            key: ValueKey(keySeed.hashCode.toString()),
-            // ถ้าต้อง “freeze” ข้อมูล ปลดคอมเมนต์สองบรรทัดนี้:
-            // frozenDataPoints: List<ChartDataPoint>.from(searchState.chartDataPointsCdeCdt),
-            // frozenStats: searchState.controlChartStats!,
-            dataLineColor: AppColors.colorBrand,
-            width: double.infinity,
-            height: fixedHeight,
-            isMovingRange: isMr,
-            // ถ้าคอมโพเนนต์รองรับช่วงเวลาให้ส่งด้วย:
-            // xStart: start,
-            // xEnd: end,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ---------- Reuse state widgets / section label ให้เหมือนตัวบน ----------
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
   final String text;
@@ -205,35 +163,64 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-class _StateBox extends StatelessWidget {
-  const _StateBox({required this.child});
-  final Widget child;
+/// ============================================================================
+/// Small chart box (CDE/CDT) — mirrors _SmallChartBox of Surface Hardness
+/// ============================================================================
+class _SmallChartBoxCdeCdt extends StatelessWidget {
+  const _SmallChartBoxCdeCdt({
+    required this.searchState,
+    required this.isMr,
+    required this.fixedHeight,
+  });
+
+  final SearchState searchState;
+  final bool isMr;
+  final double fixedHeight;
+
   @override
-  Widget build(BuildContext context) => Center(child: child);
+  Widget build(BuildContext context) {
+    final q = searchState.currentQuery;
+
+    // key seed เช่นเดียวกับ non-CDE
+    final keySeed =
+        '${q.startDate?.millisecondsSinceEpoch}-${q.endDate?.millisecondsSinceEpoch}-${q.furnaceNo}-${q.materialNo}-${isMr ? 'mr' : 'i'}';
+
+    return SizedBox(
+      width: double.infinity,
+      height: fixedHeight, // fixed
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: ControlChartTemplateSmallCdeCdt(
+            key: ValueKey(keySeed.hashCode.toString()),
+            isMovingRange: isMr,
+
+            // freeze เหมือน non-CDE
+            frozenDataPoints: List<ChartDataPointCdeCdt>.from(
+              searchState.chartDataPointsCdeCdt,
+            ),
+            frozenStats: searchState.controlChartStats!, // เหมือน non-CDE
+            frozenStatus: searchState.status,            // เหมือน non-CDE
+
+            // ใช้ช่วงจาก query ตรง ๆ
+            xStart: q.startDate,
+            xEnd:   q.endDate,
+
+            // ขนาด/สี (หาก template รองรับ)
+            width: double.infinity,
+            height: fixedHeight,
+            dataLineColor: AppColors.colorBrand,
+          ),
+      ),
+    );
+  }
 }
 
-class _Loading extends StatelessWidget {
-  const _Loading();
-  @override
-  Widget build(BuildContext context) => const SizedBox(
-        width: 20,
-        height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      );
-}
-
-
-class _Empty extends StatelessWidget {
-  const _Empty();
-  @override
-  Widget build(BuildContext context) =>
-      const Text('ไม่มีข้อมูลสำหรับแสดงผล', style: TextStyle(fontSize: 12, color: Colors.grey));
-}
-
-
-/// ----------------------------------------------------------------------------
-/// Legend (เวอร์ชัน CDE/CDT/Compound Layer)
-/// ----------------------------------------------------------------------------
+/// ============================================================================
+/// Legend (CDE/CDT/Compound Layer) — same structure as non-CDE
+/// ============================================================================
 class _LegendColumnCdeCdt extends StatelessWidget {
   const _LegendColumnCdeCdt({required this.searchState});
   final SearchState searchState;
@@ -275,17 +262,14 @@ class _LegendColumnCdeCdt extends StatelessWidget {
         s?.specAttribute?.compoundLayerTarget,
       );
 
-  // ---------- CONTROL LIMITS (เลือกตามชนิด; มี fallback) ----------
-  // NOTE: เปลี่ยนชื่อฟิลด์ให้ตรงโมเดลคุณ:
-  //  - cdeControlIChart / cdtControlIChart / compoundLayerControlIChart
-  //  - cdeControlMRChart / cdtControlMRChart / compoundLayerControlMRChart
+  // ---------- CONTROL LIMITS (per-type + fallback) ----------
   _iLimit(ControlChartStats? s) =>
       _sel(
         s?.cdeControlLimitIChart,
         s?.cdtControlLimitIChart,
         s?.compoundLayerControlLimitIChart,
       ) ??
-      s?.controlLimitIChart; // fallback ถ้ายังไม่มีแยก
+      s?.controlLimitIChart;
 
   _mrLimit(ControlChartStats? s) =>
       _sel(
@@ -303,14 +287,13 @@ class _LegendColumnCdeCdt extends StatelessWidget {
   double? _mrLcl(ControlChartStats? s) => _mrLimit(s)?.lcl;
   double? _mrCl (ControlChartStats? s) => _mrLimit(s)?.cl;
 
-  // ---------- AVERAGE (เลือกตามชนิด; มีหลายชั้น fallback) ----------
-  // หากมี average แยกต่อชนิด ให้ชี้ที่ฟิลด์เหล่านี้ก่อน
+  // ---------- AVERAGE (per-type + fallbacks) ----------
   double? _avgSelected(ControlChartStats? s) =>
       _sel<double?>(
-        s?.cdeAverage,             // ถ้ามี
-        s?.cdtAverage,             // ถ้ามี
-        s?.compoundLayerAverage,   // ถ้ามี
-      ) ?? s?.cdeAverage;
+        s?.cdeAverage,
+        s?.cdtAverage,
+        s?.compoundLayerAverage,
+      ) ?? _iCl(s) ?? s?.average;
 
   // ---------- Violations ----------
   int _violBeyondSpec(ControlChartStats? s) =>
@@ -334,23 +317,24 @@ class _LegendColumnCdeCdt extends StatelessWidget {
         s?.compoundLayerViolations?.trend,
       ) ?? 0;
 
+  String _fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
+
   @override
   Widget build(BuildContext context) {
     final s = searchState.controlChartStats;
-    String fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
 
     // ---- I Chart ----
-    final usl    = fmt(_upperSpec(s));
-    final lsl    = fmt(_lowerSpec(s));
-    final target = fmt(_target(s));
-    final ucl    = fmt(_iUcl(s));
-    final lcl    = fmt(_iLcl(s));
-    final avgVal = fmt(_avgSelected(s));
+    final usl    = _fmt(_upperSpec(s));
+    final lsl    = _fmt(_lowerSpec(s));
+    final target = _fmt(_target(s));
+    final ucl    = _fmt(_iUcl(s));
+    final lcl    = _fmt(_iLcl(s));
+    final avgVal = _fmt(_avgSelected(s));
 
     // ---- MR ----
-    final mrUcl  = fmt(_mrUcl(s));
-    final mrCl   = fmt(_mrCl(s));
-    final mrLcl  = fmt(_mrLcl(s));
+    final mrUcl  = _fmt(_mrUcl(s));
+    final mrCl   = _fmt(_mrCl(s));
+    final mrLcl  = _fmt(_mrLcl(s));
 
     // ---- Violations ----
     final overSpec    = _violBeyondSpec(s);
@@ -381,7 +365,9 @@ class _LegendColumnCdeCdt extends StatelessWidget {
       color: Colors.white,
       elevation: 1.5,
       borderRadius: BorderRadius.circular(8),
-      child: Column(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (controlChunks.isNotEmpty)
@@ -429,9 +415,8 @@ class _LegendColumnCdeCdt extends StatelessWidget {
                         children: [
                           _ViolationChip(label: 'Spec',    count: overSpec,    color: Colors.red),
                           _ViolationChip(label: 'Control', count: overControl, color: Colors.orange),
+                          // หากอยากโชว์จำนวน trend จริง ให้ใช้ count: trend
                           const _ViolationChip(label: 'Trend', color: Colors.pink),
-                          // ถ้าต้องการโชว์ค่า trend:
-                          // _ViolationChip(label: 'Trend', count: trend, color: Colors.pink),
                         ],
                       ),
                     ),
@@ -440,13 +425,14 @@ class _LegendColumnCdeCdt extends StatelessWidget {
               ),
           ],
         ),
+      ),
     );
   }
 }
 
-/// ----------------------------------------------------------------------------
-/// Legend helpers (ใช้ร่วมโค้ดกับตัวบนได้)
-/// ----------------------------------------------------------------------------
+/// ============================================================================
+/// Legend helpers (shared-style)
+/// ============================================================================
 Widget _legendLabeledRow({
   required String? label,
   required List<_LegendEntry> entries,
@@ -607,6 +593,27 @@ class _ViolationChip extends StatelessWidget {
   }
 }
 
+/// ============================================================================
+/// Simple states (shared style)
+/// ============================================================================
+class _StateBox extends StatelessWidget {
+  const _StateBox({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Center(child: child);
+}
+
+class _Loading extends StatelessWidget {
+  const _Loading();
+  @override
+  Widget build(BuildContext context) => const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+}
+
 class _Error extends StatelessWidget {
   const _Error();
   @override
@@ -621,3 +628,9 @@ class _Error extends StatelessWidget {
       );
 }
 
+class _Empty extends StatelessWidget {
+  const _Empty();
+  @override
+  Widget build(BuildContext context) =>
+      const Text('ไม่มีข้อมูลสำหรับแสดงผล', style: TextStyle(fontSize: 12, color: Colors.grey));
+}

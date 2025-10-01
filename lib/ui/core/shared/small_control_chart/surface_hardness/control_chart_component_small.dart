@@ -192,8 +192,8 @@ Widget build(BuildContext context) {
               builder: (context, tip, _) {
                 if (tip == null) return const SizedBox.shrink();
 
-                const double maxWidth = 240;
-                const double boxH = 120;
+                const double maxWidth = 144;
+                const double boxH = 196;
                 const double dotR = 8;
                 const double gap = 8;
                 const double pad = 8;
@@ -602,16 +602,18 @@ Widget build(BuildContext context) {
           return aDistance < bDistance ? a : b;
         });
 
-        final bool beyondCL   = nearestPoint.isViolatedR1BeyondLCL == true || 
-        nearestPoint.isViolatedR1BeyondUCL == true;
-        final bool beyondSpec = nearestPoint.isViolatedR1BeyondLSL == true || 
-        nearestPoint.isViolatedR1BeyondUSL == true;
+        final bool beyondCLL   = nearestPoint.isViolatedR1BeyondLCL == true;
+        final bool beyondCLU   = nearestPoint.isViolatedR1BeyondUCL == true;
+        final bool beyondSpecL = nearestPoint.isViolatedR1BeyondLSL == true;
+        final bool beyondSpecU = nearestPoint.isViolatedR1BeyondUSL == true;
         final bool trend      = nearestPoint.isViolatedR3 == true;
 
         final chips = <_ChipData>[
           if (trend)      _ChipData('Trend', Colors.pinkAccent),
-          if (beyondSpec) _ChipData('Over Spec', Colors.red),
-          if (beyondCL)   _ChipData('Over Control', Colors.orange),
+          if (beyondSpecL) _ChipData('Over Spec (L)', Colors.red),
+          if (beyondSpecU) _ChipData('Over Spec (U)', Colors.red),
+          if (beyondCLL)   _ChipData('Over Control (L)', Colors.orange),
+          if (beyondCLU)   _ChipData('Over Control (U)', Colors.orange),
         ];
 
         final content = TooltipContent(
@@ -761,20 +763,22 @@ class TooltipContent extends StatelessWidget {
                 )),
           if (chips.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Wrap(
-              spacing: 4,
-              children: chips
-                  .map((c) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: c.color.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: c.color),
-                        ),
-                        child: Text(c.label, style: AppTypography.textBody4W),
-                      ))
-                  .toList(),
-            ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: chips
+                        .map((c) => Container(
+                              margin: const EdgeInsets.only(bottom: 4), // เว้นระยะระหว่างแต่ละบรรทัด
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: c.color.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: c.color),
+                              ),
+                              child: Text(c.label, style: AppTypography.textBody4W),
+                            ))
+                        .toList(),
+                  )
+
           ],
           const SizedBox(height: 6),
           Container(height: 2, color: accent),

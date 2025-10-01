@@ -45,12 +45,12 @@ final class SearchState extends Equatable {
   /// UI expects "0" for All furnaces and "All Material No." for All materials.
   String get currentFurnaceUiValue =>
       (currentQuery.furnaceNo == null || currentQuery.furnaceNo!.isEmpty)
-          ? "0"
+          ? ""
           : currentQuery.furnaceNo!;
 
   String get currentMaterialUiValue =>
       (currentQuery.materialNo == null || currentQuery.materialNo!.isEmpty)
-          ? "All Material No."
+          ? "All Material Nos."
           : currentQuery.materialNo!;
 
   SearchState copyWith({

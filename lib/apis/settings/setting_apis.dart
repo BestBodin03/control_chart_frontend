@@ -136,6 +136,8 @@ final query = <String, dynamic>{ if (furnaceNo?.isNotEmpty ?? false) 'furnaceNo'
     queryParameters: query,
   );
 
+  debugPrint("🟡 In the API SEARCH: $res");
+
   // ✅ Transform cpName to a flat list of strings
   final cpNames = (res['cpName'] as List<dynamic>?)
           ?.map((e) => (e as List<dynamic>)[1].toString())

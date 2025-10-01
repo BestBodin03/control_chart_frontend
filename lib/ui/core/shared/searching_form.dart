@@ -1,3 +1,4 @@
+import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/data/cubit/searching/utils/search_control.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
@@ -8,7 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
 import '../../../data/cubit/searching/filters_cubit.dart';
-import '../../../data/cubit/searching/options_cubit.dart';
+import '../../../data/cubit/searching/options/options_cubit.dart';
 import '../../../data/cubit/searching/utils/mapper.dart';
 import '../../../utils/date_convertor.dart';
 import '../../screen/screen_content/home_screen_content/home_content_var.dart';
@@ -19,13 +20,15 @@ class SearchingForm extends StatelessWidget {
     this.initialProfile,
     this.loadFurnaces,
     this.loadMaterials,
-    this.loadCpNames, // << เพิ่ม loader cpNames (matNo -> cpName)
+    this.loadCpNames, 
+    required this.settingApis, // << เพิ่ม loader cpNames (matNo -> cpName)
   });
 
   final HomeContentVar? initialProfile;
   final Future<List<String>> Function()? loadFurnaces;
   final Future<List<String>> Function()? loadMaterials;
   final Future<Map<String, String>> Function()? loadCpNames;
+  final SettingApis settingApis;
 
   @override
   Widget build(BuildContext context) {
@@ -33,12 +36,10 @@ class SearchingForm extends StatelessWidget {
       providers: [
         BlocProvider(create: (_) => FiltersCubit()),
 BlocProvider(
-  create: (_) => OptionsCubit(
-    loadFurnaces: loadFurnaces ?? () async => ['0', '1', '2'],
-    loadMaterials: loadMaterials ?? () async => [],
-    loadCpNames: loadCpNames, // อาจเป็น null ได้
-  )..load(),
+  create: (_) => OptionsCubit(settingApis: settingApis)
+    ..loadDropdownOptions(index: 0),
 ),
+
       ],
       child: _SearchingFormBody(initialProfile: initialProfile),
     );
@@ -129,7 +130,7 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
   String? _coerceMat(Object? v) {
     if (v == null) return null;
     final s = v.toString().trim();
-    if (s.isEmpty || s == 'All Material No.') return null;
+    if (s.isEmpty || s == 'All Material Nos.') return null;
     return s;
   }
 
@@ -186,8 +187,11 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                   constraints: const BoxConstraints(),
                                   splashRadius: 16,
                                   onPressed: () {
-                                    context.read<FiltersCubit>().setPeriod('1 เดือน', start: oneMonthAgo(dateNow), end: dateNow);
-                                    context.read<SearchBloc>().add(LoadFilteredChartData());
+                                    context.read<FiltersCubit>().setPeriod('1 เดือน', start: dateOneM, end: dateNow);
+                                    context.read<SearchBloc>().add(LoadFilteredChartData(
+                                      startDate: dateOneM,
+                                      endDate: dateNow
+                                    ));
                                     // context.read<FiltersCubit>().setPeriod('1 เดือน', start: oneMonthAgo(dateNow), end: dateNow);
                                   },
                                   icon: const Icon(Icons.refresh_rounded, size: 24, color: AppColors.colorBrand),
@@ -314,11 +318,14 @@ BlocBuilder<OptionsCubit, OptionsState>(
   builder: (context, opts) {
     const allFurnacesLabel = 'All Furnaces';
 
-    // 1) Get furnace options and sort numerically
-    debugPrint('🔵 [Furnace] Raw opts.furnaceOptions: ${opts.furnaceOptions}');
-    final furnaces = opts.furnaceOptions
+    // Use the latest payload (or per-index: opts.furnaceOptionsByIndex[0] ?? [])
+    final raw = opts.lastFetchedFurnaces;
+    debugPrint('🔵 [Furnace] Raw: $raw');
+
+    // Sort numerically, unique, and prepend "All"
+    final furnaces = raw
         .map((e) => e.toString())
-        .where((e) => e.isNotEmpty && e != allFurnacesLabel) // Remove duplicates
+        .where((e) => e.isNotEmpty && e != allFurnacesLabel)
         .toSet()
         .toList()
       ..sort((a, b) {
@@ -329,22 +336,20 @@ BlocBuilder<OptionsCubit, OptionsState>(
         if (bi == null) return -1;
         return ai.compareTo(bi);
       });
-    
-    // Add "All" label at the beginning
     furnaces.insert(0, allFurnacesLabel);
-    debugPrint('🔵 [Furnace] Final furnaces list: $furnaces');
+    debugPrint('🔵 [Furnace] Final: $furnaces');
 
-    // 2) Safe current value
+    // Safe current value
     String? current = searchState.currentFurnaceUiValue.isEmpty
         ? allFurnacesLabel
         : searchState.currentFurnaceUiValue;
     if (!furnaces.contains(current)) current = allFurnacesLabel;
-    debugPrint('🔵 [Furnace] Current value: $current');
+    debugPrint('🔵 [Furnace] Current: $current');
 
     return AbsorbPointer(
-      absorbing: opts.loading,
+      absorbing: opts.dropdownLoading,
       child: Opacity(
-        opacity: opts.loading ? 0.6 : 1,
+        opacity: opts.dropdownLoading ? 0.6 : 1,
         child: buildDropdownField(
           key: ValueKey('furnace_$current'),
           context: context,
@@ -355,13 +360,18 @@ BlocBuilder<OptionsCubit, OptionsState>(
             final val = (selected == null || selected == allFurnacesLabel)
                 ? null
                 : selected;
-            
-            context.read<SearchBloc>().add(SelectFurnace(val));
-            
-            // Reload material options based on selected furnace
-            context.read<OptionsCubit>().loadMaterialsForFurnace(val);
 
-            // Update chart data
+            // 1) Update your search state
+            context.read<SearchBloc>().add(SelectFurnace(val));
+
+            // 2) Refetch dependent dropdowns from API (index: 0, filtered by furnace)
+            context.read<OptionsCubit>().loadDropdownOptions(
+              index: 0,
+              furnaceNo: val,
+              // keep cpNo null here; you can pass both if needed
+            );
+
+            // 3) Refresh chart data with latest filters
             final now = DateTime.now();
             final fallbackStart = now.subtract(const Duration(days: 30));
             final fs = context.read<FiltersCubit>().state;
@@ -379,21 +389,23 @@ BlocBuilder<OptionsCubit, OptionsState>(
   },
 ),
 
+
 const SizedBox(height: 16),
 
-// ============== Material Dropdown ==============
-buildSectionTitle('Material No.'),
+buildSectionTitle('Material No.'), // or 'CP No.' if that’s your domain wording
 const SizedBox(height: 8),
 BlocBuilder<OptionsCubit, OptionsState>(
   builder: (context, opts) {
-    const allLabel = 'All Material Nos.';
+    const allLabel = 'All Material Nos.'; // rename to suit your UI
 
-    // 1) Get material options and sort numerically
-    debugPrint('🟢 [Material] Raw opts.materialOptions: ${opts.materialOptions}');
-    debugPrint('🟢 [Material] Raw opts.cpNames: ${opts.cpNames}');
-    final materials = opts.materialOptions
+    // Use the latest payload (or per-index: opts.cpOptionsByIndex[0] ?? [])
+    final raw = opts.lastFetchedCps;
+    debugPrint('🟢 [Material] Raw cp list: $raw');
+
+    // Sort numerically, unique, and prepend "All"
+    final materials = raw
         .map((e) => e.toString())
-        .where((e) => e.isNotEmpty && e != allLabel) // Remove duplicates
+        .where((e) => e.isNotEmpty && e != allLabel)
         .toSet()
         .toList()
       ..sort((a, b) {
@@ -404,24 +416,14 @@ BlocBuilder<OptionsCubit, OptionsState>(
         if (bi == null) return -1;
         return ai.compareTo(bi);
       });
-    
-    // Add "All" label at the beginning
     materials.insert(0, allLabel);
-    debugPrint('🟢 [Material] Final materials list: $materials');
+    debugPrint('🟢 [Material] Final list: $materials');
 
-    // 2) Build display items with cpName (matNo - cpName)
-    final items = materials.map((matNo) {
-      if (matNo == allLabel) return allLabel;
-      final cpNames = opts.cpNames;
-      final idx = opts.materialOptions.indexOf(matNo);
-      debugPrint('🟢 [Material] matNo: $matNo, idx: $idx, cpName: ${idx >= 0 && idx < cpNames.length ? cpNames[idx] : "NOT FOUND"}');
-      return (idx >= 0 && idx < cpNames.length && cpNames[idx].isNotEmpty)
-          ? "$matNo - ${cpNames[idx]}"
-          : matNo;
-    }).toList();
-    debugPrint('🟢 [Material] Final items with cpNames: $items');
+    // (Optional) If you still want to display "matNo - cpName", you’d need
+    // a cpName map from the API. For now we just show the cpNo/material number:
+    final items = List<String>.from(materials);
 
-    // 3) Safe current value (strip cpName if present)
+    // Safe current value (strip any " - name" if you keep that display later)
     String? current = searchState.currentMaterialUiValue.isEmpty
         ? allLabel
         : searchState.currentMaterialUiValue;
@@ -429,12 +431,12 @@ BlocBuilder<OptionsCubit, OptionsState>(
       current = current.split(' - ').first;
     }
     if (!materials.contains(current)) current = allLabel;
-    debugPrint('🟢 [Material] Current value: $current');
+    debugPrint('🟢 [Material] Current: $current');
 
     return AbsorbPointer(
-      absorbing: opts.loading,
+      absorbing: opts.dropdownLoading,
       child: Opacity(
-        opacity: opts.loading ? 0.6 : 1,
+        opacity: opts.dropdownLoading ? 0.6 : 1,
         child: buildDropdownField(
           key: ValueKey('material_$current'),
           context: context,
@@ -444,11 +446,19 @@ BlocBuilder<OptionsCubit, OptionsState>(
           onChanged: (selected) {
             final val = (selected == null || selected == allLabel)
                 ? null
-                : selected?.split(' - ').first; // Strip cpName
-            
+                : selected.split(' - ').first; // safe even if no ' - '
+
             context.read<SearchBloc>().add(SelectMaterial(val));
 
-            // Update chart data
+            // If selecting a material/CP should also refetch furnaces filtered by cp:
+            context.read<OptionsCubit>().loadDropdownOptions(
+              index: 0,
+              cpNo: val,
+              // optionally pass the currently selected furnace too
+              // furnaceNo: (searchState.currentFurnaceUiValue.isEmpty ? null : searchState.currentFurnaceUiValue),
+            );
+
+            // Update chart
             final now = DateTime.now();
             final fallbackStart = now.subtract(const Duration(days: 30));
             final fs = context.read<FiltersCubit>().state;
@@ -468,6 +478,7 @@ BlocBuilder<OptionsCubit, OptionsState>(
     );
   },
 ),
+
 
 
 

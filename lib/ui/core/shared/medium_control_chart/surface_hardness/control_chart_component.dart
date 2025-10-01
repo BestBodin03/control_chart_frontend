@@ -192,7 +192,7 @@ Widget build(BuildContext context) {
               builder: (context, tip, _) {
                 if (tip == null) return const SizedBox.shrink();
 
-                const double maxWidth = 160;
+                const double maxWidth = 240;
                 const double boxH = 120;
                 const double dotR = 8;
                 const double gap = 8;

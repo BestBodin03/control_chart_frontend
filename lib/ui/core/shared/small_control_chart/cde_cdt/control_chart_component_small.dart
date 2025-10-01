@@ -39,6 +39,82 @@ class ControlChartComponentSmallCdeCdt extends StatefulWidget implements ChartCo
     this.width,
   });
 
+// ===== legend =====
+  @override
+  Widget buildLegend() {
+    String fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
+
+    T? _sel<T>(T? cde, T? cdt, T? comp) {
+      switch (controlChartStats?.secondChartSelected) {
+        case SecondChartSelected.cde:
+          return cde;
+        case SecondChartSelected.cdt:
+          return cdt;
+        case SecondChartSelected.compoundLayer:
+          return comp;
+        default:
+          return null;
+      }
+    }
+
+    final specUsl = _sel(
+      controlChartStats?.specAttribute?.cdeUpperSpec,
+      controlChartStats?.specAttribute?.cdtUpperSpec,
+      controlChartStats?.specAttribute?.compoundLayerUpperSpec,
+    );
+    final target = _sel(
+      controlChartStats?.specAttribute?.cdeTarget,
+      controlChartStats?.specAttribute?.cdtTarget,
+      controlChartStats?.specAttribute?.compoundLayerTarget,
+    );
+    final avg = _sel(
+      controlChartStats?.cdeAverage,
+      controlChartStats?.cdtAverage,
+      controlChartStats?.compoundLayerAverage,
+    );
+    final ucl = _sel(
+      controlChartStats?.cdeControlLimitIChart?.ucl,
+      controlChartStats?.cdtControlLimitIChart?.ucl,
+      controlChartStats?.compoundLayerControlLimitIChart?.ucl,
+    );
+    final lcl = _sel(
+      controlChartStats?.cdeControlLimitIChart?.lcl,
+      controlChartStats?.cdtControlLimitIChart?.lcl,
+      controlChartStats?.compoundLayerControlLimitIChart?.lcl,
+    );
+    final specLsl = _sel(
+      controlChartStats?.specAttribute?.cdeLowerSpec,
+      controlChartStats?.specAttribute?.cdtLowerSpec,
+      controlChartStats?.specAttribute?.compoundLayerLowerSpec,
+    );
+
+    Widget item(String label, Color color, String value) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(width: 8, height: 2, child: DecoratedBox(decoration: BoxDecoration(color: color))),
+        const SizedBox(width: 8),
+        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack, fontWeight: FontWeight.bold)),
+        const SizedBox(width: 4),
+        Text(value, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack, fontWeight: FontWeight.bold)),
+      ],
+    );
+
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      alignment: WrapAlignment.spaceEvenly,
+      children: [
+        if (fmt(specUsl) != 'N/A') item('Spec', Colors.red, fmt(specUsl)),
+        if (fmt(ucl)     != 'N/A') item('UCL', Colors.orange, fmt(ucl)),
+        if (fmt(target)  != 'N/A') item('Target', Colors.deepPurple.shade300, fmt(target)),
+        if (fmt(avg)     != 'N/A') item('AVG', Colors.green, fmt(avg)),
+        if (fmt(lcl)     != 'N/A') item('LCL', Colors.orange, fmt(lcl)),
+        if (fmt(specLsl) != 'N/A') item('Spec', Colors.red, fmt(specLsl)),
+      ],
+    );
+  }
+
+
   // ===== ChartComponent (ไม่ใช้ในเส้นทางนี้ แต่คง interface) =====
   @override
   FlBorderData buildBorderData() => FlBorderData(show: false);
@@ -56,8 +132,6 @@ class ControlChartComponentSmallCdeCdt extends StatefulWidget implements ChartCo
   double getMaxY() => 0;
   @override
   double getMinY() => 0;
-  @override
-  Widget buildLegend() => const SizedBox.shrink();
 
   @override
   State<ControlChartComponentSmallCdeCdt> createState() => _ControlChartComponentSmallCdeCdtState();
@@ -68,6 +142,21 @@ class _ControlChartComponentSmallCdeCdtState extends State<ControlChartComponent
   double? _cachedMinY;
   double? _cachedMaxY;
   double? _cachedInterval;
+  final GlobalKey _chartKey = GlobalKey();
+
+  // Tooltip state ภายใน widget
+  final ValueNotifier<_Tip?> _tip = ValueNotifier<_Tip?>(null);
+
+  List<ChartDataPointCdeCdt> get _pointsInWindow {
+    final src = widget.dataPoints ?? const <ChartDataPointCdeCdt>[];
+    if (src.isEmpty) return const <ChartDataPointCdeCdt>[];
+    final lo = math.min(widget.xStart.millisecondsSinceEpoch, widget.xEnd.millisecondsSinceEpoch).toDouble();
+    final hi = math.max(widget.xStart.millisecondsSinceEpoch, widget.xEnd.millisecondsSinceEpoch).toDouble();
+    return src.where((p) {
+          final t = p.collectDate.millisecondsSinceEpoch.toDouble();
+          return t >= lo && t <= hi;
+    }).toList();
+  }
 
   // ----------------------------- helpers -----------------------------
   // เลือกค่าตามชนิดที่เลือก (CDE / CDT / CompoundLayer)
@@ -171,89 +260,159 @@ class _ControlChartComponentSmallCdeCdtState extends State<ControlChartComponent
 
   // ----------------------------- build -----------------------------
   @override
-  Widget build(BuildContext context) {
-    final pts = widget.dataPoints ?? const <ChartDataPointCdeCdt>[];
-    if (pts.isEmpty) {
-      return _panel(
-        child: const Center(
-          child: Text('No data', style: TextStyle(color: Colors.black54)),
+Widget build(BuildContext context) {
+  final double minXv = widget.xStart.millisecondsSinceEpoch.toDouble();
+  final double maxXv = widget.xEnd.millisecondsSinceEpoch.toDouble();
+  final double safeRange = (maxXv - minXv).abs().clamp(1.0, double.infinity);
+  final int desiredTick = (widget.controlChartStats?.xTick ?? 6).clamp(2, 100);
+  final double tickInterval = safeRange / (desiredTick - 1);
+
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final Size chartSize = Size(
+        widget.width  ?? constraints.maxWidth,
+        widget.height ?? constraints.maxHeight,
+      );
+
+      return Container(
+        height: chartSize.height,
+        width: chartSize.width,
+        decoration: BoxDecoration(
+          color: widget.backgroundColor ?? Colors.white,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Chart
+            Positioned.fill(
+              child: KeyedSubtree(
+                key: _chartKey,
+                child: LineChart(
+                  LineChartData(
+                    minX: minXv,
+                    maxX: maxXv,
+                    minY: _getMinY(),
+                    maxY: _getMaxY(),
+                    gridData: _gridData(minXv, maxXv, tickInterval),
+                    titlesData: _titlesData(minXv, maxXv),
+                    borderData: _borderData(),
+                    extraLinesData: _controlLines(),
+                    lineBarsData: _lineBarsData(),
+                    lineTouchData: _touchData(),
+                  ),
+                ),
+              ),
+            ),
+
+            // Tooltip (local-only, non-blocking)
+                        ValueListenableBuilder<_Tip?>(
+              valueListenable: _tip,
+              builder: (context, tip, _) {
+                if (tip == null) return const SizedBox.shrink();
+
+                const double maxWidth = 144;
+                const double boxH = 196;
+                const double dotR = 8;
+                const double gap = 8;
+                const double pad = 8;
+
+                final dx = tip.local.dx;
+                final dy = tip.local.dy;
+
+                // available room checks
+                final bool canAbove = dy - (dotR + gap + boxH) >= pad;
+                final bool canBelow = dy + (dotR + gap + boxH) <= chartSize.height - pad;
+                final bool canRight = dx + (dotR + gap + maxWidth) <= chartSize.width  - 6*pad;
+                final bool canLeft  = dx - (dotR + gap + maxWidth) >= pad; // ✅ fix
+
+                double left, top;
+
+                if (canAbove) {
+                  // above
+                  left = dx - maxWidth / 2;
+                  top  = dy - dotR - gap - boxH;
+                  final hiX = chartSize.width - maxWidth - pad;
+                  left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
+                } else if (canBelow) {
+                  // below
+                  left = dx - maxWidth / 2;
+                  top  = dy + dotR + gap;
+                  final hiX = chartSize.width - maxWidth - pad;
+                  left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
+                } else if (canRight) {
+                  // right (vertically centered)
+                  left = dx + dotR + 4*gap;
+                  top  = dy - boxH / 2;
+                  final hiY = chartSize.height - boxH - pad;
+                  top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
+                } else if (canLeft) {
+                  // left (vertically centered)
+                  left = dx - dotR - gap - maxWidth;
+                  top  = dy - boxH / 2;
+                  final hiY = chartSize.height - boxH - pad;
+                  top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
+                } else {
+                  // very tight: center in the box
+                  left = (chartSize.width  - maxWidth) / 2;
+                  top  = (chartSize.height - boxH) / 2;
+                }
+
+                // final clamp (safety)
+                final hiX = chartSize.width - maxWidth - pad;
+                final hiY = chartSize.height - boxH - pad;
+                if (hiX > pad) left = left.clamp(pad, hiX);
+                if (hiY > pad) top  = top.clamp(pad, hiY);
+
+                return Positioned(
+                  left: left,
+                  top: top,
+                  width: maxWidth,
+                  child: IgnorePointer(
+                    ignoring: true,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.colorBrand.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: tip.content,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       );
-    }
-
-    final double minXv = widget.xStart.millisecondsSinceEpoch.toDouble();
-    final double maxXv = widget.xEnd.millisecondsSinceEpoch.toDouble();
-
-    final periodType = widget.controlChartStats?.periodType ?? PeriodType.ONE_MONTH;
-    final double xTick = _xInterval(periodType, minXv, maxXv);
-
-    return LayoutBuilder(
-      builder: (context, box) {
-        final bool bounded = box.hasBoundedHeight && box.maxHeight.isFinite;
-        final double w = widget.width ?? box.maxWidth;
-        final double h = bounded ? box.maxHeight : (widget.height ?? 180);
-
-        final chart = LineChart(
-          LineChartData(
-            minX: minXv,
-            maxX: maxXv,
-            minY: _getMinY(),
-            maxY: _getMaxY(),
-            gridData: _buildGridData(minXv, maxXv, xTick),
-            titlesData: _buildTitlesData(minXv, maxXv, xTick),
-            
-            borderData: _buildBorderData(),
-            extraLinesData: _buildControlLines(),
-            lineBarsData: _buildLineBarsData(minXv, maxXv),
-            lineTouchData: _buildTouchData(pts),
-            clipData: const FlClipData.all(),
-          ),
-          duration: const Duration(milliseconds: 250),
-        );
-
-        return _panel(
-          width: w,
-          height: h,
-          child: SizedBox(height: h, width: double.infinity, child: chart),
-        );
-      },
-    );
-  }
-
-  // ====== Panel wrapper ======
-  Widget _panel({Widget? child, double? width, double? height}) {
-    return Container(
-      width: width,
-      height: height,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: widget.backgroundColor ?? Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.black12),
-      ),
-      padding: const EdgeInsets.all(8),
-      child: child,
-    );
-  }
-
+    },
+  );
+}
   // ---------------------------------------------------------------------------
   // GRID / TITLES / BORDER
   // ---------------------------------------------------------------------------
-  FlGridData _buildGridData(double? minX, double? maxX, double? tickInterval) {
+ FlGridData _gridData(double? minX, double? maxX, double? tickInterval) {
     return FlGridData(
       show: true,
       drawHorizontalLine: true,
       drawVerticalLine: true,
       horizontalInterval: _getInterval(),
       verticalInterval: tickInterval ?? 1,
-      getDrawingHorizontalLine: (_) => FlLine(color: Colors.grey.shade100, strokeWidth: 0.5),
-      getDrawingVerticalLine: (_) => FlLine(color: Colors.grey.shade100, strokeWidth: 0.5),
+      getDrawingHorizontalLine: (_) => FlLine(
+        color: Colors.grey.shade100, 
+        strokeWidth: 0.5),
+      getDrawingVerticalLine: (_) => FlLine(
+        color: Colors.grey.shade100, 
+        strokeWidth: 0.5),
     );
   }
 
-  FlTitlesData _buildTitlesData(double? minX, double? maxX, double? tickInterval) {
-    final double minXv = minX!;
-    final double maxXv = maxX!;
+   FlTitlesData _titlesData(double? minX, double? maxX) {
+    final double minXv = minX ?? widget.xStart.millisecondsSinceEpoch.toDouble();
+    final double maxXv = maxX ?? widget.xEnd.millisecondsSinceEpoch.toDouble();
     final PeriodType periodType = widget.controlChartStats?.periodType ?? PeriodType.ONE_MONTH;
     final df = DateFormat('dd/MM');
     final double step = _xInterval(periodType, minXv, maxXv);
@@ -266,7 +425,11 @@ class _ControlChartComponentSmallCdeCdtState extends State<ControlChartComponent
         space: 8,
         child: Transform.rotate(
           angle: -30 * math.pi / 180,
-          child: Text(text, style: const TextStyle(fontSize: 8, color: Colors.black54), overflow: TextOverflow.ellipsis),
+          child: Text(text, 
+          style: const TextStyle(
+            fontSize: 8, 
+            color: AppColors.colorBlack), 
+            overflow: TextOverflow.ellipsis),
         ),
       );
     }
@@ -275,15 +438,18 @@ class _ControlChartComponentSmallCdeCdtState extends State<ControlChartComponent
       leftTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 28,
+          reservedSize: 24,
           interval: _getInterval(),
-          getTitlesWidget: (v, _) => Text(v.toStringAsFixed(2), style: const TextStyle(color: Colors.black54, fontSize: 8)),
+          getTitlesWidget: (v, _) => Text(v.toStringAsFixed(0), 
+          style: const TextStyle(
+            color: AppColors.colorBlack, 
+            fontSize: 8)),
         ),
       ),
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 32,
+          reservedSize: 20,
           interval: step,
           getTitlesWidget: bottomLabel,
         ),
@@ -293,7 +459,7 @@ class _ControlChartComponentSmallCdeCdtState extends State<ControlChartComponent
     );
   }
 
-  FlBorderData _buildBorderData() {
+  FlBorderData _borderData() {
     return FlBorderData(
       show: true,
       border: Border.all(color: Colors.black54, width: 1),
@@ -303,7 +469,7 @@ class _ControlChartComponentSmallCdeCdtState extends State<ControlChartComponent
   // ---------------------------------------------------------------------------
   // CONTROL LINES — ใช้ค่า selected + fallback
   // ---------------------------------------------------------------------------
-  ExtraLinesData _buildControlLines() {
+  ExtraLinesData _controlLines() {
     final s = widget.controlChartStats;
 
     final specUsl = _sel(
@@ -343,44 +509,91 @@ class _ControlChartComponentSmallCdeCdtState extends State<ControlChartComponent
   // ---------------------------------------------------------------------------
   // LINES + DOTS — ใช้ window จาก minXv..maxXv
   // ---------------------------------------------------------------------------
-  List<LineChartBarData> _buildLineBarsData(double minXv, double maxXv) {
-    final src = widget.dataPoints ?? const <ChartDataPointCdeCdt>[];
-    if (src.isEmpty) {
+ List<LineChartBarData> _lineBarsData() {
+    final pts = _pointsInWindow;
+    if (pts.isEmpty) {
       return [LineChartBarData(spots: const [], color: widget.dataLineColor, barWidth: 2)];
     }
 
-    final spots = src
+    final minXv = widget.xStart.millisecondsSinceEpoch.toDouble();
+    final maxXv = widget.xEnd.millisecondsSinceEpoch.toDouble();
+
+    final spots = pts
+        .where((p) => p.collectDate != null)
         .map((p) => FlSpot(p.collectDate.millisecondsSinceEpoch.toDouble(), p.value))
         .where((s) => s.x >= math.min(minXv, maxXv) && s.x <= math.max(minXv, maxXv))
         .toList()
       ..sort((a, b) => a.x.compareTo(b.x));
 
-    // map date->point
-    final Map<double, ChartDataPointCdeCdt> byX = {
-      for (final p in src) p.collectDate.millisecondsSinceEpoch.toDouble(): p
+    final Map<double, ChartDataPointCdeCdt> dpByX = {
+      for (final p in pts.where((e) => e.collectDate != null))
+        p.collectDate.millisecondsSinceEpoch.toDouble(): p
     };
 
-    // เส้นอ้างอิงสำหรับสี dot
-    final s = widget.controlChartStats;
-    final specUsl = _sel(
-          s?.specAttribute?.cdeUpperSpec,
-          s?.specAttribute?.cdtUpperSpec,
-          s?.specAttribute?.compoundLayerUpperSpec,
-        ) ??
-        0.0;
-    final specLsl = _sel(
-          s?.specAttribute?.cdeLowerSpec,
-          s?.specAttribute?.cdtLowerSpec,
-          s?.specAttribute?.compoundLayerLowerSpec,
-        ) ??
-        0.0;
-    final iLimit = _iLimitSel(s);
-    final ucl = iLimit?.ucl ?? 0.0;
-    final lcl = iLimit?.lcl ?? 0.0;
+    // split R3 / non-R3 segments
+    final r3Segments = <List<FlSpot>>[];
+    final nonR3Segments = <List<FlSpot>>[];
+    var cur = <FlSpot>[];
+    bool? curIsR3;
+
+    for (final s in spots) {
+      final isR3 = (dpByX[s.x]?.isViolatedR3 == true);
+
+      if (cur.isEmpty) {
+        cur.add(s);
+        curIsR3 = isR3;
+      } else if (curIsR3 == isR3) {
+        cur.add(s);
+      } else {
+        (curIsR3 == true ? r3Segments : nonR3Segments).add(cur);
+        cur = <FlSpot>[s];
+        curIsR3 = isR3;
+      }
+    }
+    if (cur.isNotEmpty) {
+      (curIsR3 == true ? r3Segments : nonR3Segments).add(cur);
+    }
 
     final baseColor = widget.dataLineColor ?? AppColors.colorBrand;
 
-    // ชั้น dots (แสดงสีตามสถานะ)
+    final specUsl = _sel(
+          widget.controlChartStats?.specAttribute?.cdeUpperSpec,
+          widget.controlChartStats?.specAttribute?.cdtUpperSpec,
+          widget.controlChartStats?.specAttribute?.compoundLayerUpperSpec,
+        ) ??
+        0.0;
+    final specLsl = _sel(
+          widget.controlChartStats?.specAttribute?.cdeLowerSpec,
+          widget.controlChartStats?.specAttribute?.cdtLowerSpec,
+          widget.controlChartStats?.specAttribute?.compoundLayerLowerSpec,
+        ) ??
+        0.0;
+    final ucl = _sel(
+          widget.controlChartStats?.cdeControlLimitIChart?.ucl,
+          widget.controlChartStats?.cdtControlLimitIChart?.ucl,
+          widget.controlChartStats?.compoundLayerControlLimitIChart?.ucl,
+        ) ??
+        0.0;
+    final lcl = _sel(
+          widget.controlChartStats?.cdeControlLimitIChart?.lcl,
+          widget.controlChartStats?.cdtControlLimitIChart?.lcl,
+          widget.controlChartStats?.compoundLayerControlLimitIChart?.lcl,
+        ) ??
+        0.0;
+
+    final indexByX = <double, int>{for (var i = 0; i < spots.length; i++) spots[i].x: i};
+
+    // bridge neighbors for each R3 segment
+    final bridgeSegments = <List<FlSpot>>[];
+    for (final seg in r3Segments) {
+      if (seg.isEmpty) continue;
+      final firstIdx = indexByX[seg.first.x]!;
+      final lastIdx  = indexByX[seg.last.x]!;
+      if (firstIdx - 1 >= 0) bridgeSegments.add([spots[firstIdx - 1], seg.first]);
+      if (lastIdx + 1 < spots.length) bridgeSegments.add([seg.last, spots[lastIdx + 1]]);
+    }
+
+    // dots-only layer
     final dotsOnly = LineChartBarData(
       spots: spots,
       isCurved: false,
@@ -389,25 +602,24 @@ class _ControlChartComponentSmallCdeCdtState extends State<ControlChartComponent
       isStrokeCapRound: true,
       dotData: FlDotData(
         show: true,
-        getDotPainter: (spot, _, __, ___) {
-          final p = byX[spot.x];
+        getDotPainter: (spot, __, ___, ____) {
+          final dp = dpByX[spot.x];
           final v = spot.y;
 
-          Color dotColor = baseColor;
-          final bool overSpec = ((specUsl > 0 && v > specUsl) || (specLsl > 0 && v < specLsl));
-          final bool overCL   = ((ucl > 0 && v > ucl) || (lcl > 0 && v < lcl));
-          final bool trend    = (p?.isViolatedR3 == true);
-
-          if (trend) dotColor = Colors.pinkAccent;
-          else if (overSpec || p?.isViolatedR1BeyondUSL == true || p?.isViolatedR1BeyondLSL == true) {
+          Color dotColor;
+          if (dp?.isViolatedR3 == true) {
+            dotColor = Colors.pinkAccent;
+          } else if (((specUsl > 0 && v > specUsl) || (specLsl > 0 && v < specLsl))) {
             dotColor = Colors.red;
-          } else if (overCL || p?.isViolatedR1BeyondUCL == true || p?.isViolatedR1BeyondLCL == true) {
+          } else if ((ucl > 0 && v > ucl) || (lcl > 0 && v < lcl)) {
             dotColor = Colors.orange;
+          } else {
+            dotColor = baseColor;
           }
 
           return FlDotCirclePainter(
             radius: 3.5,
-            color: dotColor.withValues(alpha: 0.9),
+            color: dotColor,
             strokeWidth: 1,
             strokeColor: Colors.white,
           );
@@ -416,51 +628,140 @@ class _ControlChartComponentSmallCdeCdtState extends State<ControlChartComponent
       belowBarData: BarAreaData(show: false),
     );
 
-    // เส้นเชื่อมปกติ (single layer)
-    final line = LineChartBarData(
-      spots: spots,
-      isCurved: false,
-      color: baseColor,
-      barWidth: 2,
-      isStrokeCapRound: true,
-      dotData: const FlDotData(show: false),
-      belowBarData: BarAreaData(show: false),
-    );
+    // non-R3 lines
+    final nonR3Lines = nonR3Segments
+        .where((seg) => seg.length >= 2)
+        .map((seg) => LineChartBarData(
+              spots: seg,
+              isCurved: false,
+              color: baseColor,
+              barWidth: 2,
+              isStrokeCapRound: true,
+              dotData: const FlDotData(show: false),
+              belowBarData: BarAreaData(show: false),
+            ))
+        .toList();
 
-    return [line, dotsOnly];
+    final bridgeLines = bridgeSegments
+        .map((seg) => LineChartBarData(
+              spots: seg,
+              isCurved: false,
+              color: baseColor,
+              barWidth: 2,
+              isStrokeCapRound: true,
+              dotData: const FlDotData(show: false),
+              belowBarData: BarAreaData(show: false),
+            ))
+        .toList();
+
+    // R3 overlay (white outline + pink)
+    final r3Overlay = r3Segments
+        .where((seg) => seg.length >= 2)
+        .expand((seg) => [
+              LineChartBarData(
+                spots: seg,
+                isCurved: false,
+                color: Colors.white,
+                barWidth: 5,
+                dotData: const FlDotData(show: false),
+              ),
+              LineChartBarData(
+                spots: seg,
+                isCurved: false,
+                color: Colors.pinkAccent,
+                barWidth: 3,
+                dotData: const FlDotData(show: false),
+              ),
+            ])
+        .toList();
+
+    return [...r3Overlay, ...nonR3Lines, ...bridgeLines, dotsOnly];
   }
 
   // ---------------------------------------------------------------------------
   // TOUCH / TOOLTIP — ใช้ FLChart tooltip แบบเบา ๆ
   // ---------------------------------------------------------------------------
-  LineTouchData _buildTouchData(List<ChartDataPointCdeCdt> src) {
-    final map = {
-      for (final p in src) p.collectDate.millisecondsSinceEpoch.toDouble(): p
-    };
+
+  static List<LineTooltipItem?> _emptyTooltip(List<LineBarSpot> touchedSpots) =>
+      List<LineTooltipItem?>.filled(touchedSpots.length, null);
+
+  LineTouchData _touchData() {
+    final points = _pointsInWindow;
+    const hoverColor = Colors.blueAccent;
+
+    // debugPrint(points.first.fgNo);
 
     return LineTouchData(
       handleBuiltInTouches: true,
-      touchTooltipData: LineTouchTooltipData(
-        maxContentWidth: 200,
-        fitInsideHorizontally: true,
-        fitInsideVertically: true,
-        getTooltipColor: (_) => AppColors.colorBrand.withValues(alpha: 0.9),
-        tooltipBorderRadius: BorderRadius.circular(8),
-        getTooltipItems: (spots) {
-          return spots.map((s) {
-            final p = map[s.x];
-            if (p == null) return null;
-            return LineTooltipItem(
-              "วันที่: ${p.fullLabel}\n"
-              "ค่า: ${s.y.toStringAsFixed(3)}\n"
-              "เตา: ${p.furnaceNo ?? '-'}\n"
-              "เลขแมต: ${p.matNo ?? '-'}",
-              AppTypography.textBody3W,
-              textAlign: TextAlign.left,
-            );
-          }).whereType<LineTooltipItem>().toList();
-        },
-      ),
+      touchSpotThreshold: 8,
+    mouseCursorResolver: (event, response) {
+      final hasHit = response?.lineBarSpots?.isNotEmpty ?? false;
+      return hasHit ? SystemMouseCursors.click : SystemMouseCursors.basic;
+    },
+
+      getTouchedSpotIndicator: (barData, indexes) => indexes.map((_) {
+        return TouchedSpotIndicatorData(
+          FlLine(color: hoverColor.withValues(alpha: 0.5), strokeWidth: 3),
+          FlDotData(
+            show: true,
+            getDotPainter: (spot, __, ___, ____) => FlDotCirclePainter(
+              radius: 3.5,
+              color: AppColors.colorBrandTp,
+              strokeWidth: 3,
+              strokeColor: hoverColor
+            ),
+          ),
+        );
+      }).toList(),
+
+      touchTooltipData: LineTouchTooltipData(getTooltipItems: _emptyTooltip),
+      
+      touchCallback: (event, resp) {
+        final noHit = !event.isInterestedForInteractions ||
+            resp?.lineBarSpots == null || resp!.lineBarSpots!.isEmpty;
+
+        if (noHit) {
+          _tip.value = null;
+          return;
+        }
+
+        final s = resp.lineBarSpots!.first;
+
+        // หา data point จริงที่ใกล้ที่สุด
+        final nearestPoint = points
+            .where((p) => p.collectDate != null)
+            .reduce((a, b) {
+          final aDistance = (a.collectDate.millisecondsSinceEpoch.toDouble() - s.x).abs();
+          final bDistance = (b.collectDate.millisecondsSinceEpoch.toDouble() - s.x).abs();
+          return aDistance < bDistance ? a : b;
+        });
+
+        final bool beyondCLL   = nearestPoint.isViolatedR1BeyondLCL == true;
+        final bool beyondCLU   = nearestPoint.isViolatedR1BeyondUCL == true;
+        final bool beyondSpecL = nearestPoint.isViolatedR1BeyondLSL == true;
+        final bool beyondSpecU = nearestPoint.isViolatedR1BeyondUSL == true;
+        final bool trend      = nearestPoint.isViolatedR3 == true;
+
+        final chips = <_ChipData>[
+          if (trend)      _ChipData('Trend', Colors.pinkAccent),
+          if (beyondSpecL) _ChipData('Over Spec (L)', Colors.red),
+          if (beyondSpecU) _ChipData('Over Spec (U)', Colors.red),
+          if (beyondCLL)   _ChipData('Over Control (L)', Colors.orange),
+          if (beyondCLU)   _ChipData('Over Control (U)', Colors.orange),
+        ];
+
+        final content = TooltipContent(
+          title: nearestPoint.fullLabel,
+          rows: [
+            MapEntry('Value', s.y.toStringAsFixed(3)),
+            MapEntry('FG No.', nearestPoint.fgNo ?? '-')
+          ],
+          chips: chips,
+          accent: hoverColor,
+        );
+
+        _tip.value = _Tip(local: event.localPosition!, content: content);
+      },
     );
   }
 
@@ -505,4 +806,80 @@ class _ControlChartComponentSmallCdeCdtState extends State<ControlChartComponent
     if (mant < 5.0) return 10.0 * mag;
     return 10.0 * mag;
   }
+
 }
+
+// ---------- Tooltip UI ----------
+class _Tip {
+  final Offset local;
+  final Widget content;
+  _Tip({required this.local, required this.content});
+}
+
+class TooltipContent extends StatelessWidget {
+  final String title;
+  final List<MapEntry<String, String>> rows;
+  final List<_ChipData> chips;
+  final Color accent;
+
+  const TooltipContent({
+    super.key,
+    required this.title,
+    required this.rows,
+    this.chips = const [],
+    this.accent = Colors.red,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTextStyle(
+      style: AppTypography.textBody4W,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: AppTypography.textBody4WBold),
+          const SizedBox(height: 4),
+          ...rows.map((e) =>
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(e.key, style: AppTypography.textBody4WBold),
+                    Text(e.value, style: AppTypography.textBody4W),
+                  ],
+                )),
+          if (chips.isNotEmpty) ...[
+            const SizedBox(height: 4),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: chips
+                        .map((c) => Container(
+                              margin: const EdgeInsets.only(bottom: 4), // เว้นระยะระหว่างแต่ละบรรทัด
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: c.color.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: c.color),
+                              ),
+                              child: Text(c.label, style: AppTypography.textBody4W),
+                            ))
+                        .toList(),
+                  )
+
+          ],
+          const SizedBox(height: 6),
+          Container(height: 2, color: accent),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChipData {
+  final String label;
+  final Color color;
+  _ChipData(this.label, this.color);
+}
+
+
+
+
