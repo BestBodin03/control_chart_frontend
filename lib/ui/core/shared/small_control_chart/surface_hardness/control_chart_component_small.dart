@@ -192,6 +192,8 @@ Widget build(BuildContext context) {
               builder: (context, tip, _) {
                 if (tip == null) return const SizedBox.shrink();
 
+                debugPrint('In Surface = ${chartSize.width}');
+
                 const double maxWidth = 144;
                 const double boxH = 196;
                 const double dotR = 8;

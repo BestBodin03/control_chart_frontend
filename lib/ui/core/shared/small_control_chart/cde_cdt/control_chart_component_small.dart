@@ -26,6 +26,8 @@ class ControlChartComponentSmallCdeCdt extends StatefulWidget implements ChartCo
   /// ช่วงเวลาจริงจาก parent
   final DateTime xStart;
   final DateTime xEnd;
+  final double? minY;
+  final double? maxY;
 
   const ControlChartComponentSmallCdeCdt({
     super.key,
@@ -37,6 +39,8 @@ class ControlChartComponentSmallCdeCdt extends StatefulWidget implements ChartCo
     this.backgroundColor,
     this.height,
     this.width,
+    required this.minY,
+    required this.maxY
   });
 
 // ===== legend =====
@@ -306,7 +310,7 @@ Widget build(BuildContext context) {
             ),
 
             // Tooltip (local-only, non-blocking)
-                        ValueListenableBuilder<_Tip?>(
+            ValueListenableBuilder<_Tip?>(
               valueListenable: _tip,
               builder: (context, tip, _) {
                 if (tip == null) return const SizedBox.shrink();
@@ -316,6 +320,8 @@ Widget build(BuildContext context) {
                 const double dotR = 8;
                 const double gap = 8;
                 const double pad = 8;
+
+                debugPrint('In Cde Cdt COmpound = ${chartSize.width}');
 
                 final dx = tip.local.dx;
                 final dy = tip.local.dy;
@@ -440,7 +446,7 @@ Widget build(BuildContext context) {
           showTitles: true,
           reservedSize: 24,
           interval: _getInterval(),
-          getTitlesWidget: (v, _) => Text(v.toStringAsFixed(0), 
+          getTitlesWidget: (v, _) => Text(v.toStringAsFixed(2), 
           style: const TextStyle(
             color: AppColors.colorBlack, 
             fontSize: 8)),
@@ -840,31 +846,26 @@ class TooltipContent extends StatelessWidget {
           Text(title, style: AppTypography.textBody4WBold),
           const SizedBox(height: 4),
           ...rows.map((e) =>
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(e.key, style: AppTypography.textBody4WBold),
-                    Text(e.value, style: AppTypography.textBody4W),
-                  ],
-                )),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text(e.key, style: AppTypography.textBody4WBold),
+                Text(e.value, style: AppTypography.textBody4W),
+              ])),
           if (chips.isNotEmpty) ...[
             const SizedBox(height: 4),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: chips
-                        .map((c) => Container(
-                              margin: const EdgeInsets.only(bottom: 4), // เว้นระยะระหว่างแต่ละบรรทัด
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: c.color.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: c.color),
-                              ),
-                              child: Text(c.label, style: AppTypography.textBody4W),
-                            ))
-                        .toList(),
-                  )
-
+            Wrap(
+              spacing: 4,
+              children: chips
+                  .map((c) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: c.color.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: c.color),
+                        ),
+                        child: Text(c.label, style: AppTypography.textBody4W),
+                      ))
+                  .toList(),
+            ),
           ],
           const SizedBox(height: 6),
           Container(height: 2, color: accent),

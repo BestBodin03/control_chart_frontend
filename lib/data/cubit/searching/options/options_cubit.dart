@@ -18,7 +18,7 @@ class OptionsCubit extends Cubit<OptionsState> {
     String? furnaceNo,
     String? cpNo,
   }) async {
-    debugPrint('🟡 [OptionsCubit] loadDropdownOptions(index=$index, furnaceNo=$furnaceNo, cpNo=$cpNo)');
+    // debugPrint('🟡 [OptionsCubit] loadDropdownOptions(index=$index, furnaceNo=$furnaceNo, cpNo=$cpNo)');
     emit(state.copyWith(dropdownLoading: true));
 
     try {
@@ -60,9 +60,9 @@ class OptionsCubit extends Cubit<OptionsState> {
         lastFetchedCpNames: cpNames
       ));
 
-      debugPrint('🟢 [OptionsCubit] Updated index=$index | furnaces=${furnaces.length} cps=${cps.length}');
+      // debugPrint('🟢 [OptionsCubit] Updated index=$index | furnaces=${furnaces.length} cps=${cps.length}');
     } catch (e, st) {
-      debugPrint('🔴 [OptionsCubit] loadDropdownOptions error: $e\n$st');
+      // debugPrint('🔴 [OptionsCubit] loadDropdownOptions error: $e\n$st');
       emit(state.copyWith(dropdownLoading: false, error: e.toString()));
     }
   }

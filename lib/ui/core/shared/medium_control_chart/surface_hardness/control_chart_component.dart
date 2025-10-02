@@ -601,17 +601,18 @@ Widget build(BuildContext context) {
           final bDistance = (b.collectDate.millisecondsSinceEpoch.toDouble() - s.x).abs();
           return aDistance < bDistance ? a : b;
         });
-
-        final bool beyondCL   = nearestPoint.isViolatedR1BeyondLCL == true || 
-        nearestPoint.isViolatedR1BeyondUCL == true;
-        final bool beyondSpec = nearestPoint.isViolatedR1BeyondLSL == true || 
-        nearestPoint.isViolatedR1BeyondUSL == true;
+        final bool beyondCLL   = nearestPoint.isViolatedR1BeyondLCL == true;
+        final bool beyondCLU   = nearestPoint.isViolatedR1BeyondUCL == true;
+        final bool beyondSpecL = nearestPoint.isViolatedR1BeyondLSL == true;
+        final bool beyondSpecU = nearestPoint.isViolatedR1BeyondUSL == true;
         final bool trend      = nearestPoint.isViolatedR3 == true;
 
         final chips = <_ChipData>[
           if (trend)      _ChipData('Trend', Colors.pinkAccent),
-          if (beyondSpec) _ChipData('Over Spec', Colors.red),
-          if (beyondCL)   _ChipData('Over Control', Colors.orange),
+          if (beyondSpecL) _ChipData('Over Spec (L)', Colors.red),
+          if (beyondSpecU) _ChipData('Over Spec (U)', Colors.red),
+          if (beyondCLL)   _ChipData('Over Control (L)', Colors.orange),
+          if (beyondCLU)   _ChipData('Over Control (U)', Colors.orange),
         ];
 
         final content = TooltipContent(
@@ -752,13 +753,10 @@ class TooltipContent extends StatelessWidget {
           Text(title, style: AppTypography.textBody4WBold),
           const SizedBox(height: 4),
           ...rows.map((e) =>
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(e.key, style: AppTypography.textBody4WBold),
-                    Text(e.value, style: AppTypography.textBody4W),
-                  ],
-                )),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text(e.key, style: AppTypography.textBody4WBold),
+                Text(e.value, style: AppTypography.textBody4W),
+              ])),
           if (chips.isNotEmpty) ...[
             const SizedBox(height: 4),
             Wrap(
@@ -789,4 +787,3 @@ class _ChipData {
   final Color color;
   _ChipData(this.label, this.color);
 }
-

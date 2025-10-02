@@ -650,16 +650,20 @@ class _ControlChartComponentState extends State<ControlChartComponent> {
             ) ??
             0.0;
 
-        final bool beyondCL   = (lcl > 0 && nearestPoint.value < lcl) || (ucl > 0 && nearestPoint.value > ucl);
-        final bool beyondSpec = (specLsl > 0 && nearestPoint.value < specLsl) || (specUsl > 0 && nearestPoint.value > specUsl);
+        final bool beyondCLL   = nearestPoint.isViolatedR1BeyondLCL == true;
+        final bool beyondCLU   = nearestPoint.isViolatedR1BeyondUCL == true;
+        final bool beyondSpecL = nearestPoint.isViolatedR1BeyondLSL == true;
+        final bool beyondSpecU = nearestPoint.isViolatedR1BeyondUSL == true;
         final bool trend      = nearestPoint.isViolatedR3 == true;
 
         final chips = <_ChipData>[
           if (trend)      _ChipData('Trend', Colors.pinkAccent),
-          if (beyondSpec) _ChipData('Over Spec', Colors.red),
-          if (beyondCL)   _ChipData('Over Control', Colors.orange),
+          if (beyondSpecL) _ChipData('Over Spec (L)', Colors.red),
+          if (beyondSpecU) _ChipData('Over Spec (U)', Colors.red),
+          if (beyondCLL)   _ChipData('Over Control (L)', Colors.orange),
+          if (beyondCLU)   _ChipData('Over Control (U)', Colors.orange),
         ];
-
+        
         final content = TooltipContent(
           title: nearestPoint.fullLabel ?? '',
           rows: [

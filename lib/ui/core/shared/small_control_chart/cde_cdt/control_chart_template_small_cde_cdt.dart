@@ -1,4 +1,6 @@
 import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
+import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/control_chart_component_small.dart';
+import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/mr_chart_component_small.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -18,16 +20,23 @@ class ControlChartTemplateSmallCdeCdt extends StatefulWidget {
   final String yAxisLabel;
   final Color? dataLineColor;
   final Color? backgroundColor;
-  final double? height;
+  final double? height; // can be overridden by parent
   final double? width;
   final bool isMovingRange;
 
+  /// Optional frozen overrides (bypass Bloc)
   final ControlChartStats? frozenStats;
   final List<ChartDataPointCdeCdt>? frozenDataPoints;
   final SearchStatus? frozenStatus;
 
+  /// Parent-controlled windowing
+  final int? externalStart;
+  final int? externalWindowSize;
+
+  /// ช่วงเวลาเป้าหมายที่ parent ต้องการให้กราฟใช้
   final DateTime? xStart;
   final DateTime? xEnd;
+  final int? xTick;
 
   const ControlChartTemplateSmallCdeCdt({
     super.key,
@@ -41,8 +50,11 @@ class ControlChartTemplateSmallCdeCdt extends StatefulWidget {
     this.frozenStats,
     this.frozenDataPoints,
     this.frozenStatus,
+    this.externalStart,
+    this.externalWindowSize,
     this.xStart,
     this.xEnd,
+    this.xTick,
   });
 
   @override
@@ -105,7 +117,7 @@ class _ControlChartTemplateSmallCdeCdtState
     );
   }
 
-  Widget _buildFromData({
+Widget _buildFromData({
     required List<ChartDataPointCdeCdt> dataPoints,
     required ControlChartStats stats,
     required SearchStatus status,
@@ -115,11 +127,27 @@ class _ControlChartTemplateSmallCdeCdtState
         final w = widget.width ?? constraints.maxWidth;
         final h = widget.height ?? constraints.maxHeight;
 
+        debugPrint('CDE CDE Template h, w = $h, $w');
+
+        // ใช้ช่วงของ parent (ต้องไม่เป็น null ถึงมาถึงฟังก์ชันนี้ได้)
         final DateTime start = widget.xStart!;
-        final DateTime end = widget.xEnd!;
+        final DateTime end   = widget.xEnd!;
 
-        final ctrl.ControlChartComponentSmallCdeCdt useI =
-            ctrl.ControlChartComponentSmallCdeCdt(
+        final useI = ControlChartComponentSmallCdeCdt(
+          dataPoints: dataPoints,
+          controlChartStats: stats,
+          dataLineColor: widget.dataLineColor,
+          backgroundColor: widget.backgroundColor,
+          height: h,
+          width: w,
+          xStart: start, // ✅ ช่วงจริงจาก parent
+          xEnd: end,     // ✅ ช่วงจริงจาก parent
+          // ถ้ามีพารามิเตอร์ minY/maxY ในคอมโพเนนต์ของคุณ
+          minY: stats.yAxisRange?.minYsurfaceHardnessControlChart,
+          maxY: stats.yAxisRange?.maxYsurfaceHardnessControlChart,
+        );
+
+        final useMr = MrChartComponentSmallCdeCdt(
           dataPoints: dataPoints,
           controlChartStats: stats,
           dataLineColor: widget.dataLineColor,
@@ -130,21 +158,7 @@ class _ControlChartTemplateSmallCdeCdtState
           xEnd: end,
         );
 
-        final mr.MrChartComponentSmallCdeCdt useMr =
-            mr.MrChartComponentSmallCdeCdt(
-          dataPoints: dataPoints,
-          controlChartStats: stats,
-          dataLineColor: widget.dataLineColor,
-          backgroundColor: widget.backgroundColor,
-          height: h,
-          width: w,
-          xStart: start,
-          xEnd: end,
-        );
-
-        final ChartComponent selected =
-            widget.isMovingRange ? useMr : useI;
-        final Widget selectedWidget = selected as Widget;
+        final ChartComponent selectedWidget = widget.isMovingRange ? useMr : useI;
 
         const legendRightPad = 16.0;
         const legendHeight = 16.0;
@@ -164,15 +178,18 @@ class _ControlChartTemplateSmallCdeCdtState
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  // Legend
                   SizedBox(
                     height: legendHeight,
                     child: Align(
                       alignment: Alignment.center,
-                      child: selected.buildLegend(),
+                      child: selectedWidget.buildLegend(),
                     ),
                   ),
                   const SizedBox(height: gapLegendToChart),
-                  Expanded(child: selectedWidget),
+
+                  // ✅ ใช้ component ที่มี LineChart ภายในอยู่แล้ว
+                  Expanded(child: selectedWidget as Widget),
                 ],
               ),
             ),
@@ -181,4 +198,4 @@ class _ControlChartTemplateSmallCdeCdtState
       },
     );
   }
-}
+}      

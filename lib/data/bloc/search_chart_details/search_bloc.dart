@@ -176,8 +176,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   ) async {
     emit(state.copyWith(status: () => SearchStatus.loading));
     try {
-      print('📋 Updated query: $newQuery');
-      print('Query params: ${newQuery.toQueryParams()}');
+      // print('📋 Updated query: $newQuery');
+      // print('Query params: ${newQuery.toQueryParams()}');
 
       final results = await Future.wait([
         _searchApiService.getFilteringChartDetails(newQuery),
@@ -187,7 +187,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
       final chartDetails = results[0] as List<ChartDetail>;
       final chartStatistics = results[1] as ControlChartStats;
 
-      print('✅ API call successful, emitting success state $chartStatistics');
+      // print('✅ API call successful, emitting success state $chartStatistics');
 
       emit(state.copyWith(
         status: () => SearchStatus.success,
@@ -197,7 +197,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
         errorMessage: () => null,
       ));
     } catch (e) {
-      print('❌ API call failed: $e');
+      // print('❌ API call failed: $e');
 
       emit(state.copyWith(
         status: () => SearchStatus.failure,

@@ -284,7 +284,7 @@ class _MediumContainer extends StatelessWidget {
                               border: Border.all(width: 1, color: Colors.grey.shade500),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.white.withValues(alpha:0.8),
+                                  color: AppColors.colorBg.withValues(alpha:0.4),
                                   offset: const Offset(0, -2),
                                 ),
                               ],

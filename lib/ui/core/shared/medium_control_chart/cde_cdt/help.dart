@@ -183,8 +183,8 @@ class _MediumContainerCdeCdt extends StatelessWidget {
           state.controlChartStats?.cdtViolations?.beyondSpecLimitLower,
         ) ?? 0;
 
-    final bgColor = _getViolationBgColor(vOverControl, vOverSpec, vTrend);
-    final borderColor = _getViolationBorderColor(vOverControl, vOverSpec, vTrend);
+    final bgColor = _getViolationBgColor(vLowerSpec, vUpperSpec, vLowerControl, vUpperControl, vTrend);
+    final borderColor = _getViolationBorderColor(vLowerSpec, vUpperSpec, vLowerControl, vUpperControl, vTrend);
 
     const sectionLabelH = 20.0;
     const gapV = 8.0;
@@ -286,9 +286,15 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                                 width: 292,
                                 child: DecoratedBox(
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.2),
+                                    color: Colors.white.withValues(alpha:0.2),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(width: 1, color: Colors.grey.shade500),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.colorBg.withValues(alpha:0.4),
+                                        offset: const Offset(0, -2),
+                                      ),
+                                    ],
                                   ),
                                   child: Padding(
                                     padding: const EdgeInsets.all(8),
@@ -309,7 +315,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
 
                       // Control Chart
                       SizedBox(
@@ -372,18 +378,32 @@ class _MediumContainerCdeCdt extends StatelessWidget {
   }
 }
 
-// ---- Helpers ----
-Color _getViolationBgColor(int overControl, int overSpec, int trend) {
-  if (overSpec > 0) return Colors.red.withValues(alpha: 0.15);
-  if (overControl > 0) return Colors.orange.withValues(alpha: 0.15);
-  if (trend > 0) return Colors.pink.withValues(alpha: 0.15);
+Color _getViolationBgColor(int overControlLower, int overControlUpper, 
+int overSpecLower, int overSpecUpper, int trend) {
+  if (overSpecUpper > 0 || overSpecLower > 0) {
+    return Colors.red.withValues(alpha: 0.15);
+    // return Colors.pink.shade200.withValues(alpha: 0.15);
+  } else if (overControlUpper > 0 || overControlLower > 0) {
+    return Colors.orange.withValues(alpha: 0.15);
+    // return Colors.red.shade200.withValues(alpha: 0.15);
+  } else if (trend > 0) {
+    return Colors.pink.withValues(alpha: 0.15);
+  }
   return AppColors.colorBrandTp.withValues(alpha: 0.15);
 }
 
-Color _getViolationBorderColor(int overControl, int overSpec, int trend) {
-  if (overSpec > 0) return Colors.red.withValues(alpha: 0.70);
-  if (overControl > 0) return Colors.orange.withValues(alpha: 0.70);
-  if (trend > 0) return Colors.pinkAccent.withValues(alpha: 0.70);
+// Decide border color in same hierarchy
+Color _getViolationBorderColor(int overControlLower, int overControlUpper, 
+int overSpecLower, int overSpecUpper, int trend) {
+  if (overSpecUpper > 0 || overSpecLower > 0) {
+    return Colors.red.withValues(alpha: 0.70);
+    // return Colors.pink.shade200.withValues(alpha: 0.15);
+  } else if (overControlUpper > 0 || overControlLower > 0) {
+    return Colors.orange.withValues(alpha: 0.70);
+    // return Colors.red.shade200.withValues(alpha: 0.15);
+  } else if (trend > 0) {
+    return Colors.pinkAccent.withValues(alpha: 0.70);
+  }
   return AppColors.colorBrandTp.withValues(alpha: 0.70);
 }
 

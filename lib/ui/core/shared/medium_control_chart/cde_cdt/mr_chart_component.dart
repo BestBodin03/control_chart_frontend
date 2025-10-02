@@ -398,7 +398,7 @@ class _MrChartComponentState extends State<MrChartComponent> {
             final dotColor = isOverUcl ? Colors.orange : baseColor;
             return FlDotCirclePainter(
               radius: 3.5,
-              color: dotColor.withValues(alpha: 0.85),
+              color: dotColor,
               strokeWidth: 1,
               strokeColor: Colors.white,
             );

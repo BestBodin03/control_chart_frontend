@@ -320,7 +320,7 @@ BlocBuilder<OptionsCubit, OptionsState>(
 
     // Use the latest payload (or per-index: opts.furnaceOptionsByIndex[0] ?? [])
     final raw = opts.lastFetchedFurnaces;
-    debugPrint('🔵 [Furnace] Raw: $raw');
+    // debugPrint('🔵 [Furnace] Raw: $raw');
 
     // Sort numerically, unique, and prepend "All"
     final furnaces = raw
@@ -337,14 +337,14 @@ BlocBuilder<OptionsCubit, OptionsState>(
         return ai.compareTo(bi);
       });
     furnaces.insert(0, allFurnacesLabel);
-    debugPrint('🔵 [Furnace] Final: $furnaces');
+    // debugPrint('🔵 [Furnace] Final: $furnaces');
 
     // Safe current value
     String? current = searchState.currentFurnaceUiValue.isEmpty
         ? allFurnacesLabel
         : searchState.currentFurnaceUiValue;
     if (!furnaces.contains(current)) current = allFurnacesLabel;
-    debugPrint('🔵 [Furnace] Current: $current');
+    // debugPrint('🔵 [Furnace] Current: $current');
 
     return AbsorbPointer(
       absorbing: opts.dropdownLoading,
@@ -400,7 +400,7 @@ BlocBuilder<OptionsCubit, OptionsState>(
 
     // Use the latest payload (or per-index: opts.cpOptionsByIndex[0] ?? [])
     final raw = opts.lastFetchedCps;
-    debugPrint('🟢 [Material] Raw cp list: $raw');
+    // debugPrint('🟢 [Material] Raw cp list: $raw');
 
     // Sort numerically, unique, and prepend "All"
     final materials = raw
@@ -417,7 +417,7 @@ BlocBuilder<OptionsCubit, OptionsState>(
         return ai.compareTo(bi);
       });
     materials.insert(0, allLabel);
-    debugPrint('🟢 [Material] Final list: $materials');
+    // debugPrint('🟢 [Material] Final list: $materials');
 
     // (Optional) If you still want to display "matNo - cpName", you’d need
     // a cpName map from the API. For now we just show the cpNo/material number:
@@ -431,7 +431,7 @@ BlocBuilder<OptionsCubit, OptionsState>(
       current = current.split(' - ').first;
     }
     if (!materials.contains(current)) current = allLabel;
-    debugPrint('🟢 [Material] Current: $current');
+    // debugPrint('🟢 [Material] Current: $current');
 
     return AbsorbPointer(
       absorbing: opts.dropdownLoading,

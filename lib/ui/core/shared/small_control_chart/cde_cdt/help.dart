@@ -207,11 +207,6 @@ class _SmallChartBoxCdeCdt extends StatelessWidget {
             // ใช้ช่วงจาก query ตรง ๆ
             xStart: q.startDate,
             xEnd:   q.endDate,
-
-            // ขนาด/สี (หาก template รองรับ)
-            width: double.infinity,
-            height: fixedHeight,
-            dataLineColor: AppColors.colorBrand,
           ),
       ),
     );
