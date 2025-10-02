@@ -39,6 +39,30 @@ ControlChartStats _$ControlChartStatsFromJson(
   compoundLayerMrAverage: (json['compoundLayerMRAverage'] as num?)?.toDouble(),
   cdeMrAverage: (json['cdeMRAverage'] as num?)?.toDouble(),
   cdtMrAverage: (json['cdtMRAverage'] as num?)?.toDouble(),
+  surfaceHardnessCapabilityProcess:
+      json['surfaceHardnessCapabilityProcess'] == null
+          ? null
+          : CapabilityProcess.fromJson(
+            json['surfaceHardnessCapabilityProcess'] as Map<String, dynamic>,
+          ),
+  compoundLayerCapabilityProcess:
+      json['compoundLayerCapabilityProcess'] == null
+          ? null
+          : CapabilityProcess.fromJson(
+            json['compoundLayerCapabilityProcess'] as Map<String, dynamic>,
+          ),
+  cdeCapabilityProcess:
+      json['cdeCapabilityProcess'] == null
+          ? null
+          : CapabilityProcess.fromJson(
+            json['cdeCapabilityProcess'] as Map<String, dynamic>,
+          ),
+  cdtCapabilityProcess:
+      json['cdtCapabilityProcess'] == null
+          ? null
+          : CapabilityProcess.fromJson(
+            json['cdtCapabilityProcess'] as Map<String, dynamic>,
+          ),
   controlLimitIChart:
       json['controlLimitIChart'] == null
           ? null
@@ -188,6 +212,12 @@ Map<String, dynamic> _$ControlChartStatsToJson(ControlChartStats instance) =>
       'compoundLayerMRAverage': instance.compoundLayerMrAverage,
       'cdeMRAverage': instance.cdeMrAverage,
       'cdtMRAverage': instance.cdtMrAverage,
+      'surfaceHardnessCapabilityProcess':
+          instance.surfaceHardnessCapabilityProcess?.toJson(),
+      'compoundLayerCapabilityProcess':
+          instance.compoundLayerCapabilityProcess?.toJson(),
+      'cdeCapabilityProcess': instance.cdeCapabilityProcess?.toJson(),
+      'cdtCapabilityProcess': instance.cdtCapabilityProcess?.toJson(),
       'controlLimitIChart': instance.controlLimitIChart?.toJson(),
       'compoundLayerControlLimitIChart':
           instance.compoundLayerControlLimitIChart?.toJson(),
@@ -237,6 +267,24 @@ const _$SecondChartSelectedEnumMap = {
   SecondChartSelected.compoundLayer: 'COMPOUND LAYER',
   SecondChartSelected.na: 'NA',
 };
+
+CapabilityProcess _$CapabilityProcessFromJson(Map<String, dynamic> json) =>
+    CapabilityProcess(
+      std: (json['std'] as num?)?.toDouble(),
+      cpu: (json['cpu'] as num?)?.toDouble(),
+      cpl: (json['cpl'] as num?)?.toDouble(),
+      cp: (json['cp'] as num?)?.toDouble(),
+      cpk: (json['cpk'] as num?)?.toDouble(),
+    );
+
+Map<String, dynamic> _$CapabilityProcessToJson(CapabilityProcess instance) =>
+    <String, dynamic>{
+      'std': instance.std,
+      'cpu': instance.cpu,
+      'cpl': instance.cpl,
+      'cp': instance.cp,
+      'cpk': instance.cpk,
+    };
 
 ControlLimitIChart _$ControlLimitIChartFromJson(Map<String, dynamic> json) =>
     ControlLimitIChart(

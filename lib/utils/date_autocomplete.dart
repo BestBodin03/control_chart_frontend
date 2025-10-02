@@ -4,23 +4,23 @@ class DateAutoComplete {
     DateTime startDate;
     DateTime endDate;
     switch (period) {
-      case '1 เดือน':
+      case '1 month':
         startDate = DateTime(now.year, now.month - 1, now.day, 0, 0, 0);
         endDate = now;
         break;
-      case '3 เดือน':
+      case '3 months':
         startDate = DateTime(now.year, now.month - 3, now.day, 0, 0, 0);
         endDate = now;
         break;
-      case '6 เดือน':
+      case '6 months':
         startDate = DateTime(now.year, now.month - 6, now.day, 0, 0, 0);
         endDate = now;
         break;
-      case '1 ปี':
+      case '1 year':
         startDate = DateTime(now.year - 1, now.month, now.day, 0, 0, 0);
         endDate = now;
         break;
-      case 'ตลอดเวลา':
+      case 'All time':
         // ตั้งแต่ปี 2020 หรือตามที่ระบบเริ่มมีข้อมูล
         startDate = DateTime(2010, 1, 1, 0, 0, 0);
         endDate = now;

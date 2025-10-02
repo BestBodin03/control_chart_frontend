@@ -29,6 +29,11 @@ class ControlChartStats {
   @JsonKey(name: 'cdtMRAverage')
   final double? cdtMrAverage;
 
+  final CapabilityProcess? surfaceHardnessCapabilityProcess;
+  final CapabilityProcess? compoundLayerCapabilityProcess;
+  final CapabilityProcess? cdeCapabilityProcess;
+  final CapabilityProcess? cdtCapabilityProcess;
+
   final ControlLimitIChart? controlLimitIChart;
   final ControlLimitIChart? compoundLayerControlLimitIChart;
   final ControlLimitIChart? cdeControlLimitIChart;
@@ -82,6 +87,10 @@ class ControlChartStats {
     this.compoundLayerMrAverage,
     this.cdeMrAverage,
     this.cdtMrAverage,
+    this.surfaceHardnessCapabilityProcess,
+    this.compoundLayerCapabilityProcess,
+    this.cdeCapabilityProcess,
+    this.cdtCapabilityProcess,
     this.controlLimitIChart,
     this.compoundLayerControlLimitIChart,
     this.cdeControlLimitIChart,
@@ -128,6 +137,10 @@ class ControlChartStats {
         compoundLayerMrAverage = 0.0,
         cdeMrAverage = 0.0,
         cdtMrAverage = 0.0,
+        surfaceHardnessCapabilityProcess = const CapabilityProcess(),
+        compoundLayerCapabilityProcess = const CapabilityProcess(),
+        cdeCapabilityProcess = const CapabilityProcess(),
+        cdtCapabilityProcess = const CapabilityProcess(),
         controlLimitIChart = null,
         compoundLayerControlLimitIChart = null,
         cdeControlLimitIChart = null,
@@ -159,6 +172,30 @@ class ControlChartStats {
       _$ControlChartStatsFromJson(json);
 
   Map<String, dynamic> toJson() => _$ControlChartStatsToJson(this);
+}
+
+
+/// ==================== Capability Process ====================
+/// 
+@JsonSerializable()
+class CapabilityProcess {
+  final double? std;
+  final double? cpu;
+  final double? cpl;
+  final double? cp;
+  final double? cpk;
+
+  const CapabilityProcess({
+    this.std,
+    this.cpu,
+    this.cpl,
+    this.cp,
+    this.cpk,
+  });
+
+  factory CapabilityProcess.fromJson(Map<String, dynamic> json) =>
+      _$CapabilityProcessFromJson(json);
+  Map<String, dynamic> toJson() => _$CapabilityProcessToJson(this);
 }
 
 /// ==================== Control Limits / Sigma ====================

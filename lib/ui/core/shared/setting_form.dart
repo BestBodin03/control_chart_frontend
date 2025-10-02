@@ -293,7 +293,7 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                   key: const ValueKey('global_period'),
                                   context: context,
                                   value: _periodTypeToLabel(cubit.state.specifics[0].periodType),
-                                  items: const ['1 เดือน','3 เดือน','6 เดือน','1 ปี','ตลอดเวลา','กำหนดเอง'],
+                                  items: const ['1 month','3 months','6 months','1 year','All time','Custom'],
                                   onChanged: (value) {
                                     if (value == null) return;
                                     final now = DateTime.now();
@@ -301,25 +301,25 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                     PeriodType period;
 
                                     switch (value) {
-                                      case '1 เดือน': 
+                                      case '1 month':
                                         period = PeriodType.ONE_MONTH;   
                                         startAuto = DateTime(now.year, now.month - 1, now.day); 
                                         break;
-                                      case '3 เดือน': 
-                                        period = PeriodType.THREE_MONTHS; 
+                                      case '3 months':
+                                        period = PeriodType.THREE_MONTHS;
                                         startAuto = DateTime(now.year, now.month - 3, now.day); 
                                         break;
-                                      case '6 เดือน': 
-                                        period = PeriodType.SIX_MONTHS;   
-                                        startAuto = DateTime(now.year, now.month - 6, now.day); 
+                                      case '6 months':
+                                        period = PeriodType.SIX_MONTHS;
+                                        startAuto = DateTime(now.year, now.month - 6, now.day);
                                         break;
-                                      case '1 ปี':    
-                                        period = PeriodType.ONE_YEAR;     
-                                        startAuto = DateTime(now.year - 1, now.month, now.day); 
+                                      case '1 year':
+                                        period = PeriodType.ONE_YEAR;
+                                        startAuto = DateTime(now.year - 1, now.month, now.day);
                                         break;
-                                      case 'ตลอดเวลา': 
-                                        period = PeriodType.LIFETIME;    
-                                        startAuto = DateTime(2024, 1, 1); 
+                                      case 'All time':
+                                        period = PeriodType.LIFETIME;
+                                        startAuto = DateTime(2024, 1, 1);
                                         break;
                                       default: 
                                         period = PeriodType.CUSTOM;       
@@ -643,13 +643,13 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
   // helper: แปลง enum -> label ที่ dropdown ใช้
   String _periodTypeToLabel(PeriodType? p) {
     switch (p) {
-      case PeriodType.ONE_MONTH:    return '1 เดือน';
-      case PeriodType.THREE_MONTHS: return '3 เดือน';
-      case PeriodType.SIX_MONTHS:   return '6 เดือน';
-      case PeriodType.ONE_YEAR:     return '1 ปี';
-      case PeriodType.LIFETIME:     return 'ตลอดเวลา';
+      case PeriodType.ONE_MONTH:    return '1 month';
+      case PeriodType.THREE_MONTHS: return '3 months';
+      case PeriodType.SIX_MONTHS:   return '6 months';
+      case PeriodType.ONE_YEAR:     return '1 year';
+      case PeriodType.LIFETIME:     return 'All time';
       case PeriodType.CUSTOM:
-      default:                      return 'กำหนดเอง';
+      default:                      return 'Custom';
     }
   }
 

@@ -27,11 +27,11 @@ class FormState extends Equatable {
   // Factory constructor for initial state
   factory FormState.initial() {
     return FormState(
-      startDate: null,
-      endDate: null,
+      startDate: DateTime.now().subtract(const Duration(days: 30)),
+      endDate: DateTime.now(),
       selectedItem: '',
       limitValue: '9',
-      periodValue: '1 เดือน',
+      periodValue: '1 month',
       selectedMatNo: '',
       selectedConditions: const [],
       startDateLabel: '',

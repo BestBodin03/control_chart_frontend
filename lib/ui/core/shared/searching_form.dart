@@ -63,8 +63,6 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
       final s = context.read<SearchBloc>().state;
       context.read<FiltersCubit>().hydrate(s.currentQuery.startDate, s.currentQuery.endDate);
       _applyProfileIfNeeded(widget.initialProfile);
-
-      // สำคัญ: handler LoadDropdownOptions ต้อง "pure" ไม่รีเซ็ต selection ปัจจุบัน
       context.read<SearchBloc>().add(const LoadDropdownOptions());
     });
   }
@@ -148,10 +146,10 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
       builder: (context, searchState) {
         return BlocBuilder<FiltersCubit, FiltersState>(
           builder: (context, filters) {
-            final sDate = filters.startDate ?? searchState.currentQuery.startDate;
-            final eDate = filters.endDate ?? searchState.currentQuery.endDate;
             final dateNow = DateTime.now();
             final dateOneM = oneMonthAgo(dateNow);
+            final sDate = filters.startDate ?? searchState.currentQuery.startDate ?? dateOneM;
+            final eDate = filters.endDate ?? searchState.currentQuery.endDate ?? dateNow;
 
 
             return GradientBackground(
@@ -180,19 +178,19 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                buildSectionTitle('ระยะเวลา'),
+                                buildSectionTitle('Period'),
                                 IconButton(
                                   tooltip: 'Refresh',
                                   padding: const EdgeInsets.all(8),
                                   constraints: const BoxConstraints(),
                                   splashRadius: 16,
                                   onPressed: () {
-                                    context.read<FiltersCubit>().setPeriod('1 เดือน', start: dateOneM, end: dateNow);
+                                    context.read<FiltersCubit>().setPeriod('1 month', start: dateOneM, end: dateNow);
                                     context.read<SearchBloc>().add(LoadFilteredChartData(
                                       startDate: dateOneM,
                                       endDate: dateNow
                                     ));
-                                    // context.read<FiltersCubit>().setPeriod('1 เดือน', start: oneMonthAgo(dateNow), end: dateNow);
+                                    // context.read<FiltersCubit>().setPeriod('1 month', start: oneMonthAgo(dateNow), end: dateNow);
                                   },
                                   icon: const Icon(Icons.refresh_rounded, size: 24, color: AppColors.colorBrand),
                                 ),
@@ -204,27 +202,27 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                             // Period dropdown (FiltersCubit only)
                             buildDropdownField(
                               context: context,
-                              value: filters.periodValue,
-                              items: const ['1 เดือน', '3 เดือน', '6 เดือน', '1 ปี', 'ตลอดเวลา', 'กำหนดเอง'],
+                              value: filters.periodValue ,
+                              items: const ['1 month', '3 months', '6 months', '1 year', 'All time', 'Custom'],
                               onChanged: (value) {
                                 if (value == null) return;
                                 final now = DateTime.now();
                                 DateTime? newStart, newEnd = now;
 
                                 switch (value) {
-                                  case '1 เดือน':
+                                  case '1 month':
                                     newStart = DateTime(now.year, now.month - 1, now.day);
                                     break;
-                                  case '3 เดือน':
+                                  case '3 months':
                                     newStart = DateTime(now.year, now.month - 3, now.day);
                                     break;
-                                  case '6 เดือน':
+                                  case '6 months':
                                     newStart = DateTime(now.year, now.month - 6, now.day);
                                     break;
-                                  case '1 ปี':
+                                  case '1 year':
                                     newStart = DateTime(now.year - 1, now.month, now.day);
                                     break;
-                                  case 'ตลอดเวลา':
+                                  case 'All time':
                                     newStart = DateTime(2024, 1, 1);
                                     break;
                                   default:
@@ -234,7 +232,7 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
 
                                 context.read<FiltersCubit>().setPeriod(value, start: newStart, end: newEnd);
 
-                                if (value != 'กำหนดเอง') {
+                                if (value != 'Custom') {
                                   final int? furnace = furnaceIntFromUi(searchState.currentFurnaceUiValue);
                                   final String? mat = materialFromUi(searchState.currentMaterialUiValue);
 
@@ -259,7 +257,7 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                     context: context,
                                     value: sDate,
                                     label: _dateLabel(sDate) ?? 'Select Date',
-                                    date: sDate ?? DateTime.now(),
+                                    date: sDate ?? dateOneM,
                                     onTap: () => _pickDate(context, isStart: true),
                                     onChanged: (d) {
                                       if (d == null) return;
@@ -280,14 +278,14 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                   ),
                                 ),
                                 const SizedBox(width: 16),
-                                const Text('ถึง', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87)),
+                                const Text('To', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.black87)),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: buildDateField(
                                     context: context,
                                     value: eDate,
                                     label: _dateLabel(eDate) ?? 'Select Date',
-                                    date: eDate ?? DateTime.now(),
+                                    date: eDate ?? dateNow,
                                     onTap: () => _pickDate(context, isStart: false),
                                     onChanged: (d) {
                                       if (d == null) return;
@@ -312,7 +310,7 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
 
                             const SizedBox(height: 16),
 
-buildSectionTitle('หมายเลขเตา'),
+buildSectionTitle('Furnace No.'),
 const SizedBox(height: 8),
 BlocBuilder<OptionsCubit, OptionsState>(
   builder: (context, opts) {

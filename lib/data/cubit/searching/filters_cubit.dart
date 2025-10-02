@@ -16,7 +16,7 @@ class FiltersState {
   });
 
   factory FiltersState.initial() => const FiltersState(
-        periodValue: '1 เดือน',
+        periodValue: '1 month',
         startDate: null,
         endDate: null,
         lastAppliedProfile: null,
@@ -46,7 +46,7 @@ class FiltersCubit extends Cubit<FiltersState> {
 
   void applyProfile(HomeContentVar p) {
     emit(state.copyWith(
-      periodValue: 'กำหนดเอง',
+      periodValue: 'Custom',
       startDate: p.startDate,
       endDate: p.endDate,
       lastAppliedProfile: p,
@@ -57,12 +57,12 @@ class FiltersCubit extends Cubit<FiltersState> {
     emit(state.copyWith(periodValue: value, startDate: start, endDate: end));
   }
 
-  void setStartDate(DateTime d) => emit(state.copyWith(periodValue: 'กำหนดเอง', startDate: d));
-  void setEndDate(DateTime d)   => emit(state.copyWith(periodValue: 'กำหนดเอง', endDate: d));
+  void setStartDate(DateTime d) => emit(state.copyWith(periodValue: 'Custom', startDate: d));
+  void setEndDate(DateTime d)   => emit(state.copyWith(periodValue: 'Custom', endDate: d));
 
   void refreshOneMonth() {
     final now = DateTime.now();
     final newStart = DateTime(now.year, now.month - 1, now.day);
-    emit(state.copyWith(periodValue: '1 เดือน', startDate: newStart, endDate: now));
+    emit(state.copyWith(periodValue: '1 month', startDate: newStart, endDate: now));
   }
 }

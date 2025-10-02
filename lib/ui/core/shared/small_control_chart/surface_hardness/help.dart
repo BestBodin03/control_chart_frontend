@@ -48,6 +48,8 @@ class _SmallCardState extends State<_SmallCard> {
 
     final title = 'Surface Hardness';
     final dataPoints = searchState.chartDataPoints;
+    final hasSpec = searchState.controlChartStats?.specAttribute?.surfaceHardnessLowerSpec != null ||
+                searchState.controlChartStats?.specAttribute?.surfaceHardnessUpperSpec != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -68,6 +70,9 @@ class _SmallCardState extends State<_SmallCard> {
           ],
         ),
         
+        const SizedBox(height: 8),
+        _ViolationColumn(searchState: searchState),
+
         const SizedBox(height: 8),
 
         AnimatedSwitcher(
@@ -98,9 +103,26 @@ class _SmallCardState extends State<_SmallCard> {
               mainAxisSize: MainAxisSize.min, // ✅
               children: [
                 const SizedBox(height: _gapV),
-
                 // --- Control Chart (I) ---
-                const _SectionLabel('Control Chart'),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline, // ให้ตัวอักษรเสมอ baseline เดียวกัน
+                  textBaseline: TextBaseline.alphabetic,           // ต้องระบุเมื่อใช้ Baseline
+                  children: [
+                    const _SectionLabel('Control Chart'),
+
+                    const Spacer(), // ดันข้อความ CP/CPK ไปชิดขวา แทนการใช้ spaceBetween
+
+                    if (hasSpec)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: Text(
+                          'CP = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cp?.toStringAsFixed(2) ?? 'N/A'}, '
+                          'CPK = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
+                          style: AppTypography.textBody4BBold,
+                        ),
+                      ),
+                  ],
+                ),
                 _SmallChartBox(
                   searchState: searchState,
                   dataPoints: dataPoints,
@@ -124,6 +146,129 @@ class _SmallCardState extends State<_SmallCard> {
           ),
         ),
       ],
+    );
+  }
+}
+
+
+class _ViolationColumn extends StatelessWidget {
+  const _ViolationColumn({required this.searchState});
+  final SearchState searchState;
+
+  static const double _labelColWidth = 120;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = searchState.controlChartStats;
+    String fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
+
+    // // --- I Chart ---
+    // final usl    = fmt(s?.specAttribute?.surfaceHardnessUpperSpec);
+    // final lsl    = fmt(s?.specAttribute?.surfaceHardnessLowerSpec);
+    // final target = fmt(s?.specAttribute?.surfaceHardnessTarget);
+    // final ucl    = fmt(s?.controlLimitIChart?.ucl);
+    // final lcl    = fmt(s?.controlLimitIChart?.lcl);
+    // final avg    = fmt(s?.average);
+
+    // // --- MR ---
+    // final mrUcl  = fmt(s?.controlLimitMRChart?.ucl);
+    // final mrCl   = fmt(s?.controlLimitMRChart?.cl);
+    // final mrLcl  = fmt(s?.controlLimitMRChart?.lcl);
+
+    // --- Violations ---
+    final v = s?.surfaceHardnessViolations;
+    final overSpecLower    = v?.beyondSpecLimitLower ?? 0;
+    final overSpecUpper    = v?.beyondSpecLimitUpper ?? 0;
+    final overControlLower = v?.beyondControlLimitLower ?? 0;
+    final overControlUpper = v?.beyondControlLimitUpper ?? 0;
+    final trend       = v?.trend ?? 0;
+
+    // final controlEntries = <_LegendEntry>[
+    //   _LegendEntry('Spec',   Colors.red,                 usl),
+    //   _LegendEntry('Spec',   Colors.red,                 lsl),
+    //   _LegendEntry('UCL',    Colors.orange,              ucl),
+    //   _LegendEntry('LCL',    Colors.orange,              lcl),
+    //   _LegendEntry('AVG',    Colors.green,               avg),
+    //   _LegendEntry('Target', Colors.deepPurple.shade300, target),
+    // ].where((e) => e.value != 'N/A').toList();
+
+    // final mrEntries = <_LegendEntry>[
+    //   _LegendEntry('UCL', Colors.orange, mrUcl),
+    //   _LegendEntry('AVG', Colors.green,  mrCl),
+    //   _LegendEntry('LCL', Colors.orange, mrLcl),
+    // ].where((e) => e.value != 'N/A').toList();
+
+    // final controlChunks = _chunk3(controlEntries);
+    final showViolations =
+        searchState.currentQuery.materialNo != null || searchState.currentQuery.furnaceNo != null;
+
+    return Material(
+      color: Colors.white,
+      elevation: 1.5,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // if (controlChunks.isNotEmpty)
+            //   _legendLabeledRow(
+            //     label: 'Control Chart',
+            //     entries: controlChunks[0],
+            //     labelColWidth: _labelColWidth,
+            //   ),
+            // if (controlChunks.length > 1)
+            //   _legendLabeledRow(
+            //     label: null,
+            //     entries: controlChunks[1],
+            //     labelColWidth: _labelColWidth,
+            //   ),
+            // if (controlChunks.isNotEmpty) ...[
+            //   const SizedBox(height: 4),
+            //   const Divider(height: 2),
+            //   const SizedBox(height: 4),
+            // ],
+            // if (mrEntries.isNotEmpty) ...[
+            //   _legendLabeledRow(
+            //     label: 'Moving Range',
+            //     entries: mrEntries,
+            //     labelColWidth: _labelColWidth,
+            //     maxPerRow: 3,
+            //   ),
+            //   const SizedBox(height: 4),
+            //   const Divider(height: 2),
+            //   const SizedBox(height: 4),
+            // ],
+            if (showViolations)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          _ViolationChip(label: 'Over Spec (L)',    
+                          count: overSpecLower, color: Colors.red),
+                          _ViolationChip(label: 'Over Spec (U)',    
+                          count: overSpecUpper, color: Colors.red),
+                          _ViolationChip(label: 'Over Control (L)', 
+                          count: overControlLower, color: Colors.orange),
+                          _ViolationChip(label: 'Over Control (U)', 
+                          count: overControlUpper, color: Colors.orange),
+                          _ViolationChip(label: 'Trend',   
+                          count: trend, color: Colors.pink),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -353,7 +498,7 @@ class _ViolationChip extends StatelessWidget {
     final bool isZero = c == 0;
     final bool showCount = label != 'Trend';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       decoration: BoxDecoration(
         color: isZero ? Colors.white : color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
@@ -381,24 +526,31 @@ class _ViolationChip extends StatelessWidget {
               color: AppColors.colorBlack,
             ),
           ),
-          showCount ? const SizedBox(width: 4) : const SizedBox(width: 4),
-          showCount
-              ? Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: isZero ? Colors.grey.shade300 : Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    '$c',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: isZero ? Colors.grey.shade700 : AppColors.colorBlack,
-                    ),
-                  ),
-                )
-              : const SizedBox.shrink(),
+
+          SizedBox(width: showCount ? 4 : 4),
+          
+          Visibility(
+            visible: showCount,
+            maintainSize: true,
+            maintainAnimation: true,
+            maintainState: true,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: isZero ? Colors.grey.shade300 : Colors.white,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '$c',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: isZero ? Colors.grey.shade700 : AppColors.colorBlack,
+                ),
+              ),
+            ),
+          ),
+
         ],
       ),
     );
