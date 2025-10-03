@@ -11,6 +11,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../small_control_chart_var.dart';
+
 class ControlChartComponentSmall extends StatefulWidget implements ChartComponent{
   final List<ChartDataPoint>? dataPoints;
   final ControlChartStats? controlChartStats;
@@ -120,6 +122,67 @@ class _ControlChartComponentSmallState extends State<ControlChartComponentSmall>
   double? _cachedMaxY;
   double? _cachedInterval;
 
+  void _ensureYScale() {
+    if (_cachedInterval != null) return;
+
+    const divisions = 5;
+    final yr = widget.controlChartStats?.yAxisRange;
+
+    final minSel = yr?.minYsurfaceHardnessControlChart ?? 0.0;
+
+    final maxSel = yr?.maxYsurfaceHardnessControlChart ?? 0.0;
+
+    if (maxSel <= minSel) {
+      _cachedMinY = minSel;
+      _cachedMaxY = minSel + divisions;
+      _cachedInterval = 1.0;
+      return;
+    }
+
+    final ideal = (maxSel - minSel) / divisions;
+    double interval = _niceStepCeil(ideal);
+
+    double minY = (minSel / interval).floor() * interval;
+    double maxY = minY + divisions * interval;
+
+    while (maxY < maxSel - 1e-12) {
+      interval = _nextNiceStep(interval);
+      minY = (minSel / interval).floor() * interval;
+      maxY = minY + divisions * interval;
+    }
+
+    // ===== ดึงค่า Spec และ Control Limits =====
+    final specAttr = widget.controlChartStats?.specAttribute;
+    final lsl = specAttr?.surfaceHardnessLowerSpec;
+    final usl = specAttr?.surfaceHardnessUpperSpec;
+
+    final lcl = widget.controlChartStats?.controlLimitIChart?.lcl ?? 0.0;
+
+    final ucl = widget.controlChartStats?.controlLimitIChart?.ucl ?? 0.0;
+
+    // ===== เช็คว่าชนกับ minY หรือ maxY หรือไม่ =====
+    final checkValues = <double?>[ lsl, usl, lcl, ucl];
+    
+    for (final val in checkValues) {
+      if (val == null) continue;
+      
+      // ถ้าชนกับ minY → ลด minY
+      if ((val - minY).abs() < 1e-9) {
+        minY -= interval;
+      }
+      
+      // ถ้าชนกับ maxY → เพิ่ม maxY
+      if ((val - maxY).abs() < 1e-9) {
+        maxY += interval;
+      }
+    }
+
+    _cachedMinY = minY;
+    _cachedMaxY = maxY;
+    _cachedInterval = interval;
+  }
+
+
   // Tooltip state ภายใน widget
   final ValueNotifier<_Tip?> _tip = ValueNotifier<_Tip?>(null);
 
@@ -147,7 +210,8 @@ Widget build(BuildContext context) {
   final double safeRange = (maxXv - minXv).abs().clamp(1.0, double.infinity);
   final int desiredTick = (widget.controlChartStats?.xTick ?? 6).clamp(2, 100);
   final double tickInterval = safeRange / (desiredTick - 1);
-
+  final double minSel = widget.controlChartStats?.yAxisRange?.minYsurfaceHardnessControlChart ?? 0.0;
+  final double maxSel = widget.controlChartStats?.yAxisRange?.maxYsurfaceHardnessControlChart ?? 0.0;
   return LayoutBuilder(
     builder: (context, constraints) {
       final Size chartSize = Size(
@@ -173,8 +237,8 @@ Widget build(BuildContext context) {
                   LineChartData(
                     minX: minXv,
                     maxX: maxXv,
-                    minY: _getMinY(),
-                    maxY: _getMaxY(),
+                    minY: _getMinY(minSel),
+                    maxY: _getMaxY(maxSel),
                     gridData: _gridData(minXv, maxXv, tickInterval),
                     titlesData: _titlesData(minXv, maxXv),
                     borderData: _borderData(),
@@ -633,22 +697,70 @@ Widget build(BuildContext context) {
     );
   }
 
-  double _getMinY() {
-    if (_cachedInterval == null) _getInterval();
-    return _cachedMinY ?? 0.0;
+  /// คืนค่า step ที่เล็กที่สุดซึ่ง >= x
+  double _niceStepCeil(double x) {
+    int left = 0;
+    int right = niceSteps.length - 1;
+
+    while (left < right) {
+      int mid = (left + right) >> 1; // หาร 2 แบบ integer
+      if (niceSteps[mid] >= x) {
+        right = mid;
+      } else {
+        left = mid + 1;
+      }
+    }
+    return niceSteps[left];
   }
 
-    double _getMaxY() {
-    if (_cachedInterval == null) _getInterval();
-    return _cachedMaxY ?? 0.0;
+  /// คืนค่า step ถัดไป (strictly bigger than step)
+  double _nextNiceStep(double step) {
+    int left = 0;
+    int right = niceSteps.length - 1;
+
+    while (left < right) {
+      int mid = (left + right) >> 1;
+      if (niceSteps[mid] > step) {
+        right = mid;
+      } else {
+        left = mid + 1;
+      }
+    }
+    return niceSteps[left];
   }
+
+
+  double _getMinY(double minSel) {
+    if (_cachedInterval == null) _ensureYScale();
+    double minY = _cachedMinY ?? 0.0;
+    final interval = _cachedInterval ?? 1.0;
+
+    // ถ้า minSel เท่ากับ minY (หรือใกล้กว่า threshold) → ขยับลง 1 step
+    if ((minSel - minY).abs() < interval * 0.5) {
+      minY = (minY - interval).clamp(0.0, double.infinity);
+    }
+    return minY;
+  }
+
+  double _getMaxY(double maxSel) {
+    if (_cachedInterval == null) _ensureYScale();
+    double maxY = _cachedMaxY ?? 0.0;
+    final interval = _cachedInterval ?? 1.0;
+
+    if ((maxSel - maxY).abs() < interval * 0.5) {
+      maxY = maxY + interval;
+    }
+    return maxY;
+  }
+
 
   double _getInterval() {
     const divisions = 5; // -> 6 ticks
-    final spotMin = widget.controlChartStats?.yAxisRange?.minYsurfaceHardnessControlChart
-     ?? 0.0;
-    final spotMax = widget.controlChartStats?.yAxisRange?.maxYsurfaceHardnessControlChart
-     ?? spotMin;
+    final spec = widget.controlChartStats?.yAxisRange;
+    final spotMin = spec?.minYsurfaceHardnessControlChart
+    ?? 0.0;
+    final spotMax = spec?.maxYsurfaceHardnessControlChart
+    ?? spotMin;
 
     if (spotMax <= spotMin) {
       _cachedMinY = spotMin;
@@ -674,48 +786,6 @@ Widget build(BuildContext context) {
     _cachedInterval = interval;
     return interval;
   }
-
-  double _niceStepCeil(double x) {
-    if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
-    final exp = (math.log(x) / math.log(10)).floor();
-    final mag = math.pow(10.0, exp).toDouble();
-    final mant = x / mag;
-    if (mant <= 0.025) return 0.025 * mag;
-    if (mant <= 0.050) return 0.050 * mag;
-    if (mant <= 0.075) return 0.075 * mag;
-    if (mant <= 0.125) return 0.125 * mag;
-    if (mant <= 0.25) return 0.25 * mag;
-    if (mant <= 0.5) return 0.5 * mag;
-    if (mant <= 1.0) return 1.0 * mag;
-    if (mant <= 1.25) return 1.25 * mag;
-    if (mant <= 1.5) return 1.5 * mag;
-    if (mant <= 2.0) return 2.0 * mag;
-    if (mant <= 2.5) return 2.5 * mag;
-    if (mant <= 3.0) return 3.0 * mag;
-    if (mant <= 4.0) return 4.0 * mag;
-    if (mant <= 5.0) return 5.0 * mag;
-    return 10.0 * mag;
-  }
-
-
-  double _nextNiceStep(double step) {
-    final exp = (math.log(step) / math.log(10)).floor();
-    final mag = math.pow(10.0, exp).toDouble();
-    final mant = step / mag;
-    if (mant <= 0.025) return 0.050 * mag;
-    if (mant <= 0.050) return 0.075 * mag;
-    if (mant <= 0.075) return 0.125 * mag;
-    if (mant <= 0.125) return 0.25 * mag;
-    if (mant <= 0.25) return 0.5 * mag;
-    if (mant <= 0.5) return 1.0 * mag;
-    if (mant < 1.0) return 2.0 * mag;
-    if (mant < 2.0) return 2.5 * mag;
-    if (mant < 2.5) return 3.0 * mag;
-    // if (mant < 3.0) return 3.5 * mag;
-    if (mant < 5.0) return 10.0 * mag;
-    return 10.0 * mag;
-  }
-
 
   // ---------------------------- HELPERS ----------------------------
 

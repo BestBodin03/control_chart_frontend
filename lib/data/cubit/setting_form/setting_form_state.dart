@@ -115,6 +115,7 @@ class SettingFormState {
 }
 
 class SpecificSettingState {
+  final String? id; // 👈 unique id
   final PeriodType? periodType;
   final DateTime? startDate;
   final DateTime? endDate;
@@ -122,6 +123,7 @@ class SpecificSettingState {
   final String? cpNo;
 
   const SpecificSettingState({
+    this.id,
     this.periodType,
     this.startDate,
     this.endDate,
@@ -130,6 +132,7 @@ class SpecificSettingState {
   });
 
   SpecificSettingState copyWith({
+    String? id,
     PeriodType? periodType,
     DateTime? startDate,
     DateTime? endDate,
@@ -137,6 +140,7 @@ class SpecificSettingState {
     String? cpNo,
   }) {
     return SpecificSettingState(
+      id: id ?? this.id, // 👈 preserve id
       periodType: periodType ?? this.periodType,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,

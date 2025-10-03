@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 import '../../../data/cubit/searching/filters_cubit.dart';
 import '../../../data/cubit/searching/options/options_cubit.dart';
 import '../../../data/cubit/searching/utils/mapper.dart';
+import '../../../utils/date_autocomplete.dart';
 import '../../../utils/date_convertor.dart';
 import '../../screen/screen_content/home_screen_content/home_content_var.dart';
 
@@ -151,7 +152,6 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
             final sDate = filters.startDate ?? searchState.currentQuery.startDate ?? dateOneM;
             final eDate = filters.endDate ?? searchState.currentQuery.endDate ?? dateNow;
 
-
             return GradientBackground(
               opacity: 0.2,
               child: Align(
@@ -206,45 +206,33 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                               items: const ['1 month', '3 months', '6 months', '1 year', 'All time', 'Custom'],
                               onChanged: (value) {
                                 if (value == null) return;
-                                final now = DateTime.now();
-                                DateTime? newStart, newEnd = now;
 
-                                switch (value) {
-                                  case '1 month':
-                                    newStart = DateTime(now.year, now.month - 1, now.day);
-                                    break;
-                                  case '3 months':
-                                    newStart = DateTime(now.year, now.month - 3, now.day);
-                                    break;
-                                  case '6 months':
-                                    newStart = DateTime(now.year, now.month - 6, now.day);
-                                    break;
-                                  case '1 year':
-                                    newStart = DateTime(now.year - 1, now.month, now.day);
-                                    break;
-                                  case 'All time':
-                                    newStart = DateTime(2024, 1, 1);
-                                    break;
-                                  default:
-                                    newStart = filters.startDate;
-                                    newEnd = filters.endDate ?? now;
-                                }
+                                // ใช้ utils เดิม ไม่แก้ไข
+                                final dateMap = DateAutoComplete.calculateDateRange(value);
 
-                                context.read<FiltersCubit>().setPeriod(value, start: newStart, end: newEnd);
+                                final sDate = dateMap['startDate']?.date;
+                                final eDate = dateMap['endDate']?.date;
+
+                                context.read<FiltersCubit>().setPeriod(
+                                  value,
+                                  start: sDate,
+                                  end: eDate,
+                                );
 
                                 if (value != 'Custom') {
                                   final int? furnace = furnaceIntFromUi(searchState.currentFurnaceUiValue);
                                   final String? mat = materialFromUi(searchState.currentMaterialUiValue);
 
                                   context.read<SearchBloc>().add(LoadFilteredChartData(
-                                    startDate: newStart,
-                                    endDate: newEnd,
-                                    furnaceNo: furnace.toString(),
+                                    startDate: sDate,
+                                    endDate: eDate,
+                                    furnaceNo: furnace?.toString(),
                                     materialNo: mat,
                                   ));
                                   context.read<SearchBloc>().add(const LoadDropdownOptions());
                                 }
-                              },
+                              }
+
                             ),
 
                             const SizedBox(height: 16),
@@ -257,7 +245,7 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                     context: context,
                                     value: sDate,
                                     label: _dateLabel(sDate) ?? 'Select Date',
-                                    date: sDate ?? dateOneM,
+                                    date: sDate,
                                     onTap: () => _pickDate(context, isStart: true),
                                     onChanged: (d) {
                                       if (d == null) return;
@@ -285,7 +273,7 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                     context: context,
                                     value: eDate,
                                     label: _dateLabel(eDate) ?? 'Select Date',
-                                    date: eDate ?? dateNow,
+                                    date: eDate,
                                     onTap: () => _pickDate(context, isStart: false),
                                     onChanged: (d) {
                                       if (d == null) return;
@@ -310,178 +298,160 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
 
                             const SizedBox(height: 16),
 
-buildSectionTitle('Furnace No.'),
-const SizedBox(height: 8),
-BlocBuilder<OptionsCubit, OptionsState>(
-  builder: (context, opts) {
-    const allFurnacesLabel = 'All Furnaces';
+                            buildSectionTitle('Furnace No.'),
+                            const SizedBox(height: 8),
+                            BlocBuilder<OptionsCubit, OptionsState>(
+                              builder: (context, opts) {
+                                const allFurnacesLabel = 'All Furnaces';
 
-    // Use the latest payload (or per-index: opts.furnaceOptionsByIndex[0] ?? [])
-    final raw = opts.lastFetchedFurnaces;
-    // debugPrint('🔵 [Furnace] Raw: $raw');
+                                // Use the latest payload (or per-index: opts.furnaceOptionsByIndex[0] ?? [])
+                                final raw = opts.lastFetchedFurnaces;
+                                // debugPrint('🔵 [Furnace] Raw: $raw');
 
-    // Sort numerically, unique, and prepend "All"
-    final furnaces = raw
-        .map((e) => e.toString())
-        .where((e) => e.isNotEmpty && e != allFurnacesLabel)
-        .toSet()
-        .toList()
-      ..sort((a, b) {
-        final ai = int.tryParse(a);
-        final bi = int.tryParse(b);
-        if (ai == null && bi == null) return a.compareTo(b);
-        if (ai == null) return 1;
-        if (bi == null) return -1;
-        return ai.compareTo(bi);
-      });
-    furnaces.insert(0, allFurnacesLabel);
-    // debugPrint('🔵 [Furnace] Final: $furnaces');
+                                // Sort numerically, unique, and prepend "All"
+                                final furnaces = raw
+                                    .map((e) => e.toString())
+                                    .where((e) => e.isNotEmpty && e != allFurnacesLabel)
+                                    .toSet()
+                                    .toList()
+                                  ..sort((a, b) {
+                                    final ai = int.tryParse(a);
+                                    final bi = int.tryParse(b);
+                                    if (ai == null && bi == null) return a.compareTo(b);
+                                    if (ai == null) return 1;
+                                    if (bi == null) return -1;
+                                    return ai.compareTo(bi);
+                                  });
+                                furnaces.insert(0, allFurnacesLabel);
+                                // debugPrint('🔵 [Furnace] Final: $furnaces');
 
-    // Safe current value
-    String? current = searchState.currentFurnaceUiValue.isEmpty
-        ? allFurnacesLabel
-        : searchState.currentFurnaceUiValue;
-    if (!furnaces.contains(current)) current = allFurnacesLabel;
-    // debugPrint('🔵 [Furnace] Current: $current');
+                                // Safe current value
+                                String? current = searchState.currentFurnaceUiValue.isEmpty
+                                    ? allFurnacesLabel
+                                    : searchState.currentFurnaceUiValue;
+                                if (!furnaces.contains(current)) current = allFurnacesLabel;
+                                // debugPrint('🔵 [Furnace] Current: $current');
 
-    return AbsorbPointer(
-      absorbing: opts.dropdownLoading,
-      child: Opacity(
-        opacity: opts.dropdownLoading ? 0.6 : 1,
-        child: buildDropdownField(
-          key: ValueKey('furnace_$current'),
-          context: context,
-          hint: allFurnacesLabel,
-          value: current == allFurnacesLabel ? null : current,
-          items: furnaces,
-          onChanged: (selected) {
-            final val = (selected == null || selected == allFurnacesLabel)
-                ? null
-                : selected;
+                                return AbsorbPointer(
+                                  absorbing: opts.dropdownLoading,
+                                  child: Opacity(
+                                    opacity: opts.dropdownLoading ? 0.6 : 1,
+                                    child: buildDropdownField(
+                                      key: ValueKey('furnace_$current'),
+                                      context: context,
+                                      hint: allFurnacesLabel,
+                                      value: current == allFurnacesLabel ? null : current,
+                                      items: furnaces,
+                                      onChanged: (selected) {
+                                        final val = (selected == null || selected == allFurnacesLabel) ? null : selected;
 
-            // 1) Update your search state
-            context.read<SearchBloc>().add(SelectFurnace(val));
+                                        final fs = context.read<FiltersCubit>().state;
+                                        final now = DateTime.now();
+                                        final fallbackStart = now.subtract(const Duration(days: 30));
 
-            // 2) Refetch dependent dropdowns from API (index: 0, filtered by furnace)
-            context.read<OptionsCubit>().loadDropdownOptions(
-              index: 0,
-              furnaceNo: val,
-              // keep cpNo null here; you can pass both if needed
-            );
+                                        context.read<SearchBloc>().add(LoadFilteredChartData(
+                                          startDate: fs.startDate ?? fallbackStart,
+                                          endDate: fs.endDate ?? now,
+                                          furnaceNo: val,
+                                          // 👇 เอา current material จาก state (normalize ที่นี่ถ้าจำเป็น)
+                                          materialNo: searchState.currentMaterialUiValue.isEmpty ||
+                                                      searchState.currentMaterialUiValue == 'All Material Nos.'
+                                              ? null
+                                              : searchState.currentMaterialUiValue,
+                                        ));
 
-            // 3) Refresh chart data with latest filters
-            final now = DateTime.now();
-            final fallbackStart = now.subtract(const Duration(days: 30));
-            final fs = context.read<FiltersCubit>().state;
+                                        // ✅ ยิง OptionsCubit ต่อ เพื่อ refresh material list ตาม furnace ใหม่
+                                        context.read<OptionsCubit>().loadDropdownOptions(
+                                          index: 0,
+                                          furnaceNo: val,
+                                        );
+                                      }
 
-            context.read<SearchBloc>().add(LoadFilteredChartData(
-              startDate: fs.startDate ?? fallbackStart,
-              endDate: fs.endDate ?? now,
-              furnaceNo: val,
-              materialNo: null,
-            ));
-          },
-        ),
-      ),
-    );
-  },
-),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
 
 
-const SizedBox(height: 16),
+                            const SizedBox(height: 16),
 
-buildSectionTitle('Material No.'), // or 'CP No.' if that’s your domain wording
-const SizedBox(height: 8),
-BlocBuilder<OptionsCubit, OptionsState>(
-  builder: (context, opts) {
-    const allLabel = 'All Material Nos.'; // rename to suit your UI
+                            buildSectionTitle('Material No.'), // or 'CP No.' if that’s your domain wording
+                            const SizedBox(height: 8),
+                            BlocBuilder<OptionsCubit, OptionsState>(
+                              builder: (context, opts) {
+                                const allLabel = 'All Material Nos.'; // rename to suit your UI
 
-    // Use the latest payload (or per-index: opts.cpOptionsByIndex[0] ?? [])
-    final raw = opts.lastFetchedCps;
-    // debugPrint('🟢 [Material] Raw cp list: $raw');
+                                // Use the latest payload (or per-index: opts.cpOptionsByIndex[0] ?? [])
+                                final raw = opts.lastFetchedCps;
+                                // debugPrint('🟢 [Material] Raw cp list: $raw');
 
-    // Sort numerically, unique, and prepend "All"
-    final materials = raw
-        .map((e) => e.toString())
-        .where((e) => e.isNotEmpty && e != allLabel)
-        .toSet()
-        .toList()
-      ..sort((a, b) {
-        final ai = int.tryParse(a);
-        final bi = int.tryParse(b);
-        if (ai == null && bi == null) return a.compareTo(b);
-        if (ai == null) return 1;
-        if (bi == null) return -1;
-        return ai.compareTo(bi);
-      });
-    materials.insert(0, allLabel);
-    // debugPrint('🟢 [Material] Final list: $materials');
+                                // Sort numerically, unique, and prepend "All"
+                                final materials = raw
+                                    .map((e) => e.toString())
+                                    .where((e) => e.isNotEmpty && e != allLabel)
+                                    .toSet()
+                                    .toList()
+                                  ..sort((a, b) {
+                                    final ai = int.tryParse(a);
+                                    final bi = int.tryParse(b);
+                                    if (ai == null && bi == null) return a.compareTo(b);
+                                    if (ai == null) return 1;
+                                    if (bi == null) return -1;
+                                    return ai.compareTo(bi);
+                                  });
+                                materials.insert(0, allLabel);
+                                // debugPrint('🟢 [Material] Final list: $materials');
 
-    // (Optional) If you still want to display "matNo - cpName", you’d need
-    // a cpName map from the API. For now we just show the cpNo/material number:
-    final items = List<String>.from(materials);
+                                // (Optional) If you still want to display "matNo - cpName", you’d need
+                                // a cpName map from the API. For now we just show the cpNo/material number:
+                                final items = List<String>.from(materials);
 
-    // Safe current value (strip any " - name" if you keep that display later)
-    String? current = searchState.currentMaterialUiValue.isEmpty
-        ? allLabel
-        : searchState.currentMaterialUiValue;
-    if (current != null && current != allLabel && current.contains(' - ')) {
-      current = current.split(' - ').first;
-    }
-    if (!materials.contains(current)) current = allLabel;
-    // debugPrint('🟢 [Material] Current: $current');
+                                // Safe current value (strip any " - name" if you keep that display later)
+                                String? current = searchState.currentMaterialUiValue.isEmpty
+                                    ? allLabel
+                                    : searchState.currentMaterialUiValue;
+                                if (current != null && current != allLabel && current.contains(' - ')) {
+                                  current = current.split(' - ').first;
+                                }
+                                if (!materials.contains(current)) current = allLabel;
+                                // debugPrint('🟢 [Material] Current: $current');
 
-    return AbsorbPointer(
-      absorbing: opts.dropdownLoading,
-      child: Opacity(
-        opacity: opts.dropdownLoading ? 0.6 : 1,
-        child: buildDropdownField(
-          key: ValueKey('material_$current'),
-          context: context,
-          hint: allLabel,
-          value: current == allLabel ? null : current,
-          items: items,
-          onChanged: (selected) {
-            final val = (selected == null || selected == allLabel)
-                ? null
-                : selected.split(' - ').first; // safe even if no ' - '
+                                return AbsorbPointer(
+                                  absorbing: opts.dropdownLoading,
+                                  child: Opacity(
+                                    opacity: opts.dropdownLoading ? 0.6 : 1,
+                                    child: buildDropdownField(
+                                      key: ValueKey('material_$current'),
+                                      context: context,
+                                      hint: allLabel,
+                                      value: current == allLabel ? null : current,
+                                      items: items,
+                                      onChanged: (selected) {
+                                        final val = (selected == null || selected == allLabel) ? null : selected.split(' - ').first;
 
-            context.read<SearchBloc>().add(SelectMaterial(val));
+                                        final fs = context.read<FiltersCubit>().state;
+                                        final now = DateTime.now();
+                                        final fallbackStart = now.subtract(const Duration(days: 30));
 
-            // If selecting a material/CP should also refetch furnaces filtered by cp:
-            context.read<OptionsCubit>().loadDropdownOptions(
-              index: 0,
-              cpNo: val,
-              // optionally pass the currently selected furnace too
-              // furnaceNo: (searchState.currentFurnaceUiValue.isEmpty ? null : searchState.currentFurnaceUiValue),
-            );
-
-            // Update chart
-            final now = DateTime.now();
-            final fallbackStart = now.subtract(const Duration(days: 30));
-            final fs = context.read<FiltersCubit>().state;
-            final furnace = searchState.currentFurnaceUiValue.isEmpty
-                ? null
-                : searchState.currentFurnaceUiValue;
-
-            context.read<SearchBloc>().add(LoadFilteredChartData(
-              startDate: fs.startDate ?? fallbackStart,
-              endDate: fs.endDate ?? now,
-              furnaceNo: furnace,
-              materialNo: val,
-            ));
-          },
-        ),
-      ),
-    );
-  },
-),
+                                        context.read<SearchBloc>().add(
+                                          LoadFilteredChartData(
+                                            startDate: fs.startDate ?? fallbackStart,
+                                            endDate: fs.endDate ?? now,
+                                            furnaceNo: searchState.currentFurnaceUiValue.isEmpty 
+                                                ? null 
+                                                : searchState.currentFurnaceUiValue,
+                                            materialNo: (val == null || val == allLabel) ? null : val,
+                                          ),
+                                        );
+                                      }
 
 
-
-
-
-
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                             if (searchState.optionsError != null) ...[
                               const SizedBox(height: 8),
                               Text(searchState.optionsError!, style: const TextStyle(color: Colors.red, fontSize: 12)),

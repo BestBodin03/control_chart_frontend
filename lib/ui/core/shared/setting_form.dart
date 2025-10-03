@@ -422,6 +422,7 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                 children: List.generate(state.specifics.length, (i) {
                                   final sp = state.specifics[i];
                                   return DecoratedBox(
+                                    key: ValueKey('${sp.id}_index'), // 👈 ใช้ id ไม่ใช่ index
                                     decoration: BoxDecoration(
                                       border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1)),
                                     ),
@@ -431,144 +432,143 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           // Header + Add/Remove
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                buildSectionTitle('หน้าที่ ${i + 1}'),
-                                                IconButton(
-                                                  tooltip: 'Chart Preview',
-                                                onPressed: () => {},
-                                                  icon: const Icon(Icons.info_outline), // or Icons.info
-                                                ),
-                                              ],
-                                            ),
-                                            SizedBox(
-                                              height: 36,
-                                              child: DecoratedBox(
-                                                decoration: BoxDecoration(
-                                                  borderRadius: BorderRadius.circular(8),
-                                                  border: Border.all(color: Colors.grey.shade300),
-                                                ),
-                                                child: Padding(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                                                  child: Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      // Add button
-                                                      IconButton(
-                                                        tooltip: 'เพิ่มหน้า',
-                                                        onPressed: () async {
-                                                          final cubit = context.read<SettingFormCubit>();
-                                                          final newIndex = cubit.addSpecificSetting();
-                                                          await cubit.loadDropdownOptions(index: newIndex);
-                                                        },
-                                                        padding: EdgeInsets.all(4),
-                                                        constraints: const BoxConstraints(),
-                                                        iconSize: 24,
-                                                        icon: const Icon(
-                                                          Icons.add_circle_rounded,
-                                                          color: AppColors.colorBrand,
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  buildSectionTitle('หน้าที่ ${i + 1}'),
+                                                  IconButton(
+                                                    tooltip: 'Chart Preview',
+                                                    onPressed: () => {},
+                                                    icon: const Icon(Icons.info_outline),
+                                                  ),
+                                                ],
+                                              ),
+                                              SizedBox(
+                                                height: 36,
+                                                child: DecoratedBox(
+                                                  decoration: BoxDecoration(
+                                                    borderRadius: BorderRadius.circular(8),
+                                                    border: Border.all(color: Colors.grey.shade300),
+                                                  ),
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        // Add button
+                                                        IconButton(
+                                                          tooltip: 'เพิ่มหน้า',
+                                                          onPressed: () async {
+                                                            final cubit = context.read<SettingFormCubit>();
+                                                            final newIndex = cubit.addSpecificSetting();
+                                                            await cubit.loadDropdownOptions(index: newIndex);
+                                                          },
+                                                          padding: EdgeInsets.all(4),
+                                                          constraints: const BoxConstraints(),
+                                                          iconSize: 24,
+                                                          icon: const Icon(
+                                                            Icons.add_circle_rounded,
+                                                            color: AppColors.colorBrand,
+                                                          ),
                                                         ),
-                                                      ),
 
-                                                      const SizedBox(width: 6),
+                                                        const SizedBox(width: 6),
 
-                                                      // Divider
-                                                      SizedBox(
-                                                        width: 1,
-                                                        height: 20,
-                                                        child: DecoratedBox(
-                                                          decoration: BoxDecoration(color: Colors.grey.shade300),
+                                                        // Divider
+                                                        SizedBox(
+                                                          width: 1,
+                                                          height: 20,
+                                                          child: DecoratedBox(
+                                                            decoration: BoxDecoration(color: Colors.grey.shade300),
+                                                          ),
                                                         ),
-                                                      ),
 
-                                                      const SizedBox(width: 6),
-                                                      // Remove button
-                                                      IconButton(
-                                                        tooltip: 'ลบหน้า',
-                                                        onPressed: state.specifics.length <= 1 
-                                                            ? null 
-                                                            : () => cubit.removeSpecificSetting(i), // ✅ Pass the index i
-                                                        padding: EdgeInsets.all(4),
-                                                        constraints: const BoxConstraints(),
-                                                        iconSize: 24,
-                                                        icon: Icon(
-                                                          Icons.remove_circle_outline_rounded,
-                                                          color: state.specifics.length <= 1
-                                                              ? Colors.grey.shade300
-                                                              : AppColors.colorAlert1,
+                                                        const SizedBox(width: 6),
+
+                                                        // Remove button
+                                                        IconButton(
+                                                          tooltip: 'ลบหน้า ${i + 1}',
+                                                          onPressed: state.specifics.length <= 1
+                                                              ? null
+                                                              : () => cubit.removeSpecificSetting(i),
+                                                          padding: EdgeInsets.all(4),
+                                                          constraints: const BoxConstraints(),
+                                                          iconSize: 24,
+                                                          icon: Icon(
+                                                            Icons.remove_circle_outline_rounded,
+                                                            color: state.specifics.length <= 1
+                                                                ? Colors.grey.shade300
+                                                                : AppColors.colorAlert1,
+                                                          ),
                                                         ),
-                                                      ),
-                                                    ],
+                                                      ],
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                            )
+                                              )
+                                            ],
+                                          ),
 
-                                          ],
-                                        ),
+                                          const SizedBox(height: 16),
 
+                                          // ------- Furnace -------
+                                          if (selectedDisplayType == 'FURNACE' || selectedDisplayType == 'FURNACE_CP') ...[
+                                            buildSectionTitle('หมายเลขเตา'),
+                                            const SizedBox(height: 8),
+                                            buildDropdownField(
+                                              key: ValueKey('furnace_${sp.id}'), // 👈 ใช้ id ไม่ใช่ i
+                                              context: context,
+                                              value: sp.furnaceNo?.toString() ?? "All Furnaces",
+                                              items: _getFurnaceNumbersByIndex(state, i),
+                                              hint: "All Furnaces",
+                                              onChanged: (selected) {
+                                                final val = (selected == "All Furnaces")
+                                                    ? null
+                                                    : int.tryParse(selected ?? "");
+                                                cubit.updateFurnaceNo(i, val);
+                                                cubit.loadDropdownOptions(
+                                                  index: i,
+                                                  furnaceNo: val?.toString(),
+                                                  cpNo: sp.cpNo,
+                                                );
+                                              },
+                                            ),
                                             const SizedBox(height: 16),
+                                          ],
 
-                                            // ------- Furnace -------
-                                            if (selectedDisplayType == 'FURNACE' || selectedDisplayType == 'FURNACE_CP') ...[
-                                              buildSectionTitle('หมายเลขเตา'),
-                                              const SizedBox(height: 8),
-                                              buildDropdownField(
-                                                key: ValueKey('furnace_$i'), // ✅
-                                                context: context,
-                                                value: sp.furnaceNo?.toString() ?? "All Furnaces",
-                                                // ⬇️ ดึง items ตาม index
-                                                items: _getFurnaceNumbersByIndex(state, i),
-                                                hint: "All Furnaces",
-                                                onChanged: (selected) {
-                                                  final val = (selected == "All Furnaces") ? null : int.tryParse(selected ?? "");
-                                                  cubit.updateFurnaceNo(i, val);
-                                                  cubit.loadDropdownOptions(
-                                                    index: i,
-                                                    // ส่งค่าปัจจุบันของแถวนี้ไปด้วย (ให้ API ฟิลเตอร์ร่วม)
-                                                    furnaceNo: val?.toString(),
-                                                    cpNo: null,
-                                                    // cpNo: state.specifics[i].cpNo,
-                                                  );
-                                                },
-                                              ),
-                                              const SizedBox(height: 16),
-                                            ],
-
-                                            // ------- Material -------
-                                            if (selectedDisplayType == 'CP' || selectedDisplayType == 'FURNACE_CP') ...[
-                                              buildSectionTitle('หมายเลขแมต'),
-                                              const SizedBox(height: 8),
-                                              buildDropdownField(
-                                                key: ValueKey('cp_$i'), // ✅
-                                                context: context,
-                                                value: sp.cpNo ?? "All Material Nos.",
-                                                items: _getMatNumbersByIndex(state, i),
-                                                hint: "All Material Nos.",
-                                                onChanged: (selected) {
-                                                  final val = selected == "All Material Nos." ? null : selected;
-                                                  cubit.updateCpNo(i, val);
-                                                  cubit.loadDropdownOptions(
-                                                    index: i,
-                                                    // furnaceNo: null,
-                                                    furnaceNo: state.specifics[i].furnaceNo?.toString(),
-                                                    cpNo: val,
-                                                  );
-                                                },
-                                              ),
-                                              const SizedBox(height: 48),
-                                            ],
-                                        ]
+                                          // ------- Material -------
+                                          if (selectedDisplayType == 'CP' || selectedDisplayType == 'FURNACE_CP') ...[
+                                            buildSectionTitle('หมายเลขแมต'),
+                                            const SizedBox(height: 8),
+                                            buildDropdownField(
+                                              key: ValueKey('cp_${sp.id}'), // 👈 ใช้ id ไม่ใช่ i
+                                              context: context,
+                                              value: sp.cpNo ?? "All Material Nos.",
+                                              items: _getMatNumbersByIndex(state, i),
+                                              hint: "All Material Nos.",
+                                              onChanged: (selected) {
+                                                final val = selected == "All Material Nos." ? null : selected;
+                                                cubit.updateCpNo(i, val);
+                                                cubit.loadDropdownOptions(
+                                                  index: i,
+                                                  furnaceNo: sp.furnaceNo?.toString(),
+                                                  cpNo: val,
+                                                );
+                                              },
+                                            ),
+                                            const SizedBox(height: 48),
+                                          ],
+                                        ],
                                       ),
                                     ),
                                   );
                                 }),
                               );
                             },
-                          ),
+                          )
+
                         ),
 
                       Builder(

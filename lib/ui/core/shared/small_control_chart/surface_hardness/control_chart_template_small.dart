@@ -120,7 +120,7 @@ class _ControlChartTemplateState extends State<ControlChartTemplateSmall> {
         final w = widget.width ?? constraints.maxWidth;
         final h = widget.height ?? constraints.maxHeight;
 
-        debugPrint('Surface Hardness Template h, w = $h, $w');
+        // debugPrint('Surface Hardness Template h, w = $h, $w');
 
         // ใช้ช่วงของ parent (ต้องไม่เป็น null ถึงมาถึงฟังก์ชันนี้ได้)
         final DateTime start = widget.xStart!;

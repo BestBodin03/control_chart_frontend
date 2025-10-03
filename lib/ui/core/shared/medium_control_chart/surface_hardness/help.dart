@@ -171,6 +171,8 @@ class _MediumContainer extends StatelessWidget {
               .clamp(0.0, double.infinity);
           final combineControlLimit = (violations?.beyondControlLimitLower ?? 0) + (violations?.beyondControlLimitUpper ?? 0);
           final combineSpecLimit    = (violations?.beyondSpecLimitLower ?? 0) + (violations?.beyondSpecLimitUpper ?? 0);
+          final hasSpec = searchState.controlChartStats?.specAttribute?.surfaceHardnessLowerSpec != null ||
+                searchState.controlChartStats?.specAttribute?.surfaceHardnessUpperSpec != null;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,6 +243,15 @@ class _MediumContainer extends StatelessWidget {
                               "Control Chart",
                               style: AppTypography.textBody3B,
                               textAlign: TextAlign.start,
+                            ),
+                            if (hasSpec)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: Text(
+                                'CP = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cp?.toStringAsFixed(2) ?? 'N/A'} | '
+                                'CPK = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
+                                style: AppTypography.textBody3BBold,
+                              ),
                             ),
                           ],
                         ),

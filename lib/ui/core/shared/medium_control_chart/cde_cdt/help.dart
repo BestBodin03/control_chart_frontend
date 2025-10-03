@@ -9,7 +9,7 @@ import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_
 import 'package:control_chart/utils/app_route.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
+import 'package:control_chart/ui/core/shared/chart_selection.dart';
 import 'control_chart_template.dart';
 
 typedef CdeCdtZoomBuilder = Widget Function(
@@ -188,6 +188,24 @@ class _MediumContainerCdeCdt extends StatelessWidget {
 
     const sectionLabelH = 20.0;
     const gapV = 8.0;
+    final stats = searchState.controlChartStats;
+
+    double? _upperSpec(ControlChartStats? s) =>
+        s.sel<double?>(s?.specAttribute?.cdeUpperSpec, s?.specAttribute?.cdtUpperSpec, s?.specAttribute?.compoundLayerUpperSpec);
+
+    double? _lowerSpec(ControlChartStats? s) =>
+        s.sel<double?>(s?.specAttribute?.cdeLowerSpec, s?.specAttribute?.cdtLowerSpec, s?.specAttribute?.compoundLayerLowerSpec);
+    
+    CapabilityProcess? _capabilityProcess(ControlChartStats? s) =>
+        s.sel<CapabilityProcess?>(
+          (s?.cdeCapabilityProcess?.std ?? 0) != 0 ? s?.cdeCapabilityProcess : null,
+          (s?.cdtCapabilityProcess?.std ?? 0) != 0 ? s?.cdtCapabilityProcess : null,
+          (s?.compoundLayerCapabilityProcess?.std ?? 0) != 0 ? s?.compoundLayerCapabilityProcess : null,
+        );
+
+
+    final hasSpec = _lowerSpec(stats) != null ||
+        _upperSpec(stats) != null;
 
     return Container(
       color: Colors.transparent,
@@ -254,6 +272,15 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                                     children: [
                                       Text(selectedLabel, style: AppTypography.textBody3BBold),
                                       Text("Control Chart", style: AppTypography.textBody3B),
+                                      if (hasSpec)
+                                        Padding(
+                                          padding: const EdgeInsets.only(right: 8.0),
+                                          child: Text(
+                                            'CP = ${_capabilityProcess(stats)?.cp?.toStringAsFixed(2) ?? 'N/A'} | '
+                                            'CPK = ${_capabilityProcess(stats)?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
+                                            style: AppTypography.textBody3BBold,
+                                          ),
+                                        ),
                                     ],
                                   ),
                         // Bottom: Records chip

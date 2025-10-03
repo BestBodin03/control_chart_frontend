@@ -75,22 +75,22 @@ final class LoadDropdownOptions extends SearchEvent {
 
 /// User selected a furnace from the dropdown.
 /// UI should pass "0" to mean "All".
-final class SelectFurnace extends SearchEvent {
-  const SelectFurnace(this.furnaceNo);
+// final class SelectFurnace extends SearchEvent {
+//   const SelectFurnace(this.furnaceNo);
 
-  final String? furnaceNo;
+//   final String? furnaceNo;
 
-  @override
-  List<Object?> get props => [furnaceNo];
-}
+//   @override
+//   List<Object?> get props => [furnaceNo];
+// }
 
 /// User selected a material from the dropdown.
 /// UI should pass "All Material No." to mean "All".
-final class SelectMaterial extends SearchEvent {
-  const SelectMaterial(this.materialNo);
+// final class SelectMaterial extends SearchEvent {
+//   const SelectMaterial(this.materialNo);
 
-  final String? materialNo;
+//   final String? materialNo;
 
-  @override
-  List<Object?> get props => [materialNo];
-}
+//   @override
+//   List<Object?> get props => [materialNo];
+// }

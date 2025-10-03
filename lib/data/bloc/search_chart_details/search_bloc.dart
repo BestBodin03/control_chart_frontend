@@ -30,8 +30,8 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
 
     // ▼ NEW: dropdown events
     on<LoadDropdownOptions>(_onLoadDropdownOptions);
-    on<SelectFurnace>(_onSelectFurnace);
-    on<SelectMaterial>(_onSelectMaterial);
+    // on<SelectFurnace>(_onSelectFurnace);
+    // on<SelectMaterial>(_onSelectMaterial);
   }
 
   // ---------------- existing handlers ----------------
@@ -317,46 +317,46 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     }
   }
 
-  // User selected furnace
-  Future<void> _onSelectFurnace(
-    SelectFurnace event,
-    Emitter<SearchState> emit,
-  ) async {
-    final normalizedForQuery = (event.furnaceNo == '0') ? '' : event.furnaceNo;
+  // // User selected furnace
+  // Future<void> _onSelectFurnace(
+  //   SelectFurnace event,
+  //   Emitter<SearchState> emit,
+  // ) async {
+  //   final normalizedForQuery = (event.furnaceNo == '0') ? '' : event.furnaceNo;
 
-    final newQuery = state.currentQuery.copyWith(
-      furnaceNo: normalizedForQuery,
-    );
+  //   final newQuery = state.currentQuery.copyWith(
+  //     furnaceNo: normalizedForQuery,
+  //   );
 
-    // 1) Reload charts for the new selection
-    await _updateQueryAndFetch(emit, newQuery);
+  //   // 1) Reload charts for the new selection
+  //   await _updateQueryAndFetch(emit, newQuery);
 
-    // // 2) Refresh options (filtered by new selection)
-    // add(LoadDropdownOptions(
-    //   furnaceNo: event.furnaceNo, // UI value ("0" allowed)
-    //   materialNo: state.currentMaterialUiValue,
-    // ));
-  }
+  //   // // 2) Refresh options (filtered by new selection)
+  //   // add(LoadDropdownOptions(
+  //   //   furnaceNo: event.furnaceNo, // UI value ("0" allowed)
+  //   //   materialNo: state.currentMaterialUiValue,
+  //   // ));
+  // }
 
-  // User selected material
-  Future<void> _onSelectMaterial(
-    SelectMaterial event,
-    Emitter<SearchState> emit,
-  ) async {
-    final normalizedForQuery =
-        (event.materialNo == 'All Material No.') ? '' : event.materialNo;
+  // // User selected material
+  // Future<void> _onSelectMaterial(
+  //   SelectMaterial event,
+  //   Emitter<SearchState> emit,
+  // ) async {
+  //   final normalizedForQuery =
+  //       (event.materialNo == 'All Material No.') ? '' : event.materialNo;
 
-    final newQuery = state.currentQuery.copyWith(
-      materialNo: normalizedForQuery,
-    );
+  //   final newQuery = state.currentQuery.copyWith(
+  //     materialNo: normalizedForQuery,
+  //   );
 
-    // 1) Reload charts
-    await _updateQueryAndFetch(emit, newQuery);
+  //   // 1) Reload charts
+  //   await _updateQueryAndFetch(emit, newQuery);
 
-    // 2) Refresh options (filtered by new selection)
-    // add(LoadDropdownOptions(
-    //   furnaceNo: state.currentFurnaceUiValue, // "0" allowed
-    //   materialNo: event.materialNo,           // UI value
-    // ));
-  }
+  //   // 2) Refresh options (filtered by new selection)
+  //   // add(LoadDropdownOptions(
+  //   //   furnaceNo: state.currentFurnaceUiValue, // "0" allowed
+  //   //   materialNo: event.materialNo,           // UI value
+  //   // ));
+  // }
 }

@@ -50,7 +50,7 @@ final class SearchState extends Equatable {
 
   String get currentMaterialUiValue =>
       (currentQuery.materialNo == null || currentQuery.materialNo!.isEmpty)
-          ? "All Material Nos."
+          ? ""
           : currentQuery.materialNo!;
 
   SearchState copyWith({

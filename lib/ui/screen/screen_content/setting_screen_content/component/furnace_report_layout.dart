@@ -98,7 +98,12 @@ class FurnaceReportLayout extends StatelessWidget {
             ElevatedButton(
               onPressed: () {
                 // Fire the event on the SAME SearchBloc above
-                context.read<SearchBloc>().add(LoadFilteredChartData());
+                context.read<SearchBloc>().add(LoadFilteredChartData(
+                  startDate: searchState.currentQuery.startDate,
+                  endDate: searchState.currentQuery.endDate,
+                  furnaceNo: searchState.currentQuery.furnaceNo,
+                  materialNo: searchState.currentQuery.materialNo
+                ));
               },
               child: const Text('Try again!'),
             ),

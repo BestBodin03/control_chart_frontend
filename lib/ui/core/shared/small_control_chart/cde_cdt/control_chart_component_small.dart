@@ -12,6 +12,8 @@ import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 
+import '../small_control_chart_var.dart';
+
 class ControlChartComponentSmallCdeCdt extends StatefulWidget implements ChartComponent {
   final List<ChartDataPointCdeCdt>? dataPoints; // กรองแล้วหรือทั้งหมดก็ได้
   final ControlChartStats? controlChartStats;
@@ -148,6 +150,83 @@ class _ControlChartComponentSmallCdeCdtState extends State<ControlChartComponent
   double? _cachedInterval;
   final GlobalKey _chartKey = GlobalKey();
 
+  void _ensureYScale() {
+    if (_cachedInterval != null) return;
+
+    const divisions = 5;
+    final yr = widget.controlChartStats?.yAxisRange;
+
+    final minSel = _sel<double?>(
+          yr?.minYcdeControlChart,
+          yr?.minYcdtControlChart,
+          yr?.minYcompoundLayerControlChart,
+        ) ?? 0.0;
+
+    final maxSel = _sel<double?>(
+          yr?.maxYcdeControlChart,
+          yr?.maxYcdtControlChart,
+          yr?.maxYcompoundLayerControlChart,
+        ) ?? minSel;
+
+    if (maxSel <= minSel) {
+      _cachedMinY = minSel;
+      _cachedMaxY = minSel + divisions;
+      _cachedInterval = 1.0;
+      return;
+    }
+
+    final ideal = (maxSel - minSel) / divisions;
+    double interval = _niceStepCeil(ideal);
+
+    double minY = (minSel / interval).floor() * interval;
+    double maxY = minY + divisions * interval;
+
+    while (maxY < maxSel - 1e-12) {
+      interval = _nextNiceStep(interval);
+      minY = (minSel / interval).floor() * interval;
+      maxY = minY + divisions * interval;
+    }
+
+    // ===== ดึงค่า Spec และ Control Limits =====
+    final specAttr = widget.controlChartStats?.specAttribute;
+    final lsl = specAttr?.compoundLayerLowerSpec ??
+                specAttr?.cdeLowerSpec ??
+                specAttr?.cdtLowerSpec;
+    final usl = specAttr?.compoundLayerUpperSpec ??
+                specAttr?.cdeUpperSpec ??
+                specAttr?.cdtUpperSpec;
+
+    final lcl = widget.controlChartStats?.cdeControlLimitIChart?.lcl ??
+                widget.controlChartStats?.cdtControlLimitIChart?.lcl ??
+                widget.controlChartStats?.compoundLayerControlLimitIChart?.lcl;
+
+    final ucl = widget.controlChartStats?.cdeControlLimitIChart?.ucl ??
+                widget.controlChartStats?.cdtControlLimitIChart?.ucl ??
+                widget.controlChartStats?.compoundLayerControlLimitIChart?.ucl;
+
+  // ===== เช็คว่าชนกับ minY หรือ maxY หรือไม่ =====
+  final checkValues = <double?>[lsl, usl, lcl, ucl];
+
+  for (final val in checkValues) {
+    if (val == null) continue;
+
+    // ถ้าชนกับ minY → ลด minY แต่ไม่ให้ติดลบ
+    if ((val - minY).abs() < 1e-9) {
+      minY = (minY - interval).clamp(0.0, double.infinity);
+    }
+
+    // ถ้าชนกับ maxY → เพิ่ม maxY
+    if ((val - maxY).abs() < 1e-9) {
+      maxY += interval;
+    }
+  }
+
+
+    _cachedMinY = minY;
+    _cachedMaxY = maxY;
+    _cachedInterval = interval;
+  }
+
   // Tooltip state ภายใน widget
   final ValueNotifier<_Tip?> _tip = ValueNotifier<_Tip?>(null);
 
@@ -203,65 +282,6 @@ class _ControlChartComponentSmallCdeCdtState extends State<ControlChartComponent
     return safeRange / 6.0;
   }
 
-  // สร้าง/คงค่า y-scale (เลือกจาก yAxisRange ต่อชนิด)
-  void _ensureYScale() {
-    if (_cachedInterval != null) return;
-
-    const divisions = 4; // ~5 เส้นแนวนอน
-    final yr = widget.controlChartStats?.yAxisRange;
-
-    final minSel = _sel<double?>(
-          yr?.minYcdeControlChart,
-          yr?.minYcdtControlChart,
-          yr?.minYcompoundLayerControlChart,
-        ) ??
-        0.0;
-    final maxSel = _sel<double?>(
-          yr?.maxYcdeControlChart,
-          yr?.maxYcdtControlChart,
-          yr?.maxYcompoundLayerControlChart,
-        ) ??
-        minSel;
-
-    if (maxSel <= minSel) {
-      _cachedMinY = minSel;
-      _cachedMaxY = minSel + divisions;
-      _cachedInterval = 1.0;
-      return;
-    }
-
-    final ideal = (maxSel - minSel) / divisions;
-    double interval = _niceStepCeil(ideal);
-
-    double minY = (minSel / interval).floor() * interval;
-    double maxY = minY + divisions * interval;
-
-    while (maxY < maxSel - 1e-12) {
-      interval = _nextNiceStep(interval);
-      minY = (minSel / interval).floor() * interval;
-      maxY = minY + divisions * interval;
-    }
-
-    _cachedMinY = minY;
-    _cachedMaxY = maxY;
-    _cachedInterval = interval;
-  }
-
-  double _getMinY() {
-    _ensureYScale();
-    return _cachedMinY ?? 0.0;
-  }
-
-  double _getMaxY() {
-    _ensureYScale();
-    return _cachedMaxY ?? 0.0;
-  }
-
-  double _getInterval() {
-    _ensureYScale();
-    return _cachedInterval ?? 1.0;
-  }
-
   // ----------------------------- build -----------------------------
   @override
 Widget build(BuildContext context) {
@@ -270,6 +290,19 @@ Widget build(BuildContext context) {
   final double safeRange = (maxXv - minXv).abs().clamp(1.0, double.infinity);
   final int desiredTick = (widget.controlChartStats?.xTick ?? 6).clamp(2, 100);
   final double tickInterval = safeRange / (desiredTick - 1);
+  final yr = widget.controlChartStats?.yAxisRange;
+
+    final minSel = _sel<double?>(
+          yr?.minYcdeControlChart,
+          yr?.minYcdtControlChart,
+          yr?.minYcompoundLayerControlChart,
+        ) ?? 0.0;
+
+    final maxSel = _sel<double?>(
+          yr?.maxYcdeControlChart,
+          yr?.maxYcdtControlChart,
+          yr?.maxYcompoundLayerControlChart,
+        ) ?? minSel;
 
   return LayoutBuilder(
     builder: (context, constraints) {
@@ -296,8 +329,8 @@ Widget build(BuildContext context) {
                   LineChartData(
                     minX: minXv,
                     maxX: maxXv,
-                    minY: _getMinY(),
-                    maxY: _getMaxY(),
+                    minY: _getMinY(minSel),
+                    maxY: _getMaxY(maxSel),
                     gridData: _gridData(minXv, maxXv, tickInterval),
                     titlesData: _titlesData(minXv, maxXv),
                     borderData: _borderData(),
@@ -775,46 +808,105 @@ Widget build(BuildContext context) {
   // nice steps
   // ---------------------------------------------------------------------------
   double _niceStepCeil(double x) {
-    if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
-    final exp = (math.log(x) / math.log(10)).floor();
-    final mag = math.pow(10.0, exp).toDouble();
-    final mant = x / mag;
-    if (mant <= 0.025) return 0.025 * mag;
-    if (mant <= 0.050) return 0.050 * mag;
-    if (mant <= 0.075) return 0.075 * mag;
-    if (mant <= 0.125) return 0.125 * mag;
-    if (mant <= 0.25) return 0.25 * mag;
-    if (mant <= 0.5) return 0.5 * mag;
-    if (mant <= 1.0) return 1.0 * mag;
-    if (mant <= 1.25) return 1.25 * mag;
-    if (mant <= 1.5) return 1.5 * mag;
-    if (mant <= 2.0) return 2.0 * mag;
-    if (mant <= 2.5) return 2.5 * mag;
-    if (mant <= 3.0) return 3.0 * mag;
-    if (mant <= 4.0) return 4.0 * mag;
-    if (mant <= 5.0) return 5.0 * mag;
-    return 10.0 * mag;
+    int left = 0;
+    int right = niceSteps.length - 1;
+
+    while (left < right) {
+      int mid = (left + right) >> 1; // หาร 2 แบบ integer
+      if (niceSteps[mid] >= x) {
+        right = mid;
+      } else {
+        left = mid + 1;
+      }
+    }
+    return niceSteps[left];
   }
 
+  /// คืนค่า step ถัดไป (strictly bigger than step)
   double _nextNiceStep(double step) {
-    final exp = (math.log(step) / math.log(10)).floor();
-    final mag = math.pow(10.0, exp).toDouble();
-    final mant = step / mag;
-    if (mant <= 0.025) return 0.050 * mag;
-    if (mant <= 0.050) return 0.075 * mag;
-    if (mant <= 0.075) return 0.125 * mag;
-    if (mant <= 0.125) return 0.25 * mag;
-    if (mant <= 0.25) return 0.5 * mag;
-    if (mant <= 0.5) return 1.0 * mag;
-    if (mant < 1.0) return 2.0 * mag;
-    if (mant < 2.0) return 2.5 * mag;
-    if (mant < 2.5) return 3.0 * mag;
-    if (mant < 5.0) return 10.0 * mag;
-    return 10.0 * mag;
+    int left = 0;
+    int right = niceSteps.length - 1;
+
+    while (left < right) {
+      int mid = (left + right) >> 1;
+      if (niceSteps[mid] > step) {
+        right = mid;
+      } else {
+        left = mid + 1;
+      }
+    }
+    return niceSteps[left];
   }
 
-}
 
+  double _getMinY(double minSel) {
+    if (_cachedInterval == null) _ensureYScale();
+    double minY = _cachedMinY ?? 0.0;
+    final interval = _cachedInterval ?? 1.0;
+
+    // ถ้า minSel เท่ากับ minY (หรือใกล้กว่า threshold) → ขยับลง 1 step
+    if ((minSel - minY).abs() < interval * 0.5) {
+      minY = (minY - interval).clamp(0.0, double.infinity);
+    }
+    return minY;
+  }
+
+  double _getMaxY(double maxSel) {
+    if (_cachedInterval == null) _ensureYScale();
+    double maxY = _cachedMaxY ?? 0.0;
+    final interval = _cachedInterval ?? 1.0;
+
+    if ((maxSel - maxY).abs() < interval * 0.5) {
+      maxY = maxY + interval;
+    }
+    return maxY;
+  }
+
+
+  double _getInterval() {
+    const divisions = 5; // -> 6 ticks
+    final spec = widget.controlChartStats?.yAxisRange;
+    double? _spotMin() =>
+    _sel(
+      spec?.minYcdeControlChart ?? 0, 
+      spec?.minYcdtControlChart ?? 0, 
+      spec?.minYcompoundLayerControlChart ?? 0);
+
+    double? _spotMax() =>
+    _sel(
+      spec?.maxYcdeControlChart ?? 0, 
+      spec?.maxYcdtControlChart ?? 0, 
+      spec?.maxYcompoundLayerControlChart ?? 0);
+    final spotMin = _spotMin()
+    ?? 0.0;
+    final spotMax = _spotMax()
+    ?? spotMin;
+
+    if (spotMax <= spotMin) {
+      _cachedMinY = spotMin;
+      _cachedMaxY = spotMin + divisions;
+      _cachedInterval = 1.0;
+      return _cachedInterval!;
+    }
+
+    final ideal = (spotMax - spotMin) / divisions;
+    double interval = _niceStepCeil(ideal);
+
+    double minY = (spotMin / interval).floor() * interval;
+    double maxY = minY + divisions * interval;
+
+    while (maxY < spotMax - 1e-12) {
+      interval = _nextNiceStep(interval);
+      minY = (spotMin / interval).floor() * interval;
+      maxY = minY + divisions * interval;
+    }
+
+    _cachedMinY = minY;
+    _cachedMaxY = maxY;
+    _cachedInterval = interval;
+    return interval;
+  }
+}
 // ---------- Tooltip UI ----------
 class _Tip {
   final Offset local;

@@ -33,96 +33,95 @@ Widget buildDataTable(SearchState searchState) {
   int? hoveredRowIndex;
   int? selectedRowIndex;
 
-  
   if (chartDetails.isEmpty) {
-    return SizedBox(
+    return const SizedBox(
       height: 200,
       child: Center(child: Text('ไม่มีข้อมูล')),
     );
   }
-  
-  final rowHeight = 32.0;
-  final maxRowsForFitContent = 6;
+
+  const rowHeight = 32.0;
+  const maxRowsForFitContent = 6;
   final isScrollable = chartDetails.length > maxRowsForFitContent;
-  
-return SizedBox(
-  height: isScrollable ? 200 : null,
-  child: ListView.builder(
-    shrinkWrap: !isScrollable,
-    physics: isScrollable
-        ? const ClampingScrollPhysics()
-        : const NeverScrollableScrollPhysics(),
-    itemCount: chartDetails.length,
-    itemBuilder: (context, index) {
-      final chartDetail = chartDetails[index];
 
-      final isLast = index == chartDetails.length - 1;
-      final isHovered = hoveredRowIndex == index;
-      final isSelected = selectedRowIndex == index;
+  return SizedBox(
+    height: isScrollable ? 200 : null,
+    child: ListView.builder(
+      shrinkWrap: !isScrollable,
+      physics: isScrollable
+          ? const ClampingScrollPhysics()
+          : const NeverScrollableScrollPhysics(),
+      itemCount: chartDetails.length,
+      itemBuilder: (context, index) {
+        final chartDetail = chartDetails[index];
+        final isLast = index == chartDetails.length - 1;
+        final isHovered = hoveredRowIndex == index;
+        final isSelected = selectedRowIndex == index;
 
-      return SizedBox(
-        height: rowHeight,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: index < chartDetails.length - 1
-                  ? const BorderSide(color: Colors.black26, width: 0.5)
-                  : BorderSide.none,
+        final count = chartDetail.count ?? 0;
+        final isDisabled = count < 5;
+
+        return SizedBox(
+          height: rowHeight,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: index < chartDetails.length - 1
+                    ? const BorderSide(color: Colors.black26, width: 0.5)
+                    : BorderSide.none,
+              ),
+              borderRadius: isLast
+                  ? const BorderRadius.vertical(bottom: Radius.circular(10))
+                  : null,
             ),
-            borderRadius:
-                isLast ? const BorderRadius.vertical(bottom: Radius.circular(10)) : null,
-          ),
-          child: MouseRegion(
-            // onEnter: (_) => setState(() => _hoveredRowIndex = index),
-            // onExit: (_) => setState(() => _hoveredRowIndex = null),
-            child: Material(
-              // สีพื้นเมื่อ hover/selected (โปร่งใสเพื่อยังเห็นเส้นขอบ)
-              color: isSelected
-                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.10)
-                  : (isHovered ? AppColors.colorBrandTp : Colors.transparent),
-              child: InkWell(
-                onTap: () {
-                  final q = context.read<SearchBloc>().state.currentQuery;
-                  final fn = chartDetail.furnaceNo?.toString();
-                  final mat = chartDetail.matNo;
+            child: MouseRegion(
+              child: Material(
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.10)
+                    : (isHovered
+                        ? AppColors.colorBrandTp
+                        : Colors.transparent),
+                child: InkWell(
+                  onTap: isDisabled
+                      ? null // ❌ ถ้า count < 5 ห้ามกด
+                      : () {
+                          final q = context.read<SearchBloc>().state.currentQuery;
+                          final fn = chartDetail.furnaceNo?.toString();
+                          final mat = chartDetail.matNo;
 
-                  final bloc = context.read<SearchBloc>();
+                          final bloc = context.read<SearchBloc>();
 
-                  // 1) sync ค่า UI ของ dropdown ให้ตรงกับที่ผู้ใช้คลิก
-                  if (fn != null) bloc.add(SelectFurnace(fn));
-                  bloc.add(SelectMaterial(mat ?? 'All Material No.'));
+                          bloc.add(LoadFilteredChartData(
+                            startDate: q.startDate,
+                            endDate: q.endDate,
+                            furnaceNo: fn ?? q.furnaceNo,
+                            materialNo: mat ?? q.materialNo,
+                          ));
 
-                  // 2) ยิงค้นหา
-                  bloc.add(LoadFilteredChartData(
-                    startDate: q.startDate,
-                    endDate: q.endDate,
-                    furnaceNo: fn ?? q.furnaceNo,
-                    materialNo: mat ?? q.materialNo,
-                  ));
-
-                  // 3) โหลดรายการดรอปดาวน์ใหม่ เพื่อให้ items มีค่าที่เพิ่งเลือกแน่ ๆ
-                  bloc.add(const LoadDropdownOptions());
-                },
-
-                child: _buildTableRow(
-                  [
-                    chartDetail.furnaceNo?.toString() ?? '-',
-                    chartDetail.matNo ?? '-',
-                    chartDetail.partName ?? '-',
-                    chartDetail.count?.toString() ?? '0',
-                  ],
-                  isHeader: false,
+                          bloc.add(const LoadDropdownOptions());
+                        },
+                  child: Opacity(
+                    opacity: isDisabled ? 0.4 : 1.0, // 🌫️ จางถ้า count < 5
+                    child: _buildTableRow(
+                      [
+                        chartDetail.furnaceNo?.toString() ?? '-',
+                        chartDetail.matNo ?? '-',
+                        chartDetail.partName ?? '-',
+                        chartDetail.count?.toString() ?? '0',
+                      ],
+                      isHeader: false,
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      );
-    },
-  ),
-);
-
+        );
+      },
+    ),
+  );
 }
+
 
 Widget _buildTableRow(List<String> cells, {required bool isHeader}) {
   return SizedBox(
