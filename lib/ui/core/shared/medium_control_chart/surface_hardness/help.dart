@@ -11,6 +11,9 @@ import 'package:control_chart/utils/app_route.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../fg_last_four_chars.dart';
+import '../../violation_specific_card.dart';
+
 typedef ZoomBuilder = Widget Function(
   BuildContext context,
   HomeContentVar settingProfile,
@@ -181,24 +184,37 @@ class _MediumContainer extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Material( // ✅ เพิ่มแค่ Material ครอบ InkWell
-                      color: Colors.transparent, // ให้ใช้พื้นหลังเดิม ไม่ทับธีม/สีของ Home
+                    child: Material(
+                      color: Colors.transparent,
                       child: InkWell(
                         onTap: () {
-                          // current คือ HomeContentVar ของการ์ดนี้
                           final snap = HomeContentVar(
-                            startDate:  settingProfile.startDate,
-                            endDate:    settingProfile.endDate,
-                            furnaceNo:  settingProfile.furnaceNo,
+                            startDate: settingProfile.startDate,
+                            endDate: settingProfile.endDate,
+                            furnaceNo: settingProfile.furnaceNo,
                             materialNo: settingProfile.materialNo,
-                            // เติม field อื่นที่จำเป็นต่อการค้นหา/แสดงผล
                           );
-
-                            AppRoute.instance.searchSnapshot.value = snap; // ✅ ส่ง snapshot ข้ามหน้า
-                            AppRoute.instance.navIndex.value = 1;          // ไปแท็บ Search
-                          },
+                          AppRoute.instance.searchSnapshot.value = snap;
+                          AppRoute.instance.navIndex.value = 1;
+                        },
                         child: Center(
-                          child: Text(title, style: AppTypography.textBody3BBold),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min, // shrink to fit contents
+                            children: [
+                              Text(
+                                title,
+                                style: AppTypography.textBody3BBold,
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8.0),
+                                child: Text(
+                                  '| $spotCount Records',
+                                  style: AppTypography.textBody3BBold,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -244,15 +260,6 @@ class _MediumContainer extends StatelessWidget {
                               style: AppTypography.textBody3B,
                               textAlign: TextAlign.start,
                             ),
-                            if (hasSpec)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8.0),
-                              child: Text(
-                                'CP = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cp?.toStringAsFixed(2) ?? 'N/A'} | '
-                                'CPK = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
-                                style: AppTypography.textBody3BBold,
-                              ),
-                            ),
                           ],
                         ),
 
@@ -260,23 +267,44 @@ class _MediumContainer extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4.0),
                           child: SizedBox(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                            child: DecoratedBox(
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha:0.6),
+                                color: Colors.white.withValues(alpha: 0.6),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(width: 1, color: Colors.grey.shade500),
                               ),
-                              child: Text(
-                                '$spotCount Records',
-                                style: AppTypography.textBody3BBold,
-                                textAlign: TextAlign.center,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                child: hasSpec
+                                    ? Column(
+                                      mainAxisAlignment: MainAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                            'CP = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cp?.toStringAsFixed(2) ?? 'N/A'}',
+                                            // 'CPK = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
+                                            style: AppTypography.textBody3BBold,
+                                          ),
+                                        Text(
+                                            // 'CP = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cp?.toStringAsFixed(2) ?? 'N/A'}',
+                                            'CPK = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
+                                            style: AppTypography.textBody3BBold,
+                                          )
+                                      ],
+                                    )
+                                    : null,
                               ),
                             ),
                           ),
                         ),
                       ],
                       ),
+                      ),
+                      Align(
+                        alignment: Alignment.center,
+                        child: ViolationSpecificQueueCard(
+                          violations: _buildViolationsFromState(searchState),
+                        ),
                       ),
 
                       // RIGHT: violations card (unchanged)
@@ -459,6 +487,67 @@ class _SmallError extends StatelessWidget {
       );
 }
 
+List<ViolationItem> _buildViolationsFromState(SearchState state) {
+  final spots = state.controlChartStats?.controlChartSpots?.surfaceHardness ?? [];
+  if (spots.isEmpty) return [];
+
+  final List<ViolationItem> violations = [];
+
+  for (final s in spots) {
+    // Over Control (L)
+    if (s.isViolatedR1BeyondLCL == true) {
+      violations.add(
+        ViolationItem(
+          fgNo: fgNoLast4(s.fgNo),
+          value: s.value ?? 0,
+          type: "Over Control (L)",
+          color: Colors.orange,
+        ),
+      );
+    }
+
+    // Over Control (U)
+    if (s.isViolatedR1BeyondUCL == true) {
+      violations.add(
+        ViolationItem(
+          fgNo: fgNoLast4(s.fgNo),
+          value: s.value ?? 0,
+          type: "Over Control (U)",
+          color: Colors.orange,
+        ),
+      );
+    }
+
+    // Over Spec (L)
+    if (s.isViolatedR1BeyondLSL == true) {
+      violations.add(
+        ViolationItem(
+          fgNo: fgNoLast4(s.fgNo),
+          value: s.value ?? 0,
+          type: "Over Spec (L)",
+          color: Colors.red,
+        ),
+      );
+    }
+
+    // Over Spec (U)
+    if (s.isViolatedR1BeyondUSL == true) {
+      violations.add(
+        ViolationItem(
+          fgNo: fgNoLast4(s.fgNo),
+          value: s.value ?? 0,
+          type: "Over Spec (U)",
+          color: Colors.red,
+        ),
+      );
+    }
+  }
+
+  return violations;
+}
+
+
+
 class _SmallNoData extends StatelessWidget {
   const _SmallNoData();
   @override
@@ -488,3 +577,4 @@ class _SmallNoData extends StatelessWidget {
     // interval ของแกน X (หน่วย ms)
     return stepDays * dayMs;
   }
+

@@ -286,14 +286,14 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                 ),
 
                                 const SizedBox(height: 8),
-                                buildSectionTitle('ระยะเวลา'),
+                                buildSectionTitle('Period'),
                                 const SizedBox(height: 8),
 
                                 buildDropdownField(
                                   key: const ValueKey('global_period'),
                                   context: context,
                                   value: _periodTypeToLabel(cubit.state.specifics[0].periodType),
-                                  items: const ['1 month','3 months','6 months','1 year','All time','Custom'],
+                                  items: const ['1 month','3 months','6 months','1 year','All time','custom'],
                                   onChanged: (value) {
                                     if (value == null) return;
                                     final now = DateTime.now();
@@ -342,8 +342,6 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
 
                                 const SizedBox(height: 16),
 
-                                
-
                                 // ------- Global Date pickers -------
                                 Row(
                                   children: [
@@ -373,7 +371,7 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                       ),
                                     ),
                                     const SizedBox(width: 16),
-                                    const Text('ถึง', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                    const Text('To', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                                     const SizedBox(width: 16),
                                     Expanded(
                                       child: buildDateField(
@@ -421,17 +419,18 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                               return Column(
                                 children: List.generate(state.specifics.length, (i) {
                                   final sp = state.specifics[i];
-                                  return DecoratedBox(
-                                    key: ValueKey('${sp.id}_index'), // 👈 ใช้ id ไม่ใช่ index
-                                    decoration: BoxDecoration(
-                                      border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1)),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(top: 16),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          // Header + Add/Remove
+                                  return Container(
+                                    key: ValueKey(sp.id ?? 'spec_$i'),
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1)),
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(top: 16),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            // Header + Add/Remove
                                           Row(
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
@@ -440,8 +439,8 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                                   buildSectionTitle('หน้าที่ ${i + 1}'),
                                                   IconButton(
                                                     tooltip: 'Chart Preview',
-                                                    onPressed: () => {},
-                                                    icon: const Icon(Icons.info_outline),
+                                                  onPressed: () => {},
+                                                    icon: const Icon(Icons.info_outline), // or Icons.info
                                                   ),
                                                 ],
                                               ),
@@ -473,9 +472,9 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                                             color: AppColors.colorBrand,
                                                           ),
                                                         ),
-
+                                    
                                                         const SizedBox(width: 6),
-
+                                    
                                                         // Divider
                                                         SizedBox(
                                                           width: 1,
@@ -484,15 +483,14 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                                             decoration: BoxDecoration(color: Colors.grey.shade300),
                                                           ),
                                                         ),
-
+                                    
                                                         const SizedBox(width: 6),
-
                                                         // Remove button
                                                         IconButton(
-                                                          tooltip: 'ลบหน้า ${i + 1}',
-                                                          onPressed: state.specifics.length <= 1
-                                                              ? null
-                                                              : () => cubit.removeSpecificSetting(i),
+                                                          tooltip: 'ลบหน้า',
+                                                          onPressed: state.specifics.length <= 1 
+                                                              ? null 
+                                                              : () => cubit.removeSpecificSetting(i), // ✅ Pass the index i
                                                           padding: EdgeInsets.all(4),
                                                           constraints: const BoxConstraints(),
                                                           iconSize: 24,
@@ -508,67 +506,69 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
                                                   ),
                                                 ),
                                               )
+                                    
                                             ],
                                           ),
-
-                                          const SizedBox(height: 16),
-
-                                          // ------- Furnace -------
-                                          if (selectedDisplayType == 'FURNACE' || selectedDisplayType == 'FURNACE_CP') ...[
-                                            buildSectionTitle('หมายเลขเตา'),
-                                            const SizedBox(height: 8),
-                                            buildDropdownField(
-                                              key: ValueKey('furnace_${sp.id}'), // 👈 ใช้ id ไม่ใช่ i
-                                              context: context,
-                                              value: sp.furnaceNo?.toString() ?? "All Furnaces",
-                                              items: _getFurnaceNumbersByIndex(state, i),
-                                              hint: "All Furnaces",
-                                              onChanged: (selected) {
-                                                final val = (selected == "All Furnaces")
-                                                    ? null
-                                                    : int.tryParse(selected ?? "");
-                                                cubit.updateFurnaceNo(i, val);
-                                                cubit.loadDropdownOptions(
-                                                  index: i,
-                                                  furnaceNo: val?.toString(),
-                                                  cpNo: sp.cpNo,
-                                                );
-                                              },
-                                            ),
-                                            const SizedBox(height: 16),
-                                          ],
-
-                                          // ------- Material -------
-                                          if (selectedDisplayType == 'CP' || selectedDisplayType == 'FURNACE_CP') ...[
-                                            buildSectionTitle('หมายเลขแมต'),
-                                            const SizedBox(height: 8),
-                                            buildDropdownField(
-                                              key: ValueKey('cp_${sp.id}'), // 👈 ใช้ id ไม่ใช่ i
-                                              context: context,
-                                              value: sp.cpNo ?? "All Material Nos.",
-                                              items: _getMatNumbersByIndex(state, i),
-                                              hint: "All Material Nos.",
-                                              onChanged: (selected) {
-                                                final val = selected == "All Material Nos." ? null : selected;
-                                                cubit.updateCpNo(i, val);
-                                                cubit.loadDropdownOptions(
-                                                  index: i,
-                                                  furnaceNo: sp.furnaceNo?.toString(),
-                                                  cpNo: val,
-                                                );
-                                              },
-                                            ),
-                                            const SizedBox(height: 48),
-                                          ],
-                                        ],
+                                    
+                                              const SizedBox(height: 16),
+                                    
+                                              // ------- Furnace -------
+                                              if (selectedDisplayType == 'FURNACE' || selectedDisplayType == 'FURNACE_CP') ...[
+                                                buildSectionTitle('Furnace No.'),
+                                                const SizedBox(height: 8),
+                                                buildDropdownField(
+                                                  key: ValueKey('furnace_$i'), // ✅
+                                                  context: context,
+                                                  value: sp.furnaceNo?.toString() ?? "All Furnaces",
+                                                  // ⬇️ ดึง items ตาม index
+                                                  items: _getFurnaceNumbersByIndex(state, i),
+                                                  hint: "All Furnaces",
+                                                  onChanged: (selected) {
+                                                    final val = (selected == "All Furnaces") ? null : int.tryParse(selected ?? "");
+                                                    cubit.updateFurnaceNo(i, val);
+                                                    cubit.loadDropdownOptions(
+                                                      index: i,
+                                                      // ส่งค่าปัจจุบันของแถวนี้ไปด้วย (ให้ API ฟิลเตอร์ร่วม)
+                                                      furnaceNo: val?.toString(),
+                                                      cpNo: null,
+                                                      // cpNo: state.specifics[i].cpNo,
+                                                    );
+                                                  },
+                                                ),
+                                                const SizedBox(height: 16),
+                                              ],
+                                    
+                                              // ------- Material -------
+                                              if (selectedDisplayType == 'CP' || selectedDisplayType == 'FURNACE_CP') ...[
+                                                buildSectionTitle('Material No.'),
+                                                const SizedBox(height: 8),
+                                                buildDropdownField(
+                                                  key: ValueKey('cp_$i'), // ✅
+                                                  context: context,
+                                                  value: sp.cpNo ?? "All Material Nos.",
+                                                  items: _getMatNumbersByIndex(state, i),
+                                                  hint: "All Material Nos.",
+                                                  onChanged: (selected) {
+                                                    final val = selected == "All Material Nos." ? null : selected;
+                                                    cubit.updateCpNo(i, val);
+                                                    cubit.loadDropdownOptions(
+                                                      index: i,
+                                                      furnaceNo: state.specifics[i].furnaceNo?.toString(),
+                                                      cpNo: val,
+                                                    );
+                                                  },
+                                                ),
+                                                const SizedBox(height: 48),
+                                              ],
+                                          ]
+                                        ),
                                       ),
                                     ),
                                   );
                                 }),
                               );
                             },
-                          )
-
+                          ),
                         ),
 
                       Builder(
@@ -649,7 +649,7 @@ for (var i = 0; i < formCubit.state.specifics.length; i++) {
       case PeriodType.ONE_YEAR:     return '1 year';
       case PeriodType.LIFETIME:     return 'All time';
       case PeriodType.CUSTOM:
-      default:                      return 'Custom';
+      default:                      return 'custom';
     }
   }
 

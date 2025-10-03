@@ -115,7 +115,7 @@ class SettingFormState {
 }
 
 class SpecificSettingState {
-  final String? id; // 👈 unique id
+  final String? id;
   final PeriodType? periodType;
   final DateTime? startDate;
   final DateTime? endDate;
@@ -131,6 +131,39 @@ class SpecificSettingState {
     this.cpNo,
   });
 
+  factory SpecificSettingState.fromJson(Map<String, dynamic> json) {
+    return SpecificSettingState(
+      id: json['_id'] as String?,
+      periodType: json['period']?['type'] != null
+          ? PeriodType.values.firstWhere(
+              (e) => e.name.toUpperCase() == json['period']['type'].toString().toUpperCase(),
+              orElse: () => PeriodType.ONE_MONTH,
+            )
+          : null,
+      startDate: json['period']?['startDate'] != null
+          ? DateTime.tryParse(json['period']['startDate'])
+          : null,
+      endDate: json['period']?['endDate'] != null
+          ? DateTime.tryParse(json['period']['endDate'])
+          : null,
+      furnaceNo: json['furnaceNo'] as int?,
+      cpNo: json['cpNo'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (id != null) '_id': id,
+      'period': {
+        if (periodType != null) 'type': periodType!.name.toUpperCase(),
+        if (startDate != null) 'startDate': startDate!.toIso8601String(),
+        if (endDate != null) 'endDate': endDate!.toIso8601String(),
+      },
+      if (furnaceNo != null) 'furnaceNo': furnaceNo,
+      if (cpNo != null) 'cpNo': cpNo,
+    };
+  }
+
   SpecificSettingState copyWith({
     String? id,
     PeriodType? periodType,
@@ -140,7 +173,7 @@ class SpecificSettingState {
     String? cpNo,
   }) {
     return SpecificSettingState(
-      id: id ?? this.id, // 👈 preserve id
+      id: id ?? this.id,
       periodType: periodType ?? this.periodType,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
@@ -172,9 +205,25 @@ class SpecificSettingState {
   }
 
   @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is SpecificSettingState &&
+        other.id == id &&
+        other.periodType == periodType &&
+        other.startDate == startDate &&
+        other.endDate == endDate &&
+        other.furnaceNo == furnaceNo &&
+        other.cpNo == cpNo;
+  }
+
+  @override
+  int get hashCode => Object.hash(id, periodType, startDate, endDate, furnaceNo, cpNo);
+
+  @override
   String toString() {
-    return 'SpecificSettingState(periodType: $periodType, startDate: $startDate, '
-        'endDate: $endDate, furnaceNo: $furnaceNo, cpNo: $cpNo)';
+    return 'SpecificSettingState(id: $id, periodType: $periodType, '
+        'startDate: $startDate, endDate: $endDate, '
+        'furnaceNo: $furnaceNo, cpNo: $cpNo)';
   }
 }
 

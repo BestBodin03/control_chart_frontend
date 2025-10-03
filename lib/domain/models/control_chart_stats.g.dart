@@ -390,6 +390,7 @@ Map<String, dynamic> _$SpecAttributeToJson(SpecAttribute instance) =>
 
 DataPoint _$DataPointFromJson(Map<String, dynamic> json) => DataPoint(
   value: (json['value'] as num).toDouble(),
+  fgNo: json['fgNo'] as String?,
   collectDate:
       json['collectDate'] == null
           ? null
@@ -403,6 +404,7 @@ DataPoint _$DataPointFromJson(Map<String, dynamic> json) => DataPoint(
 
 Map<String, dynamic> _$DataPointToJson(DataPoint instance) => <String, dynamic>{
   'value': instance.value,
+  'fgNo': instance.fgNo,
   'collectDate': instance.collectDate?.toIso8601String(),
   'isViolatedR1BeyondLCL': instance.isViolatedR1BeyondLCL,
   'isViolatedR1BeyondUCL': instance.isViolatedR1BeyondUCL,

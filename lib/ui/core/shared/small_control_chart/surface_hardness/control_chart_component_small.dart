@@ -839,7 +839,7 @@ class TooltipContent extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: chips
                         .map((c) => Container(
-                              margin: const EdgeInsets.only(bottom: 4), // เว้นระยะระหว่างแต่ละบรรทัด
+                              margin: const EdgeInsets.only(bottom: 8), // เว้นระยะระหว่างแต่ละบรรทัด
                               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                               decoration: BoxDecoration(
                                 color: c.color.withValues(alpha: 0.2),

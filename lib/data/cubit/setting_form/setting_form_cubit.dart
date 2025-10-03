@@ -101,7 +101,6 @@ class SettingFormCubit extends Cubit<SettingFormState> {
   int addSpecificSetting() {
     // Create new setting with global period values
     final newSetting = SpecificSettingState(
-      id: UniqueKey().toString(), // 👈 unique id
       periodType: state.globalPeriodType ?? PeriodType.ONE_MONTH,
       startDate: state.globalStartDate ?? DateTime.now().subtract(const Duration(days: 30)),
       endDate: state.globalEndDate ?? DateTime.now(),
@@ -125,11 +124,21 @@ class SettingFormCubit extends Cubit<SettingFormState> {
     return newIndex;
   }
 
-  void removeSpecificSetting(int index) {
+  void removeSpecificSetting(int index) async {
     if (index >= 0 && index < state.specifics.length) {
       final updated = List<SpecificSettingState>.from(state.specifics)
         ..removeAt(index);
       emit(state.copyWith(specifics: updated));
+      
+      // 👇 Load ทุกแถวพร้อมกัน (เร็วกว่า)
+      await Future.wait([
+        for (int i = 0; i < updated.length; i++)
+          loadDropdownOptions(
+            index: i,
+            furnaceNo: updated[i].furnaceNo?.toString(),
+            cpNo: updated[i].cpNo,
+          ),
+      ]);
     }
   }
 

@@ -381,12 +381,7 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                             BlocBuilder<OptionsCubit, OptionsState>(
                               builder: (context, opts) {
                                 const allLabel = 'All Material Nos.'; // rename to suit your UI
-
-                                // Use the latest payload (or per-index: opts.cpOptionsByIndex[0] ?? [])
                                 final raw = opts.lastFetchedCps;
-                                // debugPrint('🟢 [Material] Raw cp list: $raw');
-
-                                // Sort numerically, unique, and prepend "All"
                                 final materials = raw
                                     .map((e) => e.toString())
                                     .where((e) => e.isNotEmpty && e != allLabel)
@@ -401,13 +396,7 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                     return ai.compareTo(bi);
                                   });
                                 materials.insert(0, allLabel);
-                                // debugPrint('🟢 [Material] Final list: $materials');
-
-                                // (Optional) If you still want to display "matNo - cpName", you’d need
-                                // a cpName map from the API. For now we just show the cpNo/material number:
                                 final items = List<String>.from(materials);
-
-                                // Safe current value (strip any " - name" if you keep that display later)
                                 String? current = searchState.currentMaterialUiValue.isEmpty
                                     ? allLabel
                                     : searchState.currentMaterialUiValue;
@@ -415,8 +404,6 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                   current = current.split(' - ').first;
                                 }
                                 if (!materials.contains(current)) current = allLabel;
-                                // debugPrint('🟢 [Material] Current: $current');
-
                                 return AbsorbPointer(
                                   absorbing: opts.dropdownLoading,
                                   child: Opacity(

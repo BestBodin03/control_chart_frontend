@@ -220,8 +220,6 @@ class _ControlChartComponentSmallCdeCdtState extends State<ControlChartComponent
       maxY += interval;
     }
   }
-
-
     _cachedMinY = minY;
     _cachedMaxY = maxY;
     _cachedInterval = interval;
@@ -914,6 +912,7 @@ class _Tip {
   _Tip({required this.local, required this.content});
 }
 
+
 class TooltipContent extends StatelessWidget {
   final String title;
   final List<MapEntry<String, String>> rows;
@@ -938,26 +937,31 @@ class TooltipContent extends StatelessWidget {
           Text(title, style: AppTypography.textBody4WBold),
           const SizedBox(height: 4),
           ...rows.map((e) =>
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text(e.key, style: AppTypography.textBody4WBold),
-                Text(e.value, style: AppTypography.textBody4W),
-              ])),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(e.key, style: AppTypography.textBody4WBold),
+                    Text(e.value, style: AppTypography.textBody4W),
+                  ],
+                )),
           if (chips.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Wrap(
-              spacing: 4,
-              children: chips
-                  .map((c) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: c.color.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: c.color),
-                        ),
-                        child: Text(c.label, style: AppTypography.textBody4W),
-                      ))
-                  .toList(),
-            ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: chips
+                        .map((c) => Container(
+                              margin: const EdgeInsets.only(bottom: 8), // เว้นระยะระหว่างแต่ละบรรทัด
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: c.color.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: c.color),
+                              ),
+                              child: Text(c.label, style: AppTypography.textBody4W),
+                            ))
+                        .toList(),
+                  )
+
           ],
           const SizedBox(height: 6),
           Container(height: 2, color: accent),

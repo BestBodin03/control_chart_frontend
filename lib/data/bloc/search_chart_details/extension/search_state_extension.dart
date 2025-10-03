@@ -3,6 +3,8 @@ import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../ui/core/shared/fg_last_four_chars.dart';
+
 extension SearchStateExtension on SearchState {
   /// Surface Hardness points (refactored to be like CdeCdt)
   List<ChartDataPoint> get chartDataPoints {
@@ -39,7 +41,7 @@ extension SearchStateExtension on SearchState {
       return ChartDataPoint(
         collectDate: dt,
         label: DateFormat('dd/MM').format(dt),
-        fgNo: chartDetail.fgNo,
+        fgNo: fgNoLast4(chartDetail.fgNo),
         fullLabel:
             "${dt.day.toString().padLeft(2, '0')}/"
             "${dt.month.toString().padLeft(2, '0')}/"
@@ -142,7 +144,7 @@ List<ChartDataPointCdeCdt> get chartDataPointsCdeCdt {
 
     return ChartDataPointCdeCdt(
       collectDate: dt,
-      fgNo: d.fgNo,
+      fgNo: fgNoLast4(d.fgNo),
       label: DateFormat('dd/MM').format(dt),
       fullLabel:
           "${dt.day.toString().padLeft(2, '0')}/"

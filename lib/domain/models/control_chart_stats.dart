@@ -313,6 +313,7 @@ class SpecAttribute {
 class DataPoint {
   /// ค่าจุดบน I-Chart
   final double value;
+  final String? fgNo;
   final DateTime? collectDate;
 
   /// Nelson Rule 1 (เกิน LCL/UCL/LSL/USL)
@@ -326,6 +327,7 @@ class DataPoint {
 
   const DataPoint({
     required this.value,
+    this.fgNo,
     required this.collectDate,
     this.isViolatedR1BeyondLCL = false,
     this.isViolatedR1BeyondUCL = false,

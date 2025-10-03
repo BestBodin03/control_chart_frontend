@@ -10,6 +10,8 @@ import 'package:control_chart/utils/app_route.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:control_chart/ui/core/shared/chart_selection.dart';
+import '../../fg_last_four_chars.dart';
+import '../../violation_specific_card.dart';
 import 'control_chart_template.dart';
 
 typedef CdeCdtZoomBuilder = Widget Function(
@@ -235,14 +237,29 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                           AppRoute.instance.navIndex.value = 1;
                         },
                         child: Center(
-                          child: Text(title, style: AppTypography.textBody3BBold),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min, // shrink to fit contents
+                            children: [
+                              Text(
+                                title,
+                                style: AppTypography.textBody3BBold,
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8.0),
+                                child: Text(
+                                  '| $spotCount Records',
+                                  style: AppTypography.textBody3BBold,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ],
               ),
-
               // Card
               DecoratedBox(
                 decoration: BoxDecoration(
@@ -272,40 +289,51 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                                     children: [
                                       Text(selectedLabel, style: AppTypography.textBody3BBold),
                                       Text("Control Chart", style: AppTypography.textBody3B),
-                                      if (hasSpec)
-                                        Padding(
-                                          padding: const EdgeInsets.only(right: 8.0),
-                                          child: Text(
-                                            'CP = ${_capabilityProcess(stats)?.cp?.toStringAsFixed(2) ?? 'N/A'} | '
-                                            'CPK = ${_capabilityProcess(stats)?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
-                                            style: AppTypography.textBody3BBold,
-                                          ),
-                                        ),
                                     ],
                                   ),
-                        // Bottom: Records chip
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4.0),
-                          child: SizedBox(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha:0.6),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(width: 1, color: Colors.grey.shade500),
-                              ),
-                              child: Text(
-                                '$spotCount Records',
-                                style: AppTypography.textBody3BBold,
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ),
-                        ),
+                                  // Bottom: Records chip
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 4.0),
+                                    child: SizedBox(
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.6),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(width: 1, color: Colors.grey.shade500),
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                          child: hasSpec
+                                            ? Column(
+                                              mainAxisAlignment: MainAxisAlignment.start,
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'CP = ${_capabilityProcess(stats)?.cp?.toStringAsFixed(2) ?? 'N/A'}',
+                                                  style: AppTypography.textBody3BBold,
+                                                ),
+                                                Text(
+                                                  'CPK = ${_capabilityProcess(stats)?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
+                                                  style: AppTypography.textBody3BBold,
+                                                  
+                                                ),
+                                              ],
+                                            )
+                                            : null,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+
                                 ],
                               ),
                             ),
-
+                            Align(
+                              alignment: Alignment.center,
+                              child: ViolationSpecificQueueCard(
+                                violations: _buildViolationsFromStateCdeCdt(searchState),
+                              ),
+                            ),
                             // RIGHT: Violations card
                             Padding(
                               padding: const EdgeInsets.all(4),
@@ -448,6 +476,40 @@ class _SmallError extends StatelessWidget {
           ],
         ),
       );
+}
+
+List<ViolationItem> _buildViolationsFromStateCdeCdt(SearchState state) {
+  final sel = state.controlChartStats?.secondChartSelected;
+  if (sel == null) return [];
+
+  final spots = switch (sel) {
+    SecondChartSelected.cde => state.controlChartStats?.controlChartSpots?.cde ?? [],
+    SecondChartSelected.cdt => state.controlChartStats?.controlChartSpots?.cdt ?? [],
+    SecondChartSelected.compoundLayer =>
+      state.controlChartStats?.controlChartSpots?.compoundLayer ?? [],
+    _ => <dynamic>[],
+  };
+
+  final List<ViolationItem> violations = [];
+  for (final s in spots) {
+    if (s.isViolatedR1BeyondLCL == true) {
+      violations.add(ViolationItem(fgNo: fgNoLast4(s.fgNo), value: s.value ?? 0,
+          type: "Over Control (L)", color: Colors.orange));
+    }
+    if (s.isViolatedR1BeyondUCL == true) {
+      violations.add(ViolationItem(fgNo: fgNoLast4(s.fgNo), value: s.value ?? 0,
+          type: "Over Control (U)", color: Colors.orange));
+    }
+    if (s.isViolatedR1BeyondLSL == true) {
+      violations.add(ViolationItem(fgNo: fgNoLast4(s.fgNo), value: s.value ?? 0,
+          type: "Over Spec (L)", color: Colors.red));
+    }
+    if (s.isViolatedR1BeyondUSL == true) {
+      violations.add(ViolationItem(fgNo: fgNoLast4(s.fgNo), value: s.value ?? 0,
+          type: "Over Spec (U)", color: Colors.red));
+    }
+  }
+  return violations;
 }
 
 class _SmallNoData extends StatelessWidget {
