@@ -436,8 +436,6 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                           ),
                                         );
                                       }
-
-
                                     ),
                                   ),
                                 );

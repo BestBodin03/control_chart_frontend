@@ -132,69 +132,83 @@ class _InfoContentState extends State<InfoContent> {
     );
   }
 
-  Widget _buildLabelSlider(SearchState st, String labelText) {
-    final labels = _labelsFromState(st);
-    final showSlider = labels.length > _winSize;
+Widget _buildLabelSlider(SearchState st, String labelText) {
+  final labels = _labelsFromState(st);
+  final showSlider = labels.length > _winSize;
 
-    return LayoutBuilder(
-      builder: (context, box) {
-        final maxW = box.maxWidth;
-        final sliderW = (maxW * 0.4).clamp(160.0, 360.0);
-        final showTextInline = maxW >= 520;
+  return LayoutBuilder(
+    builder: (context, box) {
+      // Short slider on the left (responsive but capped)
+      final maxW = box.maxWidth;
+      final sliderW = (maxW * 0.28).clamp(140.0, 220.0);
 
-        return Row(
-          children: [
-            if (showSlider)
-              ConstrainedBox(
-                constraints: BoxConstraints(minWidth: 160, maxWidth: sliderW),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (showTextInline)
-                      Text(
-                        labelText,
-                        style: const TextStyle(fontSize: 12),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        thumbColor: AppColors.colorBrand,
-                        activeTrackColor: AppColors.colorBrandTp,
-                        trackHeight: 2,
-                        thumbShape:
-                            const RoundSliderThumbShape(enabledThumbRadius: 6),
-                      ),
-                      child: Slider(
-                        min: 0,
-                        max: _winMaxStart.toDouble(),
-                        divisions: _winMaxStart > 0 ? _winMaxStart : null,
-                        value: _winStart.toDouble().clamp(0, _winMaxStart.toDouble()),
-                        onChanged: (v) => setState(() {
-                          _hasUserMovedSlider = true;
-                          _winStart = v.round().clamp(0, _winMaxStart);
-                        }),
-                      ),
-                    ),
-                  ],
+      return Row(
+        children: [
+          // Left: short slider (or a fixed spacer to keep alignment)
+          if (showSlider)
+            SizedBox(
+              width: sliderW,
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 3,
+                  activeTrackColor: AppColors.colorBrandTp,
+                  inactiveTrackColor: AppColors.colorBrandTp.withValues(alpha: 0.25),
+                  thumbColor: AppColors.colorBrand,
+                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
                 ),
-              )
-            else
-              Expanded(
-                child: Text(
-                  'Range: $labelText',
-                  style: const TextStyle(fontSize: 12),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: Slider(
+                  min: 0,
+                  max: _winMaxStart.toDouble(),
+                  divisions: _winMaxStart > 0 ? _winMaxStart : null,
+                  value: _winStart.toDouble().clamp(0, _winMaxStart.toDouble()),
+                  onChanged: (v) => setState(() {
+                    _hasUserMovedSlider = true;
+                    _winStart = v.round().clamp(0, _winMaxStart);
+                  }),
                 ),
               ),
+            )
+          else
+            SizedBox(width: sliderW),
 
-            const Spacer(),
-          ],
-        );
-      },
-    );
-  }
+          // const Spacer(),
+
+          // Right: minimal pill label
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 220),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              child: Container(
+                key: ValueKey(labelText),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Text(
+                  labelText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade800,
+                    height: 1.0,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+
 }
 
 // Optional helper if you later want to pass a narrowed date range into the chart.

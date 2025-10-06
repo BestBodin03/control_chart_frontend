@@ -1,292 +1,425 @@
 import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart';
-// import 'package:control_chart/domain/models/setting.dart';
+import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_template.dart';
+import 'package:control_chart/ui/core/shared/violations_component.dart';
+import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
+import 'package:control_chart/utils/app_route.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+
+import '../../fg_last_four_chars.dart';
+import '../../spec_validation.dart';
+import '../../violation_specific_card.dart';
 
 Widget buildChartsSectionSurfaceHardnessLarge(
-  // List<HomeContentVar> profiles,
-  // int currentIndex,
- SearchState searchState
- ) {
+  SearchState searchState, {
+  int? externalStart,
+  int? externalWindowSize,
+}) {
 
-  final current = searchState.currentQuery;
-  final isReady = searchState.status == SearchStatus.success &&
-                searchState.chartDetails.isNotEmpty;
-  final partName = isReady
-    ? (searchState.chartDetails.first.chartGeneralDetail.partName)
-    : '-';
-  final title =
-      "Furnace ${current.furnaceNo ?? "-"} "
-      " | $partName - ${current.materialNo ?? '-'}"
-      " | Date ${(current.startDate)} - ${(current.endDate)}";
+  final bool isReady =
+      searchState.status == SearchStatus.success &&
+      searchState.chartDetails.isNotEmpty;
 
-      // "Furnace ${current.furnaceNo ?? "-"} "
-      // " | Material ${current.materialNo ?? '-'}"
-      // " | Date ${fmtDate(current.startDate)} - ${fmtDate(current.endDate)}";
+  final List<String> parts = [];
+
+
+
+
+  // ผลลัพธ์: จะมีเฉพาะส่วนที่มีข้อมูลจริง และคั่นด้วย " | "
+  final title = parts.join(' | ');
 
   return SizedBox.expand(
     child: _LargeContainer(
-      title: title,
-      // settingProfile: current,
       searchState: searchState,
+      externalStart: externalStart,
+      externalWindowSize: externalWindowSize,
     ),
   );
 }
 
-class _LargeContainer extends StatefulWidget {
+class _LargeContainer extends StatelessWidget {
   const _LargeContainer({
-    required this.title,
-    // required this.settingProfile,
     required this.searchState,
-    // required this.onZoom,
+    this.externalStart,
+    this.externalWindowSize,
   });
 
-  final String title;
-  // final HomeContentVar settingProfile;
   final SearchState searchState;
-  // final void Function(BuildContext) onZoom;
+  final int? externalStart;
+  final int? externalWindowSize;
 
-  @override
-  State<_LargeContainer> createState() => _LargeContainerState();
-}
 
-class _LargeContainerState extends State<_LargeContainer> {
-  static const int _windowSize = 24;
-  int _start = 0;          // inclusive
-  int _maxStart = 0;       // max value for _start
-  bool _sliderOpen = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _recomputeWindow();
-  }
+  // static const int _defaultWindow = 30;
 
-  @override
-  void didUpdateWidget(covariant _LargeContainer oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.searchState.chartDataPoints.length !=
-        widget.searchState.chartDataPoints.length) {
-      _recomputeWindow();
-    }
-  }
+  // List<T> _slice<T>(List<T> full) {
+  //   if (full.isEmpty) return full;
 
-  void _recomputeWindow() {
-    final n = widget.searchState.chartDataPoints.length;
-    if (n <= _windowSize) {
-      _start = 0;
-      _maxStart = 0;
-    } else {
-      _maxStart = n - _windowSize;
-      // default: latest window
-      _start = _maxStart;
-    }
-    setState(() {});
-  }
+  //   final win = externalWindowSize ?? _defaultWindow;
+  //   if (full.length <= win) return full;
 
-  List<T> _slice<T>(List<T> full) {
-    if (full.length <= _windowSize) return full;
-    final end = (_start + _windowSize).clamp(0, full.length);
-    return full.sublist(_start, end);
-  }
+  //   final maxStart = full.length - win;
+  //   final start = (externalStart ?? maxStart).clamp(0, maxStart);
+  //   final end = (start + win).clamp(0, full.length);
+  //   return full.sublist(start, end);
+  // }
 
   @override
   Widget build(BuildContext context) {
-    final state = widget.searchState;
-    final canSlide = state.chartDataPoints.length > _windowSize;
+    final state = searchState;
+    final spotCount = state.controlChartStats?.numberOfSpots;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final totalH = constraints.maxHeight;
-        const outerPadTop = 8.0, outerPadBottom = 8.0;
-        const titleH = 24.0, sectionLabelH = 20.0, gapV = 8.0;
+    final violations = state.controlChartStats?.surfaceHardnessViolations;
+    final bgColor = _getViolationBgColor(
+      violations?.beyondControlLimitLower ?? 0,
+      violations?.beyondControlLimitUpper ?? 0,
+      violations?.beyondSpecLimitLower ?? 0,
+      violations?.beyondSpecLimitUpper ?? 0,
+      violations?.trend ?? 0,
+    );
+    final borderColor = _getViolationBorderColor(
+      violations?.beyondControlLimitLower ?? 0,
+      violations?.beyondControlLimitUpper ?? 0,
+      violations?.beyondSpecLimitLower ?? 0,
+      violations?.beyondSpecLimitUpper ?? 0,
+      violations?.trend ?? 0,
+    );
 
-        final chartsAreaH = (totalH
-                - outerPadTop - outerPadBottom
-                - titleH - gapV - 8.0
-                - sectionLabelH - gapV
-                - sectionLabelH - 8.0)
-            .clamp(0.0, double.infinity);
-        final eachChartH = (chartsAreaH / 2).clamp(0.0, double.infinity);
+// used only for proportions inside layout
+    const sectionLabelH = 20.0;
+    const gapV = 8.0;
 
-        // windowed (visible) data used by both charts
-        final visiblePoints = _slice(state.chartDataPoints);
+    final allPoints = searchState.chartDataPoints;
+    final filter = searchState.currentQuery;
 
-        return Container(
-          color: Colors.transparent,
-          child: Column(
+    // windowed (visible) data used by both charts
+    // final visiblePoints = _slice<ChartDataPoint>(state.chartDataPoints);
+
+    if (state.status == SearchStatus.loading) {
+      return const Center(
+        child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+    if (state.status == SearchStatus.failure) {
+      return const _SmallError();
+    }
+    if (state.controlChartStats == null || state.chartDetails.isEmpty) {
+      return const _SmallNoData();
+    }
+
+    debugPrint('in help MAX ${searchState.controlChartStats?.yAxisRange?.maxYsurfaceHardnessControlChart}');
+
+    return Container(
+      color: Colors.transparent,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV) * 2 - 120) / 2)
+              .clamp(0.0, double.infinity);
+          final combineControlLimit = (violations?.beyondControlLimitLower ?? 0) + (violations?.beyondControlLimitUpper ?? 0);
+          final combineSpecLimit    = (violations?.beyondSpecLimitLower ?? 0) + (violations?.beyondSpecLimitUpper ?? 0);
+          final lowerSpec = searchState.controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;
+          final upperSpec = searchState.controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
+
+          final hasSpec  = isValidSpec(lowerSpec) || isValidSpec(upperSpec);
+          final hasSpecL = isValidSpec(lowerSpec) && !isValidSpec(upperSpec);
+          final hasSpecU = !isValidSpec(lowerSpec) && isValidSpec(upperSpec);
+
+          return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title row + actions (zoom + slider toggle / slider)
-              // Padding(
-              //   padding: const EdgeInsets.only(bottom: 8)
-              // ),
-          
-              // Card
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: AppColors.colorBrandTp.withValues(alpha: 0.15),
-                    border: Border.all(
-                      color: AppColors.colorBrandTp.withValues(alpha: 0.35),
-                      width: 1,
-                    ),
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-                    // padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
-                    child: Column(
-                      children: [
-                        // Control Chart header (centered)
-                        Row(
-                          children: [
-                            // const SizedBox(width: 20),
-                            Expanded(
-                              child: Center(
+              // Title row (centered) — no slider here; slider is in HomeContent
+              Row(
+                children: [
+                  Expanded(
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          // final snap = HomeContentVar(
+                          //   startDate: filter.startDate,
+                          //   endDate: filter.endDate,
+                          //   furnaceNo: filter.furnaceNo,
+                          //   materialNo: filter.materialNo,
+                          // );
+                          // AppRoute.instance.searchSnapshot.value = snap;
+                          // AppRoute.instance.navIndex.value = 1;
+                        },
+                        child: Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min, // shrink to fit contents
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8.0),
                                 child: Text(
-                                  "Surface Hardness | Control Chart",
-                                  style: AppTypography.textBody3B,
+                                  '| $spotCount Records',
+                                  style: AppTypography.textBody3BBold,
                                   textAlign: TextAlign.center,
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 20),
-                          ],
-                        ),
-          
-                        _buildSingleChart(
-                          // settingProfile: widget.searchState,
-                          searchState: state,
-                          height: eachChartH,
-                          isMovingRange: false,
-                          // pass same window to control both charts
-                          visiblePoints: visiblePoints,
-                        ),
-          
-                        const SizedBox(height: 8),
-          
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 4.0),
-                          child: Text(
-                            "Surface Hardness | Moving Range",
-                            style: AppTypography.textBody3B,
+                            ],
                           ),
                         ),
-                        _buildMrChart(
-                          // settingProfile: widget.settingProfile,
-                          searchState: state,
-                          height: eachChartH,
-                          isMovingRange: true,
-                          visiblePoints: visiblePoints,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
+                ],
+              ),
+              // Card
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  border: Border.all(color: borderColor, width: 1),
+                  borderRadius: BorderRadius.circular(8.0),
                 ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                  child: Column(
+                    children: [
+                      // Header Top
+                      IntrinsicHeight(
+                      child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+
+                      // LEFT: title/subtitle on top, Records at bottom
+                      Padding(
+                      padding: const EdgeInsets.only(left: 8.0),
+                      child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween, // ⬅️ push Records to bottom
+                      children: [
+                        // Top block
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Surface Hardness",
+                              style: AppTypography.textBody3BBold,
+                              textAlign: TextAlign.start,
+                            ),
+                            Text(
+                              "Control Chart",
+                              style: AppTypography.textBody3B,
+                              textAlign: TextAlign.start,
+                            ),
+                          ],
+                        ),
+
+                        // Bottom: Records chip
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4.0),
+                          child: SizedBox(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.6),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(width: 1, color: Colors.grey.shade500),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                child: hasSpec
+                                    ? Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          if (hasSpecL)
+                                            Text(
+                                              'CPL = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpl?.toStringAsFixed(2) ?? 'N/A'}',
+                                              style: AppTypography.textBody3BBold,
+                                            )
+                                          else if (hasSpecU)
+                                            Text(
+                                              'CPU = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpu?.toStringAsFixed(2) ?? 'N/A'}',
+                                              style: AppTypography.textBody3BBold,
+                                            )
+                                          else ...[
+                                            Text(
+                                              'CP = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cp?.toStringAsFixed(2) ?? 'N/A'}',
+                                              style: AppTypography.textBody3BBold,
+                                            ),
+                                            Text(
+                                              'CPK = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
+                                              style: AppTypography.textBody3BBold,
+                                            ),
+                                          ],
+                                        ],
+                                      )
+                                    : null,
+                              ),
+
+                            ),
+                          ),
+                        ),
+                      ],
+                      ),
+                      ),
+                      Align(
+                        alignment: Alignment.center,
+                        child: ViolationSpecificQueueCard(
+                          violations: _buildViolationsFromState(searchState),
+                        ),
+                      ),
+
+                      // RIGHT: violations card (unchanged)
+                      Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                      Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: SizedBox(
+                          width: 292,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha:0.2),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(width: 1, color: Colors.grey.shade500),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.colorBg.withValues(alpha:0.4),
+                                  offset: const Offset(0, -2),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: ViolationsColumn(
+                                combinedControlLimit: combineControlLimit,
+                                combinedSpecLimit:    combineSpecLimit,
+                                trend: violations?.trend ?? 0,
+                                overCtrlLower: violations?.beyondControlLimitLower ?? 0,
+                                overCtrlUpper: violations?.beyondControlLimitUpper ?? 0,
+                                overSpecLower: violations?.beyondSpecLimitLower ?? 0,
+                                overSpecUpper: violations?.beyondSpecLimitUpper ?? 0,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      ],
+                      ),
+                      ],
+                      ),
+                      ),
+
+
+                      const SizedBox(height: 4),
+
+                      // Control Chart
+                      _buildSingleChart(
+                        searchState: state,
+                        height: eachChartH,
+                        visiblePoints: allPoints,
+                        isMovingRange: false,
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // Header bottom
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                                Text(
+                                  "Moving Range",
+                                  style: AppTypography.textBody3B,
+                                  textAlign: TextAlign.start,
+                                ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // MR Chart
+                      _buildSingleChart(
+                        searchState: state,
+                        height: eachChartH,
+                        visiblePoints: allPoints,
+                        isMovingRange: true,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
+
+Color _getViolationBgColor(int overControlLower, int overControlUpper, 
+int overSpecLower, int overSpecUpper, int trend) {
+  if (overSpecUpper > 0 || overSpecLower > 0) {
+    return Colors.red.withValues(alpha: 0.15);
+    // return Colors.pink.shade200.withValues(alpha: 0.15);
+  } else if (overControlUpper > 0 || overControlLower > 0) {
+    return Colors.orange.withValues(alpha: 0.15);
+    // return Colors.red.shade200.withValues(alpha: 0.15);
+  } else if (trend > 0) {
+    return Colors.pink.withValues(alpha: 0.15);
+  }
+  return AppColors.colorBrandTp.withValues(alpha: 0.15);
+}
+
+// Decide border color in same hierarchy
+Color _getViolationBorderColor(int overControlLower, int overControlUpper, 
+int overSpecLower, int overSpecUpper, int trend) {
+  if (overSpecUpper > 0 || overSpecLower > 0) {
+    return Colors.red.withValues(alpha: 0.70);
+    // return Colors.pink.shade200.withValues(alpha: 0.15);
+  } else if (overControlUpper > 0 || overControlLower > 0) {
+    return Colors.orange.withValues(alpha: 0.70);
+    // return Colors.red.shade200.withValues(alpha: 0.15);
+  } else if (trend > 0) {
+    return Colors.pinkAccent.withValues(alpha: 0.70);
+  }
+  return AppColors.colorBrandTp.withValues(alpha: 0.70);
+}
+
 
 Widget _buildSingleChart({
-  // required HomeContentVar settingProfile,
   required SearchState searchState,
   required bool isMovingRange,
   required double height,
-  required List<dynamic> visiblePoints, // List<ChartDataPoint>
+  required List<ChartDataPoint> visiblePoints,
 }) {
-  if (searchState.status == SearchStatus.loading) {
-    return const Center(
-      child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-    );
-  }
-  if (searchState.status == SearchStatus.failure) {
-    return const _SmallError();
-  }
-  if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
-    return const _SmallNoData();
-  }
 
+  final allPoints = searchState.chartDataPoints;
   final q = searchState.currentQuery;
   final uniqueKey = '${q.startDate?.millisecondsSinceEpoch}-'
       '${q.endDate?.millisecondsSinceEpoch}-'
       '${q.furnaceNo}-'
       '${q.materialNo}-';
 
-  return SizedBox(
-    width: double.infinity,
-    height: height,
-    child: DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: ControlChartTemplate(
-          key: ValueKey(uniqueKey.hashCode.toString()),
-          isMovingRange: false,
-          height: height,
-          // 🔒 freeze the same window for both charts
-          frozenDataPoints: List<ChartDataPoint>.from(visiblePoints),
-          frozenStats: searchState.controlChartStats,
-          frozenStatus: searchState.status,
-        ),
-      ),
-    ),
-  );
-}
-
-Widget _buildMrChart({
-  // required HomeContentVar settingProfile,
-  required SearchState searchState,
-  required bool isMovingRange,
-  required double height,
-  required List<dynamic> visiblePoints, // List<ChartDataPoint>
-}) {
-  if (searchState.status == SearchStatus.loading) {
-    return const Center(
-      child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-    );
-  }
-  if (searchState.status == SearchStatus.failure) {
-    return const _SmallError();
-  }
-  if (searchState.controlChartStats == null || searchState.chartDetails.isEmpty) {
-    return const _SmallNoData();
-  }
-
-  final q = searchState.currentQuery;
-  final uniqueKey = '${q.startDate?.millisecondsSinceEpoch}-'
-      '${q.endDate?.millisecondsSinceEpoch}-'
-      '${q.furnaceNo}-'
-      '${q.materialNo}-';
+  // print('in help ${q.startDate!.millisecondsSinceEpoch}');
 
   return SizedBox(
     width: double.infinity,
     height: height,
     child: DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-      ),
+      decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(8)),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(4),
         child: ControlChartTemplate(
-          key: ValueKey(uniqueKey.hashCode.toString()),
-          isMovingRange: true,
+          key: ValueKey(uniqueKey.hashCode.toString() + (isMovingRange ? '_mr' : '_cc')),
+          isMovingRange: isMovingRange,
           height: height,
-          // 🔒 same window slice
-          frozenDataPoints: List<ChartDataPoint>.from(visiblePoints),
-          frozenStats: searchState.controlChartStats,
+          // freeze same window for both charts
+          frozenDataPoints: List<ChartDataPoint>.from(allPoints),
+          frozenStats: searchState.controlChartStats!,
           frozenStatus: searchState.status,
+          // xTick: searchState.controlChartStats?.xTick,
+          xStart:   q.startDate,
+          xEnd: q.endDate,
         ),
       ),
     ),
@@ -294,7 +427,7 @@ Widget _buildMrChart({
 }
 
 class _SmallError extends StatelessWidget {
-  const _SmallError({super.key});
+  const _SmallError();
   @override
   Widget build(BuildContext context) => const Center(
         child: Column(
@@ -302,18 +435,101 @@ class _SmallError extends StatelessWidget {
           children: [
             Icon(Icons.error_outline, size: 16, color: Colors.red),
             SizedBox(height: 4),
-            Text(
-              'จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
-              style: TextStyle(fontSize: 10, color: Colors.red),
-            ),
+            Text('จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
+                style: TextStyle(fontSize: 10, color: Colors.red)),
           ],
         ),
       );
 }
 
+List<ViolationItem> _buildViolationsFromState(SearchState state) {
+  final spots = state.controlChartStats?.controlChartSpots?.surfaceHardness ?? [];
+  if (spots.isEmpty) return [];
+
+  final List<ViolationItem> violations = [];
+
+  for (final s in spots) {
+    // Over Control (L)
+    if (s.isViolatedR1BeyondLCL == true) {
+      violations.add(
+        ViolationItem(
+          fgNo: fgNoLast4(s.fgNo),
+          value: s.value ?? 0,
+          type: "Over Control (L)",
+          color: Colors.orange,
+        ),
+      );
+    }
+
+    // Over Control (U)
+    if (s.isViolatedR1BeyondUCL == true) {
+      violations.add(
+        ViolationItem(
+          fgNo: fgNoLast4(s.fgNo),
+          value: s.value ?? 0,
+          type: "Over Control (U)",
+          color: Colors.orange,
+        ),
+      );
+    }
+
+    // Over Spec (L)
+    if (s.isViolatedR1BeyondLSL == true) {
+      violations.add(
+        ViolationItem(
+          fgNo: fgNoLast4(s.fgNo),
+          value: s.value ?? 0,
+          type: "Over Spec (L)",
+          color: Colors.red,
+        ),
+      );
+    }
+
+    // Over Spec (U)
+    if (s.isViolatedR1BeyondUSL == true) {
+      violations.add(
+        ViolationItem(
+          fgNo: fgNoLast4(s.fgNo),
+          value: s.value ?? 0,
+          type: "Over Spec (U)",
+          color: Colors.red,
+        ),
+      );
+    }
+  }
+
+  return violations;
+}
+
+
+
 class _SmallNoData extends StatelessWidget {
-  const _SmallNoData({super.key});
+  const _SmallNoData();
   @override
   Widget build(BuildContext context) =>
-      const Center(child: Text('No Data', style: TextStyle(fontSize: 12, color: Colors.grey)));
+      const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล', style: TextStyle(fontSize: 12, color: Colors.grey)));
 }
+
+  double getXInterval(PeriodType periodType, double startMs, double endMs) {
+    const double dayMs = 86400000.0;
+
+    int stepDays;
+    switch (periodType) {
+      case PeriodType.ONE_MONTH:
+        stepDays = 7;
+        break;
+      case PeriodType.THREE_MONTHS:
+        stepDays = 14;
+        break;
+      case PeriodType.SIX_MONTHS:
+        stepDays = 30;
+        break;
+      case PeriodType.ONE_YEAR:
+      default:
+        stepDays = 60;
+        break;
+    }
+    // interval ของแกน X (หน่วย ms)
+    return stepDays * dayMs;
+  }
+

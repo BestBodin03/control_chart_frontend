@@ -13,10 +13,10 @@ class PeriodSelector extends StatelessWidget {
   final ValueChanged<String>? onChanged;
 
   static const _periods = [
+    {'label': '1 Day', 'short': '1D', 'value': '1 Day'},
     {'label': '1 Week', 'short': '1W', 'value': '1 Week'},
-    {'label': '2 Weeks', 'short': '2W', 'value': '2 weeks'},
-    {'label': '1 Month', 'short': '1M', 'value': '1 month'},
-    {'label': '2 Months', 'short': '2M', 'value': '2 months'},
+    {'label': '1 Month', 'short': '1M', 'value': '1 Month'},
+    {'label': '2 Months', 'short': '2M', 'value': '2 Months'},
   ];
 
   @override
