@@ -1,3 +1,4 @@
+import 'package:control_chart/data/cubit/searching/filters_cubit.dart';
 import 'package:control_chart/ui/core/layout/app_drawer/app_drawer.dart';
 import 'package:control_chart/ui/core/layout/app_drawer/collapsed_app_drawer.dart';
 import 'package:control_chart/ui/core/shared/date_time_component.dart';
@@ -29,6 +30,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
   // Bloc ที่ใช้เฉพาะแท็บ Home
   late final TvMonitoringBloc _tvBloc;
   late final SearchBloc _homeSearchBloc;
+  late final FiltersCubit _filterCubit;
 
   // ใช้ PageView แทน IndexedStack
   late final PageController _pageController;
@@ -53,6 +55,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
     // ---- Bloc เฉพาะหน้า Home ----
     _tvBloc = TvMonitoringBloc();
     _homeSearchBloc = SearchBloc(/* deps */);
+    _filterCubit = FiltersCubit();
 
     // ---- Page controller ----
     _pageController = PageController(initialPage: AppRoute.instance.navIndex.value);
@@ -67,6 +70,7 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
               providers: [
                 BlocProvider.value(value: _tvBloc),
                 BlocProvider.value(value: _homeSearchBloc),
+                BlocProvider.value(value: _filterCubit)
               ],
               child: HomeContent(
                 profiles: _profilesSnapshot,

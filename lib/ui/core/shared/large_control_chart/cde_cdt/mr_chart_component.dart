@@ -9,16 +9,15 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-/// MR-Chart (Moving Range) with local Tooltip (no Overlay), quadrant placement.
+/// CDE/CDT MR Chart — Surface-like (xStart/xEnd), local tooltip, length-1 points
 class MrChartComponentLarge extends StatefulWidget implements ChartComponent {
-  final List<ChartDataPoint>? dataPoints;
+  final List<ChartDataPointCdeCdt>? dataPoints;
   final ControlChartStats? controlChartStats;
   final Color? dataLineColor;
   final Color? backgroundColor;
   final double? height;
   final double? width;
 
-  /// ช่วงเวลาที่ต้องการแสดง
   final DateTime xStart;
   final DateTime xEnd;
 
@@ -34,26 +33,36 @@ class MrChartComponentLarge extends StatefulWidget implements ChartComponent {
     required this.xEnd,
   });
 
-  // ===== Legend =====
+  // Legend
   @override
   Widget buildLegend() {
     String fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
-    return Wrap(
-      spacing: 4,
-      runSpacing: 4,
-      direction: Axis.horizontal,
-      alignment: WrapAlignment.spaceEvenly,
-      children: [
-        if (fmt(controlChartStats?.controlLimitMRChart?.ucl) != 'N/A')
-          _legendItem('UCL', Colors.orange, fmt(controlChartStats?.controlLimitMRChart?.ucl)),
-        if (fmt(controlChartStats?.mrAverage) != 'N/A')
-          _legendItem('AVG', Colors.green, fmt(controlChartStats?.mrAverage)),
-      ],
-    );
-  }
 
-  Widget _legendItem(String label, Color color, String value) {
-    return Row(
+    T? _sel<T>(T? cde, T? cdt, T? comp) {
+      switch (controlChartStats?.secondChartSelected) {
+        case SecondChartSelected.cde:
+          return cde;
+        case SecondChartSelected.cdt:
+          return cdt;
+        case SecondChartSelected.compoundLayer:
+          return comp;
+        default:
+          return null;
+      }
+    }
+
+    final ucl = _sel(
+      controlChartStats?.cdeControlLimitMRChart?.ucl,
+      controlChartStats?.cdtControlLimitMRChart?.ucl,
+      controlChartStats?.compoundLayerControlLimitMRChart?.ucl,
+    );
+    final cl = _sel(
+      controlChartStats?.cdeControlLimitMRChart?.cl,
+      controlChartStats?.cdtControlLimitMRChart?.cl,
+      controlChartStats?.compoundLayerControlLimitMRChart?.cl,
+    );
+
+    Widget item(String label, Color color, String value) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(width: 8, height: 2, child: DecoratedBox(decoration: BoxDecoration(color: color))),
@@ -63,9 +72,19 @@ class MrChartComponentLarge extends StatefulWidget implements ChartComponent {
         Text(value, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack, fontWeight: FontWeight.bold)),
       ],
     );
+
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      alignment: WrapAlignment.spaceEvenly,
+      children: [
+        if (fmt(ucl) != 'N/A') item('UCL', Colors.orange, fmt(ucl)),
+        if (fmt(cl)  != 'N/A') item('AVG', Colors.green, fmt(cl)),
+      ],
+    );
   }
 
-  // ===== STUBs เพื่อให้ตอบ interface ChartComponent =====
+  // interface stubs
   @override
   FlBorderData buildBorderData() => FlBorderData(show: false);
   @override
@@ -90,23 +109,32 @@ class MrChartComponentLarge extends StatefulWidget implements ChartComponent {
 class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
   final GlobalKey _chartKey = GlobalKey();
 
-  // cache Y
   double? _cachedMinY;
   double? _cachedMaxY;
   double? _cachedInterval;
 
-  // Tooltip state (local)
   final ValueNotifier<_MrTip?> _tip = ValueNotifier<_MrTip?>(null);
 
+  T? _sel<T>(T? cde, T? cdt, T? comp) {
+    switch (widget.controlChartStats?.secondChartSelected) {
+      case SecondChartSelected.cde:
+        return cde;
+      case SecondChartSelected.cdt:
+        return cdt;
+      case SecondChartSelected.compoundLayer:
+        return comp;
+      default:
+        return null;
+    }
+  }
 
-  List<ChartDataPoint> get _pointsInWindow {
-    final src = widget.dataPoints ?? const <ChartDataPoint>[];
-    if (src.length <= 1) return const <ChartDataPoint>[];
+  // เอาเฉพาะช่วงเวลา + length-1 (เหมือนที่ผู้ใช้ต้องการ)
+  List<ChartDataPointCdeCdt> get _pointsInWindow {
+    final src = widget.dataPoints ?? const <ChartDataPointCdeCdt>[];
+    if (src.length <= 1) return const <ChartDataPointCdeCdt>[];
 
-    final lo = math.min(widget.xStart.millisecondsSinceEpoch,
-                        widget.xEnd.millisecondsSinceEpoch).toDouble();
-    final hi = math.max(widget.xStart.millisecondsSinceEpoch,
-                        widget.xEnd.millisecondsSinceEpoch).toDouble();
+    final lo = math.min(widget.xStart.millisecondsSinceEpoch, widget.xEnd.millisecondsSinceEpoch).toDouble();
+    final hi = math.max(widget.xStart.millisecondsSinceEpoch, widget.xEnd.millisecondsSinceEpoch).toDouble();
 
     final filtered = src.where((p) {
       final t = p.collectDate.millisecondsSinceEpoch.toDouble();
@@ -114,11 +142,9 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
     }).toList()
       ..sort((a, b) => a.collectDate.compareTo(b.collectDate));
 
-    if (filtered.length <= 1) return const <ChartDataPoint>[];
-    // เอาแค่ length - 1 (ตัดตัวท้าย)
-    return filtered.sublist(0, filtered.length - 1);
+    if (filtered.length <= 1) return const <ChartDataPointCdeCdt>[];
+    return filtered.sublist(0, filtered.length - 1); // length-1
   }
-
 
   @override
   void dispose() {
@@ -172,88 +198,81 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
                 ),
               ),
 
-              // Tooltip (local-only, non-blocking) — quadrant placement + clamp
+              // Tooltip (local) — เล็ก กระชับ วางแบบ quadrant + clamp
               ValueListenableBuilder<_MrTip?>(
                 valueListenable: _tip,
-              builder: (context, tip, _) {
-                if (tip == null) return const SizedBox.shrink();
+                builder: (context, tip, _) {
+                  if (tip == null) return const SizedBox.shrink();
 
-                const double maxWidth = 90;
-                const double boxH = 120;
-                const double dotR = 8;
-                const double gap = 8;
-                const double pad = 8;
+                  const double maxWidth = 90;
+                  const double boxH = 120;
+                  const double dotR = 8;
+                  const double gap = 8;
+                  const double pad = 8;
 
-                final dx = tip.local.dx;
-                final dy = tip.local.dy;
+                  final dx = tip.local.dx;
+                  final dy = tip.local.dy;
 
-                // available room checks
-                final bool canAbove = dy - (dotR + gap + boxH) >= pad;
-                final bool canBelow = dy + (dotR + gap + boxH) <= chartSize.height - pad;
-                final bool canRight = dx + (dotR + gap + maxWidth) <= chartSize.width  - 6*pad;
-                final bool canLeft  = dx - (dotR + gap + maxWidth) >= pad; // ✅ fix
+                  final bool canAbove = dy - (dotR + gap + boxH) >= pad;
+                  final bool canBelow = dy + (dotR + gap + boxH) <= chartSize.height - pad;
+                  final bool canRight = dx + (dotR + gap + maxWidth) <= chartSize.width  - 6*pad;
+                  final bool canLeft  = dx - (dotR + gap + maxWidth) >= pad;
 
-                double left, top;
+                  double left, top;
+                  if (canAbove) {
+                    left = dx - maxWidth / 2;
+                    top  = dy - dotR - gap - boxH;
+                    final hiX = chartSize.width - maxWidth - pad;
+                    left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
+                  } else if (canBelow) {
+                    left = dx - maxWidth / 2;
+                    top  = dy + dotR + gap;
+                    final hiX = chartSize.width - maxWidth - pad;
+                    left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
+                  } else if (canRight) {
+                    left = dx + dotR + 4*gap;
+                    top  = dy - boxH / 2;
+                    final hiY = chartSize.height - boxH - pad;
+                    top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
+                  } else if (canLeft) {
+                    left = dx - dotR - gap - maxWidth;
+                    top  = dy - boxH / 2;
+                    final hiY = chartSize.height - boxH - pad;
+                    top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
+                  } else {
+                    left = (chartSize.width  - maxWidth) / 2;
+                    top  = (chartSize.height - boxH) / 2;
+                  }
 
-                if (canAbove) {
-                  // above
-                  left = dx - maxWidth / 2;
-                  top  = dy - dotR - gap - boxH;
                   final hiX = chartSize.width - maxWidth - pad;
-                  left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
-                } else if (canBelow) {
-                  // below
-                  left = dx - maxWidth / 2;
-                  top  = dy + dotR + gap;
-                  final hiX = chartSize.width - maxWidth - pad;
-                  left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
-                } else if (canRight) {
-                  // right (vertically centered)
-                  left = dx + dotR + 4*gap;
-                  top  = dy - boxH / 2;
                   final hiY = chartSize.height - boxH - pad;
-                  top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
-                } else if (canLeft) {
-                  // left (vertically centered)
-                  left = dx - dotR - gap - maxWidth;
-                  top  = dy - boxH / 2;
-                  final hiY = chartSize.height - boxH - pad;
-                  top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
-                } else {
-                  // very tight: center in the box
-                  left = (chartSize.width  - maxWidth) / 2;
-                  top  = (chartSize.height - boxH) / 2;
-                }
+                  if (hiX > pad) left = left.clamp(pad, hiX);
+                  if (hiY > pad) top  = top.clamp(pad, hiY);
 
-                // final clamp (safety)
-                final hiX = chartSize.width - maxWidth - pad;
-                final hiY = chartSize.height - boxH - pad;
-                if (hiX > pad) left = left.clamp(pad, hiX);
-                if (hiY > pad) top  = top.clamp(pad, hiY);
-
-                return Positioned(
-                  left: left,
-                  top: top,
-                  width: maxWidth,
-                  child: IgnorePointer(
-                    ignoring: true,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.colorBrand.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(8),
+                  return Positioned(
+                    left: left,
+                    top: top,
+                    width: maxWidth,
+                    child: IgnorePointer(
+                      ignoring: true,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.colorBrand.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            tip.valueStr,
+                            textAlign: TextAlign.center,
+                            style: AppTypography.textBody4WBold,
+                          ),
                         ),
-                        child: Text(
-                          textAlign: TextAlign.center,
-                          tip.valueStr,
-                          style: AppTypography.textBody4WBold,),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
               ),
             ],
           ),
@@ -262,8 +281,7 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
     );
   }
 
-  // --------------------- GRID / TITLES / BORDER ---------------------
-
+  // --------------- GRID / TITLES / BORDER ---------------
   FlGridData _gridData(double? minX, double? maxX, double? tickInterval) {
     return FlGridData(
       show: true,
@@ -272,7 +290,7 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
       horizontalInterval: _getInterval(),
       verticalInterval: tickInterval ?? 1,
       getDrawingHorizontalLine: (_) => FlLine(color: Colors.grey.shade100, strokeWidth: 0.5),
-      getDrawingVerticalLine: (_) => FlLine(color: Colors.grey.shade100, strokeWidth: 0.5),
+      getDrawingVerticalLine:    (_) => FlLine(color: Colors.grey.shade100, strokeWidth: 0.5),
     );
   }
 
@@ -291,10 +309,7 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
         space: 8,
         child: Transform.rotate(
           angle: -30 * math.pi / 180,
-          child: Text(text, style: const TextStyle(
-            fontSize: 8, 
-            color: AppColors.colorBlack), 
-            overflow: TextOverflow.ellipsis),
+          child: Text(text, style: const TextStyle(fontSize: 8, color: AppColors.colorBlack), overflow: TextOverflow.ellipsis),
         ),
       );
     }
@@ -305,11 +320,7 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
           showTitles: true,
           reservedSize: 24,
           interval: _getInterval(),
-          getTitlesWidget: (v, _) => Text(
-            v.toStringAsFixed(0), 
-            style: const TextStyle(
-              color: AppColors.colorBlack, 
-              fontSize: 8)),
+          getTitlesWidget: (v, _) => Text(v.toStringAsFixed(2), style: const TextStyle(color: AppColors.colorBlack, fontSize: 8)),
         ),
       ),
       bottomTitles: AxisTitles(
@@ -327,44 +338,49 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
 
   FlBorderData _borderData() => FlBorderData(show: true, border: Border.all(color: Colors.black54, width: 1));
 
-  // -------------------------- CONTROL LINES --------------------------
-
+  // --------------- CONTROL LINES ---------------
   ExtraLinesData _controlLines() {
+    final ucl = _sel(
+      widget.controlChartStats?.cdeControlLimitMRChart?.ucl,
+      widget.controlChartStats?.cdtControlLimitMRChart?.ucl,
+      widget.controlChartStats?.compoundLayerControlLimitMRChart?.ucl,
+    );
+    final cl = _sel(
+      widget.controlChartStats?.cdeControlLimitMRChart?.cl,
+      widget.controlChartStats?.cdtControlLimitMRChart?.cl,
+      widget.controlChartStats?.compoundLayerControlLimitMRChart?.cl,
+    );
+
     return ExtraLinesData(
       extraLinesOnTop: false,
       horizontalLines: [
-        HorizontalLine(
-          y: widget.controlChartStats?.controlLimitMRChart?.ucl ?? 0.0,
-          color: Colors.amberAccent,
-          strokeWidth: 1.5,
-        ),
-        HorizontalLine(
-          y: widget.controlChartStats?.mrAverage ?? 0.0,
-          color: AppColors.colorSuccess1,
-          strokeWidth: 2,
-        ),
+        if (ucl != null) HorizontalLine(y: ucl, color: Colors.amberAccent, strokeWidth: 1.5),
+        if (cl  != null) HorizontalLine(y: cl,  color: AppColors.colorSuccess1, strokeWidth: 2),
       ],
     );
   }
 
-  // ---------------------------- DATA LAYERS ----------------------------
-
+  // --------------- DATA LAYER ---------------
   List<LineChartBarData> _lineBarsData() {
     final pts = _pointsInWindow;
     if (pts.isEmpty) {
       return [LineChartBarData(spots: const [], color: widget.dataLineColor, barWidth: 2)];
     }
 
-    final minXv = widget.xStart.millisecondsSinceEpoch.toDouble();
-    final maxXv = widget.xEnd.millisecondsSinceEpoch.toDouble();
+    // เรา plot MR ที่เวลา[i] = |v[i] - v[i-1]|
+    final spots = <FlSpot>[];
+    for (var i = 1; i < pts.length; i++) {
+      final t = pts[i].collectDate.millisecondsSinceEpoch.toDouble();
+      spots.add(FlSpot(t, pts[i].mrValue));
+    }
 
-    final spots = pts
-        .map((p) => FlSpot(p.collectDate.millisecondsSinceEpoch.toDouble(), p.mrValue))
-        .where((s) => s.x >= math.min(minXv, maxXv) && s.x <= math.max(minXv, maxXv))
-        .toList()
-      ..sort((a, b) => a.x.compareTo(b.x));
+    final ucl = _sel(
+          widget.controlChartStats?.cdeControlLimitMRChart?.ucl,
+          widget.controlChartStats?.cdtControlLimitMRChart?.ucl,
+          widget.controlChartStats?.compoundLayerControlLimitMRChart?.ucl,
+        ) ??
+        0.0;
 
-    final ucl = widget.controlChartStats?.controlLimitMRChart?.ucl ?? 0.0;
     final baseColor = widget.dataLineColor ?? AppColors.colorBrand;
 
     return [
@@ -378,8 +394,8 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
           show: true,
           getDotPainter: (spot, _, __, ___) {
             final v = spot.y;
-            final isOverUCL = (ucl > 0 && v > ucl);
-            final dotColor = isOverUCL ? Colors.orange : baseColor;
+            final isOverUcl = (ucl > 0 && v > ucl);
+            final dotColor = isOverUcl ? Colors.orange : baseColor;
             return FlDotCirclePainter(
               radius: 3.5,
               color: dotColor,
@@ -393,8 +409,7 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
     ];
   }
 
-  // --------------------------- TOUCH / TOOLTIP ---------------------------
-
+  // --------------- TOUCH / TOOLTIP ---------------
   static List<LineTooltipItem?> _emptyTooltip(List<LineBarSpot> touchedSpots) =>
       List<LineTooltipItem?>.filled(touchedSpots.length, null);
 
@@ -411,14 +426,12 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
               radius: 3.5,
               color: AppColors.colorBrandTp,
               strokeWidth: 3,
-              strokeColor: Colors.blueAccent
+              strokeColor: Colors.blueAccent,
             ),
           ),
         );
       }).toList(),
-      // ปิด tooltip ของ fl_chart (เราวาดเอง)
       touchTooltipData: LineTouchTooltipData(getTooltipItems: _emptyTooltip),
-
       touchCallback: (event, resp) {
         final noHit = !event.isInterestedForInteractions ||
             resp?.lineBarSpots == null ||
@@ -438,39 +451,41 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
     );
   }
 
-  // ------------------------------ Y SCALE ------------------------------
-
+  // --------------- Y SCALE ---------------
   double _getMaxY() {
     if (_cachedInterval == null) _getInterval();
     return _cachedMaxY ?? 0.0;
   }
-
   double _getMinY() {
     if (_cachedInterval == null) _getInterval();
     return _cachedMinY ?? 0.0;
   }
 
   double _getInterval() {
-    const divisions = 5; // -> 6 ticks
-    final spotMin = 0.0; // MR เริ่มที่ศูนย์
-    final spotMax = widget.controlChartStats?.yAxisRange?.maxYsurfaceHardnessMrChart ?? spotMin;
+    const divisions = 5;
+    final minSel = 0.0;
+    final maxSel = _sel(
+          widget.controlChartStats?.yAxisRange?.maxYcdeMrChart,
+          widget.controlChartStats?.yAxisRange?.maxYcdtMrChart,
+          widget.controlChartStats?.yAxisRange?.maxYcompoundLayerMrChart,
+        ) ?? 0.0;
 
-    if (spotMax <= spotMin) {
-      _cachedMinY = spotMin;
-      _cachedMaxY = spotMin + divisions;
+    if (maxSel <= minSel) {
+      _cachedMinY = minSel;
+      _cachedMaxY = minSel + divisions;
       _cachedInterval = 1.0;
       return _cachedInterval!;
     }
 
-    final ideal = (spotMax - spotMin) / divisions;
+    final ideal = (maxSel - minSel) / divisions;
     double interval = _niceStepCeil(ideal);
 
-    double minY = (spotMin / interval).floor() * interval;
+    double minY = (minSel / interval).floor() * interval;
     double maxY = minY + divisions * interval;
 
-    while (maxY < spotMax - 1e-12) {
+    while (maxY < maxSel - 1e-12) {
       interval = _nextNiceStep(interval);
-      minY = (spotMin / interval).floor() * interval;
+      minY = (minSel / interval).floor() * interval;
       maxY = minY + divisions * interval;
     }
 
@@ -520,7 +535,6 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
     return 10.0 * mag;
   }
 
-  // ------------------------------ HELPERS ------------------------------
   double _xInterval(PeriodType periodType, double minX, double maxX) {
     final safeRange = (maxX - minX).abs().clamp(1.0, double.infinity);
     return safeRange / 6.0;

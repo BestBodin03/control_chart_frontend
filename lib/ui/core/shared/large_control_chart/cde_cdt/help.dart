@@ -21,7 +21,7 @@ typedef CdeCdtZoomBuilder = Widget Function(
   SearchState searchState,
 );
 
-Widget buildChartsSectionCdeCdt(
+Widget buildChartsSectionCdeCdtLarge(
   List<HomeContentVar> profiles,
   int currentIndex,
   SearchState searchState, {
@@ -71,7 +71,7 @@ Widget buildChartsSectionCdeCdt(
   final title = parts.join(' | ');
 
   return SizedBox.expand(
-    child: _MediumContainerCdeCdt(
+    child: _LargeContainerCdeCdt(
       title: title,
       selectedLabel: selectedLabel,
       settingProfile: current,
@@ -81,8 +81,8 @@ Widget buildChartsSectionCdeCdt(
   );
 }
 
-class _MediumContainerCdeCdt extends StatelessWidget {
-  const _MediumContainerCdeCdt({
+class _LargeContainerCdeCdt extends StatelessWidget {
+  const _LargeContainerCdeCdt({
     required this.title,
     required this.selectedLabel,
     required this.settingProfile,
@@ -389,7 +389,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         height: eachChartH,
-                        child: ControlChartTemplateCdeCdt(
+                        child: ControlChartTemplateCdeCdtLarge(
                           key: ValueKey('${uniqueKey}_cc'),
                           isMovingRange: false,
                           height: eachChartH,
@@ -423,7 +423,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         height: eachChartH,
-                        child: ControlChartTemplateCdeCdt(
+                        child: ControlChartTemplateCdeCdtLarge(
                           key: ValueKey('${uniqueKey}_mr'),
                           isMovingRange: true,
                           height: eachChartH,

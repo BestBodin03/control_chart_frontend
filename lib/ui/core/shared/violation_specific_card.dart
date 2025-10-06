@@ -92,7 +92,7 @@ class _ViolationSpecificQueueCardState
                     ),
                   ),
                   Text(
-                    "FG No: ${current.fgNo}",
+                    "FG No.: ${current.fgNo}",
                     style: const TextStyle(color: Colors.white, fontSize: 13),
                   ),
                   Text(

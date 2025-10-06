@@ -2,33 +2,33 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 // import '../../../screen/screen_content/home_screen_content/home_content_var.dart';
 import '../../../ui/screen/screen_content/home_screen_content/home_content_var.dart';
 
-class FiltersState {
+class FilterState {
   final String periodValue; // '1 เดือน' | '3 เดือน' | ... | 'กำหนดเอง'
   final DateTime? startDate;
   final DateTime? endDate;
   final HomeContentVar? lastAppliedProfile;
 
-  const FiltersState({
+  const FilterState({
     required this.periodValue,
     required this.startDate,
     required this.endDate,
     required this.lastAppliedProfile,
   });
 
-  factory FiltersState.initial() => const FiltersState(
+  factory FilterState.initial() => const FilterState(
         periodValue: '1 month',
         startDate: null,
         endDate: null,
         lastAppliedProfile: null,
       );
 
-  FiltersState copyWith({
+  FilterState copyWith({
     String? periodValue,
     DateTime? startDate,
     DateTime? endDate,
     HomeContentVar? lastAppliedProfile,
   }) {
-    return FiltersState(
+    return FilterState(
       periodValue: periodValue ?? this.periodValue,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
@@ -37,8 +37,8 @@ class FiltersState {
   }
 }
 
-class FiltersCubit extends Cubit<FiltersState> {
-  FiltersCubit() : super(FiltersState.initial());
+class FiltersCubit extends Cubit<FilterState> {
+  FiltersCubit() : super(FilterState.initial());
 
   void hydrate(DateTime? s, DateTime? e) {
     emit(state.copyWith(startDate: s ?? state.startDate, endDate: e ?? state.endDate));

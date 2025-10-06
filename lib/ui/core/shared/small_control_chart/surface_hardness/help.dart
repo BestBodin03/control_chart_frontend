@@ -1,3 +1,5 @@
+import 'package:control_chart/domain/types/chart_atrribute.dart';
+import 'package:control_chart/ui/screen/screen_content/searching_screen_content/searching_var.dart';
 import 'package:flutter/material.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
@@ -7,6 +9,10 @@ import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/small_control_chart/surface_hardness/control_chart_template_small.dart';
 
 import 'package:control_chart/domain/models/chart_data_point.dart';
+
+import '../../common/info_content.dart';
+import '../../common/info_overlay.dart';
+import '../../spec_validation.dart';
 
 /// ----------------------------------------------------------------------------
 /// Public builder
@@ -48,8 +54,12 @@ class _SmallCardState extends State<_SmallCard> {
 
     final title = 'Surface Hardness';
     final dataPoints = searchState.chartDataPoints;
-    final hasSpec = searchState.controlChartStats?.specAttribute?.surfaceHardnessLowerSpec != null ||
-                searchState.controlChartStats?.specAttribute?.surfaceHardnessUpperSpec != null;
+    final stats = searchState.controlChartStats?.surfaceHardnessCapabilityProcess;
+    final lowerSpec = searchState.controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;
+    final upperSpec = searchState.controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
+    final hasSpec  = isValidSpec(lowerSpec) || isValidSpec(upperSpec);
+    final hasSpecL = isValidSpec(lowerSpec) && !isValidSpec(upperSpec);
+    final hasSpecU = !isValidSpec(lowerSpec) && isValidSpec(upperSpec);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -62,10 +72,25 @@ class _SmallCardState extends State<_SmallCard> {
           children: [
             Text(title, style: AppTypography.textBody3BBold),
             IconButton(
+              hoverColor: AppColors.colorBrandTp,
+              splashRadius: 8,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
-              onPressed: () => setState(() => _showLegend = !_showLegend),
-              icon: const Icon(Icons.info_rounded, size: 16),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  barrierColor: Colors.transparent, // let InfoOverlay handle dim
+                  builder: (_) => InfoOverlay(
+                    onClose: () => Navigator.of(context).pop(),
+                    child: InfoContent(
+                      selectedPeriodType: searchPeriodType,
+                      searchState: searchState,
+                      chartAttribute: ChartAttribute.SURFACE_HARDNESS,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.info_rounded, size: 24),
               tooltip: 'Info',
             ),
           ],
@@ -112,15 +137,19 @@ class _SmallCardState extends State<_SmallCard> {
 
                     const Spacer(), // ดันข้อความ CP/CPK ไปชิดขวา แทนการใช้ spaceBetween
 
-                    if (hasSpec)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Text(
-                          'CP = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cp?.toStringAsFixed(2) ?? 'N/A'} | '
-                          'CPK = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
-                          style: AppTypography.textBody4BBold,
-                        ),
+                  if (hasSpec)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: Text(
+                        hasSpecL
+                            ? 'CPL = ${stats?.cpl?.toStringAsFixed(2) ?? 'N/A'}'
+                            : hasSpecU
+                                ? 'CPU = ${stats?.cpu?.toStringAsFixed(2) ?? 'N/A'}'
+                                : 'CP = ${stats?.cp?.toStringAsFixed(2) ?? 'N/A'} | '
+                                  'CPK = ${stats?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
+                        style: AppTypography.textBody4BBold,
                       ),
+                    ),
                   ],
                 ),
                 _SmallChartBox(

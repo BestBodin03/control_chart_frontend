@@ -14,6 +14,7 @@ import '../../../data/cubit/searching/utils/mapper.dart';
 import '../../../utils/date_autocomplete.dart';
 import '../../../utils/date_convertor.dart';
 import '../../screen/screen_content/home_screen_content/home_content_var.dart';
+import '../../screen/screen_content/searching_screen_content/searching_var.dart';
 
 class SearchingForm extends StatelessWidget {
   const SearchingForm({
@@ -145,7 +146,7 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
           a.currentFurnaceUiValue != b.currentFurnaceUiValue ||
           a.currentMaterialUiValue != b.currentMaterialUiValue,
       builder: (context, searchState) {
-        return BlocBuilder<FiltersCubit, FiltersState>(
+        return BlocBuilder<FiltersCubit, FilterState>(
           builder: (context, filters) {
             final dateNow = DateTime.now();
             final dateOneM = oneMonthAgo(dateNow);
@@ -190,6 +191,7 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                       startDate: dateOneM,
                                       endDate: dateNow
                                     ));
+                                    searchPeriodType = '1 month';
                                     // context.read<FiltersCubit>().setPeriod('1 month', start: oneMonthAgo(dateNow), end: dateNow);
                                   },
                                   icon: const Icon(Icons.refresh_rounded, size: 24, color: AppColors.colorBrand),
@@ -218,6 +220,8 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                   start: sDate,
                                   end: eDate,
                                 );
+
+                                searchPeriodType = value;
 
                                 if (value != 'Custom') {
                                   final int? furnace = furnaceIntFromUi(searchState.currentFurnaceUiValue);

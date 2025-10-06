@@ -1,5 +1,7 @@
 import 'package:control_chart/domain/extension/map.dart';
+import 'package:control_chart/domain/types/chart_atrribute.dart';
 import 'package:control_chart/ui/core/shared/chart_selection.dart';
+import 'package:control_chart/ui/screen/screen_content/searching_screen_content/searching_var.dart';
 import 'package:flutter/material.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart' show ChartDataPointCdeCdt;
 import 'package:control_chart/domain/models/control_chart_stats.dart';
@@ -9,6 +11,10 @@ import 'package:control_chart/data/bloc/search_chart_details/extension/search_st
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/control_chart_template_small_cde_cdt.dart';
+
+import '../../common/info_content.dart';
+import '../../common/info_overlay.dart';
+import '../../spec_validation.dart';
 
 /// ============================================================================
 /// Public builder
@@ -83,8 +89,11 @@ class _SmallCardCdeCdtState extends State<_SmallCardCdeCdt> {
         );
 
 
-    final hasSpec = _lowerSpec(stats) != null ||
-        _upperSpec(stats) != null;
+    final hasSpec  = isValidSpec((_lowerSpec(stats))) || isValidSpec((_upperSpec(stats)));
+    final hasSpecL = isValidSpec((_lowerSpec(stats))) && !isValidSpec((_upperSpec(stats)));
+    final hasSpecU = !isValidSpec((_lowerSpec(stats))) && isValidSpec((_upperSpec(stats)));
+
+    final capability = _capabilityProcess(stats);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -97,10 +106,25 @@ class _SmallCardCdeCdtState extends State<_SmallCardCdeCdt> {
           children: [
             Text(title, style: AppTypography.textBody3BBold),
             IconButton(
+              hoverColor: AppColors.colorBrandTp,
+              splashRadius: 8,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
-              onPressed: () => {},
-              icon: const Icon(Icons.info_rounded, size: 16),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  barrierColor: Colors.transparent, // let InfoOverlay handle dim
+                  builder: (_) => InfoOverlay(
+                    onClose: () => Navigator.of(context).pop(),
+                    child: InfoContent(
+                      selectedPeriodType: searchPeriodType,
+                      searchState: searchState,
+                      chartAttribute: ChartAttribute.OTHERS,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.info_rounded, size: 24),
               tooltip: 'Info',
             ),
           ],
@@ -146,15 +170,21 @@ class _SmallCardCdeCdtState extends State<_SmallCardCdeCdt> {
                   children: [
                     const _SectionLabel('Control Chart'),
                     const Spacer(),
-                    if (hasSpec)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Text(
-                          'CP = ${_capabilityProcess(stats)?.cp?.toStringAsFixed(2) ?? 'N/A'} | '
-                          'CPK = ${_capabilityProcess(stats)?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
-                          style: AppTypography.textBody4BBold,
-                        ),
+
+                  if (hasSpec)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: Text(
+                        hasSpecL
+                            ? 'CPL = ${capability?.cpl?.toStringAsFixed(2) ?? 'N/A'}'
+                            : hasSpecU
+                                ? 'CPU = ${capability?.cpu?.toStringAsFixed(2) ?? 'N/A'}'
+                                : 'CP = ${capability?.cp?.toStringAsFixed(2) ?? 'N/A'} | '
+                                  'CPK = ${capability?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
+                        style: AppTypography.textBody4BBold,
                       ),
+                    ),
+
                   ],
                 ),
                 _SmallChartBoxCdeCdt(searchState: searchState, isMr: false, fixedHeight: _chartH),

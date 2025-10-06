@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../fg_last_four_chars.dart';
+import '../../spec_validation.dart';
 import '../../violation_specific_card.dart';
 
 typedef ZoomBuilder = Widget Function(
@@ -174,8 +175,12 @@ class _MediumContainer extends StatelessWidget {
               .clamp(0.0, double.infinity);
           final combineControlLimit = (violations?.beyondControlLimitLower ?? 0) + (violations?.beyondControlLimitUpper ?? 0);
           final combineSpecLimit    = (violations?.beyondSpecLimitLower ?? 0) + (violations?.beyondSpecLimitUpper ?? 0);
-          final hasSpec = searchState.controlChartStats?.specAttribute?.surfaceHardnessLowerSpec != null ||
-                searchState.controlChartStats?.specAttribute?.surfaceHardnessUpperSpec != null;
+          final lowerSpec = searchState.controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;
+          final upperSpec = searchState.controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
+
+          final hasSpec  = isValidSpec(lowerSpec) || isValidSpec(upperSpec);
+          final hasSpecL = isValidSpec(lowerSpec) && !isValidSpec(upperSpec);
+          final hasSpecU = !isValidSpec(lowerSpec) && isValidSpec(upperSpec);
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -277,23 +282,33 @@ class _MediumContainer extends StatelessWidget {
                                 padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                                 child: hasSpec
                                     ? Column(
-                                      mainAxisAlignment: MainAxisAlignment.start,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                            'CP = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cp?.toStringAsFixed(2) ?? 'N/A'}',
-                                            // 'CPK = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
-                                            style: AppTypography.textBody3BBold,
-                                          ),
-                                        Text(
-                                            // 'CP = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cp?.toStringAsFixed(2) ?? 'N/A'}',
-                                            'CPK = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
-                                            style: AppTypography.textBody3BBold,
-                                          )
-                                      ],
-                                    )
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          if (hasSpecL)
+                                            Text(
+                                              'CPL = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpl?.toStringAsFixed(2) ?? 'N/A'}',
+                                              style: AppTypography.textBody3BBold,
+                                            )
+                                          else if (hasSpecU)
+                                            Text(
+                                              'CPU = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpu?.toStringAsFixed(2) ?? 'N/A'}',
+                                              style: AppTypography.textBody3BBold,
+                                            )
+                                          else ...[
+                                            Text(
+                                              'CP = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cp?.toStringAsFixed(2) ?? 'N/A'}',
+                                              style: AppTypography.textBody3BBold,
+                                            ),
+                                            Text(
+                                              'CPK = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
+                                              style: AppTypography.textBody3BBold,
+                                            ),
+                                          ],
+                                        ],
+                                      )
                                     : null,
                               ),
+
                             ),
                           ),
                         ),
