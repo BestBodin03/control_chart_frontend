@@ -8,12 +8,12 @@ class DisplaySelector extends StatefulWidget {
     super.key,
     this.onPeriodChanged,
     this.onLayoutChanged,
-    this.initialPeriod = '1 Week',
-    this.initialLayout = 1,
+    this.initialPeriod = '1W',   // <-- default short code
+    this.initialLayout = 1,      // 1=Single, 2=Double
   });
 
-  final ValueChanged<String>? onPeriodChanged;
-  final ValueChanged<int>? onLayoutChanged;
+  final ValueChanged<String>? onPeriodChanged; // receives '1D'|'1W'|'1M'|'2M'
+  final ValueChanged<int>? onLayoutChanged;    // receives 1 or 2
   final String initialPeriod;
   final int initialLayout;
 
@@ -22,14 +22,15 @@ class DisplaySelector extends StatefulWidget {
 }
 
 class _DisplaySelectorState extends State<DisplaySelector> {
-  late String selectedPeriod;
+  late String selectedPeriodShort;
   late int selectedLayout;
 
   @override
   void initState() {
     super.initState();
-    selectedPeriod = widget.initialPeriod;
+    selectedPeriodShort = widget.initialPeriod; // already short
     selectedLayout = widget.initialLayout;
+    debugPrint('[DisplaySelector] init period=$selectedPeriodShort layout=$selectedLayout');
   }
 
   @override
@@ -49,20 +50,21 @@ class _DisplaySelectorState extends State<DisplaySelector> {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           PeriodSelector(
-            selectedPeriod: selectedPeriod,
-            onChanged: (value) {
-              setState(() => selectedPeriod = value);
-              widget.onPeriodChanged?.call(value);
+            selectedPeriod: selectedPeriodShort,
+            onChanged: (short) {
+              setState(() => selectedPeriodShort = short);
+              debugPrint('[DisplaySelector] period changed → $short');
+              widget.onPeriodChanged?.call(short);
             },
           ),
           const SizedBox(height: 8),
           LayoutSelector(
             selectedLayout: selectedLayout,
             onChanged: (value) {
-              setState(() => selectedLayout = value);
+              setState(() => selectedLayout = value); // 1 or 2
+              debugPrint('[DisplaySelector] layout changed → $value');
               widget.onLayoutChanged?.call(value);
             },
           ),

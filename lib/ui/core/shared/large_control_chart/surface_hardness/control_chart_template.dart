@@ -12,13 +12,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../../domain/types/chart_component.dart';
 
-/// Large template that **keeps your UI/design exactly the same**
-/// but changes the **data windowing logic** to be driven by the slider:
-/// - Uses `externalStart` + `externalWindowSize` as an index window
-///   over `xAxisMediumLabel` (labels), NOT raw data indices.
-/// - Computes `effectiveXStart` / `effectiveXEnd` from those labels
-///   and passes them down to the child components, which already
-///   filter by the time range internally.
 class ControlChartTemplateLarge extends StatefulWidget {
   final String xAxisLabel;
   final String yAxisLabel;

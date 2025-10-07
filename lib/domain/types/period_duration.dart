@@ -1,43 +1,38 @@
+/// Canonical, strict period choices: 1D, 1W, 1M, 2M
 enum PeriodDuration {
-  sevenDays(days: 7),
-  fourteenDays(days: 14),
-  thirtyDays(days: 30),
-  sixtyDays(days: 60);
+  oneDay(days: 1, label: '1D'),
+  oneWeek(days: 7, label: '1W'),
+  oneMonth(days: 30, label: '1M'),
+  twoMonths(days: 60, label: '2M');
 
   final int days;
-  const PeriodDuration({required this.days});
+  final String label;
+  const PeriodDuration({required this.days, required this.label});
 
-  int get milliseconds => days * 24 * 60 * 60 * 1000;
+  double get milliseconds => days * 24 * 60 * 60 * 1000;
 
-  String get label {
-    switch (this) {
-      case PeriodDuration.sevenDays:
-        return '7 Days';
-      case PeriodDuration.fourteenDays:
-        return '14 Days';
-      case PeriodDuration.thirtyDays:
-        return '30 Days';
-      case PeriodDuration.sixtyDays:
-        return '60 Days';
+  /// Strict parser: accepts ONLY 1D / 1W / 1M / 2M (case-insensitive).
+  static PeriodDuration fromLabel(String s) {
+    switch (s.trim().toUpperCase()) {
+      case '1D': return PeriodDuration.oneDay;
+      case '1W': return PeriodDuration.oneWeek;
+      case '1M': return PeriodDuration.oneMonth;
+      case '2M': return PeriodDuration.twoMonths;
+      default:   return PeriodDuration.oneMonth; // or throw if you prefer strict failure
     }
   }
 
-  static PeriodDuration fromLabel(String label) {
-    switch (label.toLowerCase()) {
-      case '7 days':
-      case '1 week':
-        return PeriodDuration.sevenDays;
-      case '14 days':
-      case '2 weeks':
-        return PeriodDuration.fourteenDays;
-      case '30 days':
-      case '1 month':
-        return PeriodDuration.thirtyDays;
-      case '60 days':
-      case '2 months':
-        return PeriodDuration.sixtyDays;
-      default:
-        return PeriodDuration.thirtyDays;
+  /// Strict from days: accepts ONLY 1, 7, 30, 60.
+  static PeriodDuration fromDays(int d) {
+    switch (d) {
+      case 1:  return PeriodDuration.oneDay;
+      case 7:  return PeriodDuration.oneWeek;
+      case 30: return PeriodDuration.oneMonth;
+      case 60: return PeriodDuration.twoMonths;
+      default: return PeriodDuration.oneMonth; // or throw
     }
   }
+
+  @override
+  String toString() => label; // canonical string
 }

@@ -1,23 +1,25 @@
 import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart';
-import 'package:control_chart/domain/models/setting.dart';
-import 'package:control_chart/domain/types/period_duration.dart';
+import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_template.dart';
-import 'package:control_chart/ui/core/shared/violation_for_dashboard.dart';
 import 'package:control_chart/ui/core/shared/violations_component.dart';
-import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
 import 'package:control_chart/utils/app_route.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../fg_last_four_chars.dart';
 import '../../spec_validation.dart';
+import '../../violation_for_dashboard.dart';
 import '../../violation_specific_card.dart';
+import 'control_chart_template.dart';
 
-Widget buildChartsSectionSurfaceHardnessLarge(
+/// ------------------------------------------------------------
+/// CDE/CDT/Compound — Large (same props/UX as Surface Hardness)
+/// ------------------------------------------------------------
+Widget buildChartsSectionCdeCdtLargeDouble(
   SearchState searchState, {
   int? externalStart,
   int? externalWindowSize,
@@ -25,8 +27,14 @@ Widget buildChartsSectionSurfaceHardnessLarge(
   DateTime? windowStart,
   DateTime? windowEnd,
 }) {
+  final sel = searchState.controlChartStats?.secondChartSelected;
+  if (sel == null || sel == SecondChartSelected.na) {
+    // ไม่เลือก series ก็ไม่แสดง
+    return const SizedBox.shrink();
+  }
+
   return SizedBox.expand(
-    child: _LargeContainer(
+    child: _LargeContainerCdeCdt(
       searchState: searchState,
       externalStart: externalStart,
       externalWindowSize: externalWindowSize,
@@ -37,8 +45,8 @@ Widget buildChartsSectionSurfaceHardnessLarge(
   );
 }
 
-class _LargeContainer extends StatelessWidget {
-  const _LargeContainer({
+class _LargeContainerCdeCdt extends StatelessWidget {
+  const _LargeContainerCdeCdt({
     required this.searchState,
     this.externalStart,
     this.externalWindowSize,
@@ -54,25 +62,36 @@ class _LargeContainer extends StatelessWidget {
   final DateTime? windowStart;
   final DateTime? windowEnd;
 
+  // ----- helper: select value by current secondChartSelected -----
+  T? _sel<T>(T? cde, T? cdt, T? comp) {
+    switch (searchState.controlChartStats?.secondChartSelected) {
+      case SecondChartSelected.cde:
+        return cde;
+      case SecondChartSelected.cdt:
+        return cdt;
+      case SecondChartSelected.compoundLayer:
+        return comp;
+      default:
+        return null;
+    }
+  }
+
+  String _selectedLabel() {
+    switch (searchState.controlChartStats?.secondChartSelected) {
+      case SecondChartSelected.cde:
+        return 'CDE';
+      case SecondChartSelected.cdt:
+        return 'CDT';
+      case SecondChartSelected.compoundLayer:
+        return 'Compound Layer';
+      default:
+        return '-';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = searchState;
-
-    final violations = state.controlChartStats?.surfaceHardnessViolations;
-    final bgColor = _getViolationBgColor(
-      violations?.beyondControlLimitLower ?? 0,
-      violations?.beyondControlLimitUpper ?? 0,
-      violations?.beyondSpecLimitLower ?? 0,
-      violations?.beyondSpecLimitUpper ?? 0,
-      violations?.trend ?? 0,
-    );
-    final borderColor = _getViolationBorderColor(
-      violations?.beyondControlLimitLower ?? 0,
-      violations?.beyondControlLimitUpper ?? 0,
-      violations?.beyondSpecLimitLower ?? 0,
-      violations?.beyondSpecLimitUpper ?? 0,
-      violations?.trend ?? 0,
-    );
 
     if (state.status == SearchStatus.loading) {
       return const Center(
@@ -86,30 +105,105 @@ class _LargeContainer extends StatelessWidget {
       return const _SmallNoData();
     }
 
+    final stats = state.controlChartStats!;
+    final q = state.currentQuery;
+
+    // effective x-range: window override wins; fallback to current query
+    final xStart = windowStart ?? q.startDate;
+    final xEnd   = windowEnd   ?? q.endDate;
+
+    // title parts (เหมือน Surface)
+    final List<String> parts = [];
+    if (q.furnaceNo != null) parts.add('Furnace ${q.furnaceNo}');
+    final partName = state.chartDetails.first.chartGeneralDetail.partName?.trim();
+    final mat = q.materialNo?.toString() ?? '';
+    if ((partName ?? '').isNotEmpty) {
+      parts.add('$partName - $mat');
+    } else if (mat.isNotEmpty) {
+      parts.add(mat);
+    }
+    if (xStart != null && xEnd != null) {
+      parts.add('Date ${DateFormat('dd/MM').format(xStart)} - ${DateFormat('dd/MM').format(xEnd)}');
+    }
+    final title = parts.join(' | ');
+
+    // data + counts
+    final allPoints = state.chartDataPointsCdeCdt;
+    final spotCount = allPoints.length;
+
+    // unique key bind with time-window & filter for precise rebuild (เหมือน Surface)
+    final uniqueKey = '${xStart?.millisecondsSinceEpoch ?? 0}-'
+        '${xEnd?.millisecondsSinceEpoch ?? 0}-'
+        '${q.furnaceNo ?? ''}-${q.materialNo ?? ''}-'
+        '${stats.secondChartSelected?.name}';
+
+    // ---------- violations (เลือกเฉพาะ series ที่ active) ----------
+    final int vOverCtrlL = _sel<int?>(
+          stats.cdeViolations?.beyondControlLimitLower,
+          stats.cdtViolations?.beyondControlLimitLower,
+          stats.compoundLayerViolations?.beyondControlLimitLower,
+        ) ?? 0;
+
+    final int vOverCtrlU = _sel<int?>(
+          stats.cdeViolations?.beyondControlLimitUpper,
+          stats.cdtViolations?.beyondControlLimitUpper,
+          stats.compoundLayerViolations?.beyondControlLimitUpper,
+        ) ?? 0;
+
+    final int vOverSpecL = _sel<int?>(
+          stats.cdeViolations?.beyondSpecLimitLower,
+          stats.cdtViolations?.beyondSpecLimitLower,
+          stats.compoundLayerViolations?.beyondSpecLimitLower,
+        ) ?? 0;
+
+    final int vOverSpecU = _sel<int?>(
+          stats.cdeViolations?.beyondSpecLimitUpper,
+          stats.cdtViolations?.beyondSpecLimitUpper,
+          stats.compoundLayerViolations?.beyondSpecLimitUpper,
+        ) ?? 0;
+
+    final int vTrend = _sel<int?>(
+          stats.cdeViolations?.trend,
+          stats.cdtViolations?.trend,
+          stats.compoundLayerViolations?.trend,
+        ) ?? 0;
+
+    final bgColor = getViolationBgColor(vOverCtrlL, vOverCtrlU, vOverSpecL, vOverSpecU, vTrend);
+    final borderColor = getViolationBorderColor(vOverCtrlL, vOverCtrlU, vOverSpecL, vOverSpecU, vTrend);
+
+    // ---------- spec & capability (CP/CPK/CPL/CPU) ----------
+    double? _upperSpec() => _sel<double?>(
+          stats.specAttribute?.cdeUpperSpec,
+          stats.specAttribute?.cdtUpperSpec,
+          stats.specAttribute?.compoundLayerUpperSpec,
+        );
+
+    double? _lowerSpec() => _sel<double?>(
+          stats.specAttribute?.cdeLowerSpec,
+          stats.specAttribute?.cdtLowerSpec,
+          stats.specAttribute?.compoundLayerLowerSpec,
+        );
+
+    CapabilityProcess? _capability() => _sel<CapabilityProcess?>(
+          (stats.cdeCapabilityProcess?.std ?? 0) != 0 ? stats.cdeCapabilityProcess : null,
+          (stats.cdtCapabilityProcess?.std ?? 0) != 0 ? stats.cdtCapabilityProcess : null,
+          (stats.compoundLayerCapabilityProcess?.std ?? 0) != 0 ? stats.compoundLayerCapabilityProcess : null,
+        );
+
+    final hasSpec  = isValidSpec(_lowerSpec()) || isValidSpec(_upperSpec());
+    final hasSpecL = isValidSpec(_lowerSpec()) && !isValidSpec(_upperSpec());
+    final hasSpecU = !isValidSpec(_lowerSpec()) && isValidSpec(_upperSpec());
+
+    // ---------- layout (mirror Surface) ----------
     return Container(
       color: AppColors.colorBg,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 900; // tweak breakpoint
+          final wide = constraints.maxWidth >= 900;
 
-          final combineControlLimit =
-              (violations?.beyondControlLimitLower ?? 0) + (violations?.beyondControlLimitUpper ?? 0);
-          final combineSpecLimit =
-              (violations?.beyondSpecLimitLower ?? 0) + (violations?.beyondSpecLimitUpper ?? 0);
-          final lowerSpec = searchState.controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;
-          final upperSpec = searchState.controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
-
-          final hasSpec = isValidSpec(lowerSpec) || isValidSpec(upperSpec);
-          final hasSpecL = isValidSpec(lowerSpec) && !isValidSpec(upperSpec);
-          final hasSpecU = !isValidSpec(lowerSpec) && isValidSpec(upperSpec);
-          final spotCount = state.controlChartStats?.numberOfSpots;
-
-          // LEFT: info panel that fills container height (card background) but
-          // inner content keeps its natural height.
+          // LEFT info panel (เหมือน Surface)
           final Widget leftPanel = SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: Container(
+            child: Container(
                 decoration: BoxDecoration(
                   color: AppColors.colorBg,
                   borderRadius: BorderRadius.circular(12),
@@ -121,7 +215,7 @@ class _LargeContainer extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -132,8 +226,7 @@ class _LargeContainer extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const SizedBox(width: 4),
-                          Text("Surface Hardness", style: AppTypography.textBody2BBold),
+                          Text(_selectedLabel(), style: AppTypography.textBody2BBold),
                           const SizedBox(height: 4),
                           Text('$spotCount Records', style: AppTypography.textBody3BBold),
                           const SizedBox(height: 4),
@@ -148,26 +241,26 @@ class _LargeContainer extends StatelessWidget {
                                 ),
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                  child: Flex(
+                                    direction: Axis.horizontal,
                                     children: [
                                       if (hasSpecL)
                                         Text(
-                                          'CPL = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpl?.toStringAsFixed(2) ?? 'N/A'}',
+                                          'CPL = ${_capability()?.cpl?.toStringAsFixed(2) ?? 'N/A'}',
                                           style: AppTypography.textBody3BBold,
                                         )
                                       else if (hasSpecU)
                                         Text(
-                                          'CPU = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpu?.toStringAsFixed(2) ?? 'N/A'}',
+                                          'CPU = ${_capability()?.cpu?.toStringAsFixed(2) ?? 'N/A'}',
                                           style: AppTypography.textBody3BBold,
                                         )
                                       else ...[
                                         Text(
-                                          'CP = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cp?.toStringAsFixed(2) ?? 'N/A'}',
+                                          'CP = ${_capability()?.cp?.toStringAsFixed(2) ?? 'N/A'}',
                                           style: AppTypography.textBody3BBold,
                                         ),
                                         Text(
-                                          'CPK = ${searchState.controlChartStats?.surfaceHardnessCapabilityProcess?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
+                                          'CPK = ${_capability()?.cpk?.toStringAsFixed(2) ?? 'N/A'}',
                                           style: AppTypography.textBody3BBold,
                                         ),
                                       ],
@@ -176,23 +269,16 @@ class _LargeContainer extends StatelessWidget {
                                 ),
                               ),
                             ),
+                          ViolationSpecificQueueCard(
+                            violations: buildViolationsFromStateCdeCdt(searchState),
+                          ),
                         ],
                       ),
                     ),
-                                          Align(
-                        alignment: Alignment.center,
-                        child: ViolationSpecificQueueCard(
-                          violations: _buildViolationsFromState(searchState),
-                        ),
-                      ),
-
                     const SizedBox(height: 8),
-
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minWidth: 200),
-                        child: Padding(
+                      child: Padding(
                           padding: const EdgeInsets.all(8),
                           child: DecoratedBox(
                             decoration: BoxDecoration(
@@ -210,28 +296,26 @@ class _LargeContainer extends StatelessWidget {
                               padding: const EdgeInsets.all(8),
                               child: SizedBox(
                                 width: 156,
-                                child: ViolationForDashboard(
-                                  combinedControlLimit: combineControlLimit,
-                                  combinedSpecLimit:    combineSpecLimit,
-                                  trend:                violations?.trend ?? 0,
-                                  overCtrlLower:        violations?.beyondControlLimitLower ?? 0,
-                                  overCtrlUpper:        violations?.beyondControlLimitUpper ?? 0,
-                                  overSpecLower:        violations?.beyondSpecLimitLower ?? 0,
-                                  overSpecUpper:        violations?.beyondSpecLimitUpper ?? 0,
+                                child: ViolationsColumn(
+                                  combinedControlLimit: vOverCtrlL + vOverCtrlU,
+                                  combinedSpecLimit:    vOverSpecL + vOverSpecU,
+                                  trend:                vTrend,
+                                  overCtrlLower:        vOverCtrlL,
+                                  overCtrlUpper:        vOverCtrlU,
+                                  overSpecLower:        vOverSpecL,
+                                  overSpecUpper:        vOverSpecU,
                                 ),
                               ),
                             ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
-            ),
           );
 
-          // RIGHT: charts block
+          // RIGHT charts (เหมือน Surface)
           final Widget chartsExpanded = Expanded(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -241,10 +325,11 @@ class _LargeContainer extends StatelessWidget {
               ),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-                child: _ChartsStack(
+                child: _ChartsStackCdeCdt(
                   state: state,
-                  windowStart: windowStart,  // <-- use slider window here
-                  windowEnd: windowEnd,      // <--
+                  xStart: xStart,
+                  xEnd: xEnd,
+                  uniqueKey: uniqueKey,
                 ),
               ),
             ),
@@ -279,63 +364,113 @@ class _LargeContainer extends StatelessWidget {
       ),
     );
   }
-}
-
-Color _getViolationBgColor(
-  int overControlLower,
-  int overControlUpper,
-  int overSpecLower,
-  int overSpecUpper,
-  int trend,
-) {
-  if (overSpecUpper > 0 || overSpecLower > 0) {
-    return Colors.red.withValues(alpha: 0.15);
-  } else if (overControlUpper > 0 || overControlLower > 0) {
-    return Colors.orange.withValues(alpha: 0.15);
-  } else if (trend > 0) {
-    return Colors.pink.withValues(alpha: 0.15);
+  
+Color getViolationBgColor(
+    int overControlLower,
+    int overControlUpper,
+    int overSpecLower,
+    int overSpecUpper,
+    int trend,
+  ) {
+    if (overSpecUpper > 0 || overSpecLower > 0) {
+      return Colors.red.withValues(alpha: 0.15);
+    } else if (overControlUpper > 0 || overControlLower > 0) {
+      return Colors.orange.withValues(alpha: 0.15);
+    } else if (trend > 0) {
+      return Colors.pink.withValues(alpha: 0.15);
+    }
+    return AppColors.colorBrandTp.withValues(alpha: 0.15);
   }
-  return AppColors.colorBrandTp.withValues(alpha: 0.15);
-}
 
-Color _getViolationBorderColor(
-  int overControlLower,
-  int overControlUpper,
-  int overSpecLower,
-  int overSpecUpper,
-  int trend,
-) {
-  if (overSpecUpper > 0 || overSpecLower > 0) {
-    return Colors.red.withValues(alpha: 0.70);
-  } else if (overControlUpper > 0 || overControlLower > 0) {
-    return Colors.orange.withValues(alpha: 0.70);
-  } else if (trend > 0) {
-    return Colors.pinkAccent.withValues(alpha: 0.70);
+  Color getViolationBorderColor(
+    int overControlLower,
+    int overControlUpper,
+    int overSpecLower,
+    int overSpecUpper,
+    int trend,
+  ) {
+    if (overSpecUpper > 0 || overSpecLower > 0) {
+      return Colors.red.withValues(alpha: 0.70);
+    } else if (overControlUpper > 0 || overControlLower > 0) {
+      return Colors.orange.withValues(alpha: 0.70);
+    } else if (trend > 0) {
+      return Colors.pinkAccent.withValues(alpha: 0.70);
+    }
+    return AppColors.colorBrandTp.withValues(alpha: 0.70);
   }
-  return AppColors.colorBrandTp.withValues(alpha: 0.70);
+
+  /// Build violation item list by current 'sel' series
+  List<ViolationItem> buildViolationsFromStateCdeCdt(SearchState state) {
+    final sel = state.controlChartStats?.secondChartSelected;
+    if (sel == null) return [];
+
+    final spots = switch (sel) {
+      SecondChartSelected.cde => state.controlChartStats?.controlChartSpots?.cde ?? [],
+      SecondChartSelected.cdt => state.controlChartStats?.controlChartSpots?.cdt ?? [],
+      SecondChartSelected.compoundLayer =>
+        state.controlChartStats?.controlChartSpots?.compoundLayer ?? [],
+      _ => <dynamic>[],
+    };
+
+    final List<ViolationItem> violations = [];
+    for (final s in spots) {
+      if (s.isViolatedR1BeyondLCL == true) {
+        violations.add(ViolationItem(
+          fgNo: fgNoLast4(s.fgNo),
+          value: s.value ?? 0,
+          type: "Over Control (L)",
+          color: Colors.orange,
+        ));
+      }
+      if (s.isViolatedR1BeyondUCL == true) {
+        violations.add(ViolationItem(
+          fgNo: fgNoLast4(s.fgNo),
+          value: s.value ?? 0,
+          type: "Over Control (U)",
+          color: Colors.orange,
+        ));
+      }
+      if (s.isViolatedR1BeyondLSL == true) {
+        violations.add(ViolationItem(
+          fgNo: fgNoLast4(s.fgNo),
+          value: s.value ?? 0,
+          type: "Over Spec (L)",
+          color: Colors.red,
+        ));
+      }
+      if (s.isViolatedR1BeyondUSL == true) {
+        violations.add(ViolationItem(
+          fgNo: fgNoLast4(s.fgNo),
+          value: s.value ?? 0,
+          type: "Over Spec (U)",
+          color: Colors.red,
+        ));
+      }
+    }
+    return violations;
+  }
 }
 
-class _ChartsStack extends StatelessWidget {
-  const _ChartsStack({
+
+class _ChartsStackCdeCdt extends StatelessWidget {
+  const _ChartsStackCdeCdt({
     required this.state,
-    this.windowStart,
-    this.windowEnd,
+    required this.xStart,
+    required this.xEnd,
+    required this.uniqueKey,
   });
 
   final SearchState state;
-  final DateTime? windowStart;
-  final DateTime? windowEnd;
+  final DateTime? xStart;
+  final DateTime? xEnd;
+  final String uniqueKey;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, c) {
         final eachChartH = ((c.maxHeight - 8 * 2 - 48) / 2).clamp(0.0, double.infinity);
-        final allPoints = state.chartDataPoints;
-
-        // Effective window: slider override wins; otherwise from current query
-        final effectiveStart = windowStart ?? state.currentQuery.startDate;
-        final effectiveEnd   = windowEnd   ?? state.currentQuery.endDate;
+        final allPoints = state.chartDataPointsCdeCdt;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,13 +480,14 @@ class _ChartsStack extends StatelessWidget {
               child: Text("Control Chart", style: AppTypography.textBody3B),
             ),
             const SizedBox(height: 8),
-            _buildSingleChart(
+            _buildSingleChartCdeCdt(
               searchState: state,
               height: eachChartH,
               visiblePoints: allPoints,
               isMovingRange: false,
-              xStartOverride: effectiveStart,
-              xEndOverride:   effectiveEnd,
+              xStartOverride: xStart,
+              xEndOverride:   xEnd,
+              uniqueKey: '${uniqueKey}_cc',
             ),
             const SizedBox(height: 8),
             Padding(
@@ -359,13 +495,14 @@ class _ChartsStack extends StatelessWidget {
               child: Text("Moving Range", style: AppTypography.textBody3B),
             ),
             const SizedBox(height: 8),
-            _buildSingleChart(
+            _buildSingleChartCdeCdt(
               searchState: state,
               height: eachChartH,
               visiblePoints: allPoints,
               isMovingRange: true,
-              xStartOverride: effectiveStart,
-              xEndOverride:   effectiveEnd,
+              xStartOverride: xStart,
+              xEndOverride:   xEnd,
+              uniqueKey: '${uniqueKey}_mr',
             ),
           ],
         );
@@ -374,23 +511,20 @@ class _ChartsStack extends StatelessWidget {
   }
 }
 
-Widget _buildSingleChart({
+Widget _buildSingleChartCdeCdt({
   required SearchState searchState,
   required bool isMovingRange,
   required double height,
-  required List<ChartDataPoint> visiblePoints,
+  required List<ChartDataPointCdeCdt> visiblePoints,
+  required String uniqueKey,
   DateTime? xStartOverride,
   DateTime? xEndOverride,
 }) {
-  final allPoints = searchState.chartDataPoints;
+  final allPoints = searchState.chartDataPointsCdeCdt;
   final q = searchState.currentQuery;
 
   final xStart = xStartOverride ?? q.startDate;
   final xEnd   = xEndOverride   ?? q.endDate;
-
-  final uniqueKey = '${xStart?.millisecondsSinceEpoch}-'
-      '${xEnd?.millisecondsSinceEpoch}-'
-      '${q.furnaceNo}-${q.materialNo}-';
 
   return SizedBox(
     width: double.infinity,
@@ -399,11 +533,11 @@ Widget _buildSingleChart({
       decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(8)),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(4),
-        child: ControlChartTemplate(
-          key: ValueKey(uniqueKey.hashCode.toString() + (isMovingRange ? '_mr' : '_cc')),
+        child: ControlChartTemplateCdeCdtLarge(
+          key: ValueKey(uniqueKey.hashCode.toString()),
           isMovingRange: isMovingRange,
           height: height,
-          frozenDataPoints: List<ChartDataPoint>.from(allPoints),
+          frozenDataPoints: List<ChartDataPointCdeCdt>.from(allPoints),
           frozenStats: searchState.controlChartStats!,
           frozenStatus: searchState.status,
           xStart: xStart,
@@ -430,76 +564,9 @@ class _SmallError extends StatelessWidget {
       );
 }
 
-List<ViolationItem> _buildViolationsFromState(SearchState state) {
-  final spots = state.controlChartStats?.controlChartSpots?.surfaceHardness ?? [];
-  if (spots.isEmpty) return [];
-
-  final List<ViolationItem> violations = [];
-
-  for (final s in spots) {
-    if (s.isViolatedR1BeyondLCL == true) {
-      violations.add(ViolationItem(
-        fgNo: fgNoLast4(s.fgNo),
-        value: s.value ?? 0,
-        type: "Over Control (L)",
-        color: Colors.orange,
-      ));
-    }
-    if (s.isViolatedR1BeyondUCL == true) {
-      violations.add(ViolationItem(
-        fgNo: fgNoLast4(s.fgNo),
-        value: s.value ?? 0,
-        type: "Over Control (U)",
-        color: Colors.orange,
-      ));
-    }
-    if (s.isViolatedR1BeyondLSL == true) {
-      violations.add(ViolationItem(
-        fgNo: fgNoLast4(s.fgNo),
-        value: s.value ?? 0,
-        type: "Over Spec (L)",
-        color: Colors.red,
-      ));
-    }
-    if (s.isViolatedR1BeyondUSL == true) {
-      violations.add(ViolationItem(
-        fgNo: fgNoLast4(s.fgNo),
-        value: s.value ?? 0,
-        type: "Over Spec (U)",
-        color: Colors.red,
-      ));
-    }
-  }
-
-  return violations;
-}
-
 class _SmallNoData extends StatelessWidget {
   const _SmallNoData();
   @override
   Widget build(BuildContext context) =>
       const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล', style: TextStyle(fontSize: 12, color: Colors.grey)));
 }
-
-double getXInterval(PeriodType periodType, double startMs, double endMs) {
-  const double dayMs = 86400000.0;
-
-  int stepDays;
-  switch (periodType) {
-    case PeriodType.ONE_MONTH:
-      stepDays = 7;
-      break;
-    case PeriodType.THREE_MONTHS:
-      stepDays = 14;
-      break;
-    case PeriodType.SIX_MONTHS:
-      stepDays = 30;
-      break;
-    case PeriodType.ONE_YEAR:
-    default:
-      stepDays = 60;
-      break;
-  }
-  return stepDays * dayMs;
-}
-

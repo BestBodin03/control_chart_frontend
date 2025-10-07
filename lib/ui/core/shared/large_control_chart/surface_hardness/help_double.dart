@@ -17,7 +17,7 @@ import '../../fg_last_four_chars.dart';
 import '../../spec_validation.dart';
 import '../../violation_specific_card.dart';
 
-Widget buildChartsSectionSurfaceHardnessLarge(
+Widget buildChartsSectionSurfaceHardnessLargeDouble(
   SearchState searchState, {
   int? externalStart,
   int? externalWindowSize,
@@ -106,10 +106,8 @@ class _LargeContainer extends StatelessWidget {
 
           // LEFT: info panel that fills container height (card background) but
           // inner content keeps its natural height.
-          final Widget leftPanel = SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: Container(
+          final Widget leftPanel = Container(
+            width: double.infinity,
                 decoration: BoxDecoration(
                   color: AppColors.colorBg,
                   borderRadius: BorderRadius.circular(12),
@@ -121,7 +119,7 @@ class _LargeContainer extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -179,20 +177,18 @@ class _LargeContainer extends StatelessWidget {
                         ],
                       ),
                     ),
-                                          Align(
-                        alignment: Alignment.center,
-                        child: ViolationSpecificQueueCard(
-                          violations: _buildViolationsFromState(searchState),
-                        ),
-                      ),
+
+                    const SizedBox(height: 8),
+
+                    ViolationSpecificQueueCard(
+                      violations: _buildViolationsFromState(searchState),
+                    ),
 
                     const SizedBox(height: 8),
 
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minWidth: 200),
-                        child: Padding(
+                      child: Padding(
                           padding: const EdgeInsets.all(8),
                           child: DecoratedBox(
                             decoration: BoxDecoration(
@@ -210,7 +206,7 @@ class _LargeContainer extends StatelessWidget {
                               padding: const EdgeInsets.all(8),
                               child: SizedBox(
                                 width: 156,
-                                child: ViolationForDashboard(
+                                child: ViolationsColumn(
                                   combinedControlLimit: combineControlLimit,
                                   combinedSpecLimit:    combineSpecLimit,
                                   trend:                violations?.trend ?? 0,
@@ -224,11 +220,8 @@ class _LargeContainer extends StatelessWidget {
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
-              ),
-            ),
           );
 
           // RIGHT: charts block

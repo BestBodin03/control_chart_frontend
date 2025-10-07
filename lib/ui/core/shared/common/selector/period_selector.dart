@@ -1,22 +1,23 @@
+import 'package:control_chart/ui/core/shared/common/selector/selector_button.dart';
 import 'package:flutter/material.dart';
+
 import '../../../design_system/app_color.dart';
-import 'selector_button.dart';
 
 class PeriodSelector extends StatelessWidget {
   const PeriodSelector({
     super.key,
-    required this.selectedPeriod,
+    required this.selectedPeriod,    // can be '1D','1W','1M','2M'
     this.onChanged,
   });
 
-  final String selectedPeriod;
+  final String selectedPeriod;       // short code
   final ValueChanged<String>? onChanged;
 
   static const _periods = [
-    {'label': '1 Day', 'short': '1D', 'value': '1 Day'},
-    {'label': '1 Week', 'short': '1W', 'value': '1 Week'},
-    {'label': '1 Month', 'short': '1M', 'value': '1 Month'},
-    {'label': '2 Months', 'short': '2M', 'value': '2 Months'},
+    {'label': '1 Day',    'short': '1D'},
+    {'label': '1 Week',   'short': '1W'},
+    {'label': '1 Month',  'short': '1M'},
+    {'label': '2 Months', 'short': '2M'},
   ];
 
   @override
@@ -24,11 +25,12 @@ class PeriodSelector extends StatelessWidget {
     return Wrap(
       spacing: 4,
       children: _periods.map((p) {
-        final isSelected = selectedPeriod == p['value'];
+        final short = p['short'] as String;
+        final isSelected = selectedPeriod == short; // compare by short
         return SelectorButton(
-          label: p['short'] as String,
+          label: short,                     // button shows short code
           isSelected: isSelected,
-          onTap: () => onChanged?.call(p['value'] as String),
+          onTap: () => onChanged?.call(short), // <-- send short code upwards
           color: AppColors.colorBrand,
         );
       }).toList(),
