@@ -11,6 +11,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../common/chart/legend_item.dart';
 import '../../small_control_chart/small_control_chart_var.dart';
 
 class ControlChartComponentLarge extends StatefulWidget implements ChartComponent {
@@ -41,68 +42,75 @@ class ControlChartComponentLarge extends StatefulWidget implements ChartComponen
   });
 
   @override
-  Widget buildLegend() {
+  Widget buildLegend(context) {
     String fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
+
     return Wrap(
-      spacing: 4,
+      spacing: 12,
       runSpacing: 4,
       direction: Axis.horizontal,
       alignment: WrapAlignment.spaceEvenly,
       children: [
         if (fmt(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec) != 'N/A')
-          _legendItem('Spec', Colors.red, 
-          fmt(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec)),
+          legendItem(context, 
+            'Spec',
+            Colors.red,
+            fmt(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec),
+          ),
+
         if (fmt(controlChartStats?.controlLimitIChart?.ucl) != 'N/A')
-          _legendItem('UCL', Colors.orange, 
-          fmt(controlChartStats?.controlLimitIChart?.ucl)),
+          legendItem(context, 
+            'UCL',
+            Colors.orange,
+            fmt(controlChartStats?.controlLimitIChart?.ucl),
+          ),
+
         if (fmt(controlChartStats?.specAttribute?.surfaceHardnessTarget) != 'N/A')
-          _legendItem('Target', Colors.deepPurple.shade300, 
-          fmt(controlChartStats?.specAttribute?.surfaceHardnessTarget)),
+          legendItem(context, 
+            'Target',
+            Colors.deepPurple.shade300,
+            fmt(controlChartStats?.specAttribute?.surfaceHardnessTarget),
+          ),
+
         if (fmt(controlChartStats?.average) != 'N/A')
-          _legendItem('AVG', Colors.green, 
-          fmt(controlChartStats?.average)),
+          legendItem(context, 
+            'AVG',
+            Colors.green,
+            fmt(controlChartStats?.average),
+          ),
+
         if (fmt(controlChartStats?.controlLimitIChart?.lcl) != 'N/A')
-          _legendItem('LCL', Colors.orange, 
-          fmt(controlChartStats?.controlLimitIChart?.lcl)),
+          legendItem(context, 
+            'LCL',
+            Colors.orange,
+            fmt(controlChartStats?.controlLimitIChart?.lcl),
+          ),
+
         if (fmt(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec) != 'N/A')
-          _legendItem('Spec', Colors.red, 
-          fmt(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec)),
-      ],
-    );
-  }
-
-  Widget _legendItem(String label, Color color, String value) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(width: 8, height: 2, 
-        child: DecoratedBox(decoration: BoxDecoration(color: color))),
-        const SizedBox(width: 8),
-        Text(label, 
-        style: const TextStyle(
-          fontSize: 10, 
-          color: AppColors.colorBlack, 
-          fontWeight: FontWeight.bold)),
-        const SizedBox(width: 4),
-        Text(value, 
-        style: const TextStyle(
-          fontSize: 10, 
-          color: AppColors.colorBlack, 
-          fontWeight: FontWeight.bold)),
+          legendItem(context, 
+            'Spec',
+            Colors.red,
+            fmt(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec),
+          ),
       ],
     );
   }
 
   @override
-  FlBorderData buildBorderData() => FlBorderData(show: false);
+  FlBorderData buildBorderData() 
+  => FlBorderData(show: false);
   @override
-  ExtraLinesData buildControlLines() => const ExtraLinesData();
+  ExtraLinesData buildControlLines() 
+  => const ExtraLinesData();
   @override
-  FlGridData buildGridData(double? minX, double? maxX, double? tickInterval) => const FlGridData(show: false);
+  FlGridData buildGridData(double? minX, double? maxX, double? tickInterval) 
+  => const FlGridData(show: false);
   @override
-  List<LineChartBarData> buildLineBarsData() => const <LineChartBarData>[];
+  List<LineChartBarData> buildLineBarsData() 
+  => const <LineChartBarData>[];
   @override
-  FlTitlesData buildTitlesData(double? minX, double? maxX, double? tickInterval) => const FlTitlesData();
+  FlTitlesData buildTitlesData(double? minX, double? maxX, double? tickInterval) 
+  => const FlTitlesData();
   @override
   LineTouchData buildTouchData() => const LineTouchData();
   @override
@@ -188,8 +196,10 @@ class _ControlChartComponentLargeState extends State<ControlChartComponentLarge>
   List<ChartDataPoint> get _pointsInWindow {
     final src = widget.dataPoints ?? const <ChartDataPoint>[];
     if (src.isEmpty) return const <ChartDataPoint>[];
-    final lo = math.min(widget.xStart.millisecondsSinceEpoch, widget.xEnd.millisecondsSinceEpoch).toDouble();
-    final hi = math.max(widget.xStart.millisecondsSinceEpoch, widget.xEnd.millisecondsSinceEpoch).toDouble();
+    final lo = math.min(widget.xStart.millisecondsSinceEpoch, 
+    widget.xEnd.millisecondsSinceEpoch).toDouble();
+    final hi = math.max(widget.xStart.millisecondsSinceEpoch, 
+    widget.xEnd.millisecondsSinceEpoch).toDouble();
     return src.where((p) {
           final t = p.collectDate.millisecondsSinceEpoch.toDouble();
           return t >= lo && t <= hi;
@@ -209,8 +219,10 @@ Widget build(BuildContext context) {
   final double safeRange = (maxXv - minXv).abs().clamp(1.0, double.infinity);
   final int desiredTick = (widget.controlChartStats?.xTick ?? 6).clamp(2, 100);
   final double tickInterval = safeRange / (desiredTick - 1);
-  final double minSel = widget.controlChartStats?.yAxisRange?.minYsurfaceHardnessControlChart ?? 0.0;
-  final double maxSel = widget.controlChartStats?.yAxisRange?.maxYsurfaceHardnessControlChart ?? 0.0;
+  final double minSel = 
+  widget.controlChartStats?.yAxisRange?.minYsurfaceHardnessControlChart ?? 0.0;
+  final double maxSel = 
+  widget.controlChartStats?.yAxisRange?.maxYsurfaceHardnessControlChart ?? 0.0;
 
   return LayoutBuilder(
     builder: (context, constraints) {

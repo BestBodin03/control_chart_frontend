@@ -9,6 +9,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../common/chart/legend_item.dart';
+
 /// MR-Chart (Moving Range) with local Tooltip (no Overlay), quadrant placement.
 class MrChartComponentLarge extends StatefulWidget implements ChartComponent {
   final List<ChartDataPoint>? dataPoints;
@@ -36,7 +38,7 @@ class MrChartComponentLarge extends StatefulWidget implements ChartComponent {
 
   // ===== Legend =====
   @override
-  Widget buildLegend() {
+  Widget buildLegend(context) {
     String fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
     return Wrap(
       spacing: 4,
@@ -45,22 +47,9 @@ class MrChartComponentLarge extends StatefulWidget implements ChartComponent {
       alignment: WrapAlignment.spaceEvenly,
       children: [
         if (fmt(controlChartStats?.controlLimitMRChart?.ucl) != 'N/A')
-          _legendItem('UCL', Colors.orange, fmt(controlChartStats?.controlLimitMRChart?.ucl)),
+          legendItem(context,'UCL', Colors.orange, fmt(controlChartStats?.controlLimitMRChart?.ucl)),
         if (fmt(controlChartStats?.mrAverage) != 'N/A')
-          _legendItem('AVG', Colors.green, fmt(controlChartStats?.mrAverage)),
-      ],
-    );
-  }
-
-  Widget _legendItem(String label, Color color, String value) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(width: 8, height: 2, child: DecoratedBox(decoration: BoxDecoration(color: color))),
-        const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack, fontWeight: FontWeight.bold)),
-        const SizedBox(width: 4),
-        Text(value, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack, fontWeight: FontWeight.bold)),
+          legendItem(context, 'AVG', Colors.green, fmt(controlChartStats?.mrAverage)),
       ],
     );
   }
@@ -308,7 +297,7 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
           getTitlesWidget: (v, _) => Text(
             v.toStringAsFixed(0), 
             style: const TextStyle(
-              color: AppColors.colorBlack, 
+              color: AppColors.colorAlert1, 
               fontSize: 8)),
         ),
       ),

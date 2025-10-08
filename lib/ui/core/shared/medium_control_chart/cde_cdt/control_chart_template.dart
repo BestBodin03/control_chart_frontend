@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../domain/types/chart_component.dart';
+import '../../common/chart/size_scaler.dart';
 import 'control_chart_component.dart';
 import 'mr_chart_component.dart' as mr;
 
@@ -145,9 +146,8 @@ class _ControlChartTemplateCdeCdtState
 
         final Widget selectedWidget = widget.isMovingRange ? useMr : useI;
 
-        const legendRightPad = 24.0;
-        const legendHeight = 32.0;
-        const gapLegendToChart = 4.0;
+        const legendRightPad = 32.0;
+        const legendHeight = 28.0;
 
         return SizedBox(
           width: w,
@@ -165,13 +165,12 @@ class _ControlChartTemplateCdeCdtState
                 children: [
                   // Legend
                   SizedBox(
-                    height: legendHeight,
+                    height: sizeScaler(context, legendHeight, 1.25),
                     child: Align(
                       alignment: Alignment.center,
-                      child: (selectedWidget as ChartComponent).buildLegend(),
+                      child: (selectedWidget as ChartComponent).buildLegend(context),
                     ),
                   ),
-                  const SizedBox(height: gapLegendToChart),
 
                   // chart
                   Expanded(child: selectedWidget),

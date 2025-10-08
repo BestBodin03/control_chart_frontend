@@ -225,7 +225,7 @@ class _ControlChartTemplateLargeState extends State<ControlChartTemplateLarge> {
                     height: legendHeight,
                     child: Align(
                       alignment: Alignment.center,
-                      child: selectedWidget.buildLegend(),
+                      child: selectedWidget.buildLegend(context),
                     ),
                   ),
                   const SizedBox(height: gapLegendToChart),

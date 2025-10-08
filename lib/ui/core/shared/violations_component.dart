@@ -1,6 +1,8 @@
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:flutter/material.dart';
 
+import 'common/chart/font_scaler.dart';
+
 class ViolationsColumn extends StatelessWidget {
   const ViolationsColumn({
     super.key,
@@ -56,7 +58,7 @@ class ViolationsColumn extends StatelessWidget {
             color: Colors.red,
             label: 'Over Spec',
             violated: specTotal > 0,
-            fontSize: fontSize,
+            fontSize: fontScaler(context, fontSize),
             dotSize: dotSize,
             splitPills: _SplitPillsData(
               upper: overSpecUpper,
@@ -74,7 +76,7 @@ class ViolationsColumn extends StatelessWidget {
             color: Colors.orange,
             label: 'Over Control',
             violated: ctrlTotal > 0,
-            fontSize: fontSize,
+            fontSize: fontScaler(context, fontSize),
             dotSize: dotSize,
             splitPills: _SplitPillsData(
               upper: overCtrlUpper,
@@ -91,7 +93,7 @@ class ViolationsColumn extends StatelessWidget {
             color: Colors.pinkAccent,
             label: 'Trend',
             violated: trend > 0,
-            fontSize: fontSize,
+            fontSize: fontScaler(context, fontSize),
             dotSize: dotSize,
             showCount: false,
           ),
@@ -172,7 +174,7 @@ class _ViolationRow extends StatelessWidget {
             maxLines: 1,
             softWrap: false,
             overflow: TextOverflow.fade, // looks less like “deleted”
-            style: TextStyle(color: color, fontSize: fontSize, fontWeight: FontWeight.bold),
+            style: TextStyle(color: color, fontSize: fontScaler(context, fontSize), fontWeight: FontWeight.bold),
           ),
         ),
 
@@ -181,7 +183,7 @@ class _ViolationRow extends StatelessWidget {
           width: _iconColWidth,
           child: Align(
             alignment: Alignment.centerRight,
-            child: Icon(icon, size: fontSize + 4, color: iconColor),
+            child: Icon(icon, size: fontScaler(context, fontSize) + 4, color: iconColor),
           ),
         ),
 
@@ -193,7 +195,7 @@ class _ViolationRow extends StatelessWidget {
           child: Align(
             alignment: Alignment.centerRight,
             child: (splitPills != null)
-                ? _HorizontalPills(color: color, fontSize: fontSize, data: splitPills!)
+                ? _HorizontalPills(color: color, fontSize: fontScaler(context, fontSize), data: splitPills!)
                 : (showCount
                     ? Text(
                         countText ?? '',
@@ -201,7 +203,7 @@ class _ViolationRow extends StatelessWidget {
                         overflow: TextOverflow.fade,
                         textAlign: TextAlign.right,
                         style: TextStyle(
-                          fontSize: fontSize,
+                          fontSize: fontScaler(context, fontSize),
                           color: violated ? AppColors.colorBlack : Colors.grey.shade600,
                           fontWeight: FontWeight.w600,
                         ),
@@ -241,7 +243,7 @@ class _HorizontalPills extends StatelessWidget {
           icon: data.upperIcon,
           label: 'U',
           value: data.upper,
-          fontSize: fontSize,
+          fontSize: fontScaler(context, fontSize),
           height: data.pillHeight,
           radius: data.pillRadius,
           textColor: textColor,
@@ -253,7 +255,7 @@ class _HorizontalPills extends StatelessWidget {
           icon: data.lowerIcon,
           label: 'L',
           value: data.lower,
-          fontSize: fontSize,
+          fontSize: fontScaler(context, fontSize),
           height: data.pillHeight,
           radius: data.pillRadius,
           textColor: textColor,
@@ -299,12 +301,12 @@ class _PillBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: fontSize * 0.95, color: textColor),
+          Icon(icon, size: fontScaler(context, fontSize), color: textColor),
           const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
-              fontSize: fontSize * 0.9,
+              fontSize: fontScaler(context, fontSize),
               color: textColor,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.2,
@@ -314,7 +316,7 @@ class _PillBadge extends StatelessWidget {
           Text(
             '$value',
             style: TextStyle(
-              fontSize: fontSize * 0.9,
+              fontSize: fontScaler(context, fontSize),
               color: AppColors.colorBlack,
               fontWeight: FontWeight.w700,
             ),

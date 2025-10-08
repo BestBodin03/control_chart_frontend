@@ -13,6 +13,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../common/chart/legend_item.dart';
+
 /// CDE/CDT MR Chart — Surface-like time axis with xStart/xEnd
 class MrChartComponentSmallCdeCdt extends StatefulWidget implements ChartComponent  {
   final List<ChartDataPointCdeCdt>? dataPoints;
@@ -36,11 +38,11 @@ class MrChartComponentSmallCdeCdt extends StatefulWidget implements ChartCompone
     required this.xEnd,
   });
 
-  // Legend
   @override
-  Widget buildLegend() {
+  Widget buildLegend(BuildContext context) {
     String fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
 
+    // helper to select CDE/CDT/Compound values
     T? _sel<T>(T? cde, T? cdt, T? comp) {
       switch (controlChartStats?.secondChartSelected) {
         case SecondChartSelected.cde:
@@ -54,38 +56,36 @@ class MrChartComponentSmallCdeCdt extends StatefulWidget implements ChartCompone
       }
     }
 
+    // select corresponding data fields
     final ucl = _sel(
       controlChartStats?.cdeControlLimitMRChart?.ucl,
       controlChartStats?.cdtControlLimitMRChart?.ucl,
       controlChartStats?.compoundLayerControlLimitMRChart?.ucl,
     );
+
     final cl = _sel(
       controlChartStats?.cdeControlLimitMRChart?.cl,
       controlChartStats?.cdtControlLimitMRChart?.cl,
       controlChartStats?.compoundLayerControlLimitMRChart?.cl,
     );
 
-    Widget item(String label, Color color, String value) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(width: 8, height: 2, child: DecoratedBox(decoration: BoxDecoration(color: color))),
-        const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack, fontWeight: FontWeight.bold)),
-        const SizedBox(width: 4),
-        Text(value, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack, fontWeight: FontWeight.bold)),
-      ],
-    );
-
     return Wrap(
-      spacing: 4,
+      spacing: 8,
       runSpacing: 4,
       alignment: WrapAlignment.spaceEvenly,
       children: [
-        if (fmt(ucl) != 'N/A') item('UCL', Colors.orange, fmt(ucl)),
-        if (fmt(cl)  != 'N/A') item('AVG', Colors.green, fmt(cl)),
+        if (fmt(ucl) != 'N/A')
+          legendItem(context, 'UCL', Colors.orange, fmt(ucl)),
+
+        if (fmt(cl) != 'N/A')
+          legendItem(context, 'AVG', Colors.green, fmt(cl)),
+
+        if (fmt(controlChartStats?.average) != 'N/A')
+          legendItem(context, 'AVG', Colors.green, fmt(controlChartStats?.average)),
       ],
     );
   }
+
 
   // interface stubs
   @override

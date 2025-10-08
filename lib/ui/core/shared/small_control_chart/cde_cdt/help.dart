@@ -12,6 +12,7 @@ import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/control_chart_template_small_cde_cdt.dart';
 
+import '../../common/chart/small_chart_height_scaler.dart';
 import '../../common/info_content.dart';
 import '../../common/info_overlay.dart';
 import '../../spec_validation.dart';
@@ -35,7 +36,7 @@ class _SmallCardCdeCdt extends StatefulWidget {
 }
 
 class _SmallCardCdeCdtState extends State<_SmallCardCdeCdt> {
-  static const double _chartH = 144; // fixed height ต่อหนึ่งกราฟ
+  static const double _chartH = 248; // fixed height ต่อหนึ่งกราฟ
   static const double _gapV = 4;
 
   bool _showLegend = false;
@@ -322,12 +323,12 @@ class _SmallChartBoxCdeCdt extends StatelessWidget {
   const _SmallChartBoxCdeCdt({
     required this.searchState,
     required this.isMr,
-    required this.fixedHeight,
+    required this.fixedHeight, // kept for API compatibility (not used)
   });
 
   final SearchState searchState;
   final bool isMr;
-  final double fixedHeight;
+  final double fixedHeight; // ignored in favor of responsive height
 
   @override
   Widget build(BuildContext context) {
@@ -335,9 +336,11 @@ class _SmallChartBoxCdeCdt extends StatelessWidget {
     final keySeed =
         '${q.startDate?.millisecondsSinceEpoch}-${q.endDate?.millisecondsSinceEpoch}-${q.furnaceNo}-${q.materialNo}-${isMr ? 'mr' : 'i'}';
 
+    final double h = responsiveChartHeight(context); // ✅ smooth 144..248
+
     return SizedBox(
       width: double.infinity,
-      height: fixedHeight,
+      height: h,
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Colors.grey.shade50,
@@ -356,6 +359,10 @@ class _SmallChartBoxCdeCdt extends StatelessWidget {
     );
   }
 }
+
+
+
+
 
 class _ViolationChip extends StatelessWidget {
   const _ViolationChip({required this.label, this.count, required this.color});

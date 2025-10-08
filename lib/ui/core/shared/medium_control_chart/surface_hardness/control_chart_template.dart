@@ -3,6 +3,7 @@ import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
 import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
+import 'package:control_chart/ui/core/shared/common/chart/size_scaler.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_component.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/mr_chart_component.dart';
 import 'package:flutter/material.dart';
@@ -151,9 +152,8 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
 
         final ChartComponent selectedWidget = widget.isMovingRange ? useMr : useI;
 
-        const legendRightPad = 24.0;
+        const legendRightPad = 32.0;
         const legendHeight = 28.0;
-        const gapLegendToChart = 4.0;
 
         return SizedBox(
           width: w,
@@ -171,13 +171,12 @@ class _ControlChartTemplateState extends State<ControlChartTemplate> {
                 children: [
                   // Legend
                   SizedBox(
-                    height: legendHeight,
+                    height: sizeScaler(context, legendHeight, 1.25),
                     child: Align(
                       alignment: Alignment.center,
-                      child: selectedWidget.buildLegend(),
+                      child: selectedWidget.buildLegend(context),
                     ),
                   ),
-                  const SizedBox(height: gapLegendToChart),
 
                   // ✅ ใช้ component ที่มี LineChart ภายในอยู่แล้ว
                   Expanded(child: selectedWidget as Widget),

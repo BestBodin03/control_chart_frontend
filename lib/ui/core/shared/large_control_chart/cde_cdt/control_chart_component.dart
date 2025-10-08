@@ -9,6 +9,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../common/chart/legend_item.dart';
 import '../../small_control_chart/small_control_chart_var.dart';
 
 /// CDE/CDT Control Chart — Surface-like (xStart/xEnd time axis)
@@ -37,9 +38,10 @@ class ControlChartComponentLarge extends StatefulWidget implements ChartComponen
 
   // ===== legend =====
   @override
-  Widget buildLegend() {
+  Widget buildLegend(BuildContext context) {
     String fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
 
+    // chart selector helper
     T? _sel<T>(T? cde, T? cdt, T? comp) {
       switch (controlChartStats?.secondChartSelected) {
         case SecondChartSelected.cde:
@@ -53,59 +55,66 @@ class ControlChartComponentLarge extends StatefulWidget implements ChartComponen
       }
     }
 
+    // Select matching chart fields
     final specUsl = _sel(
       controlChartStats?.specAttribute?.cdeUpperSpec,
       controlChartStats?.specAttribute?.cdtUpperSpec,
       controlChartStats?.specAttribute?.compoundLayerUpperSpec,
     );
+
     final target = _sel(
       controlChartStats?.specAttribute?.cdeTarget,
       controlChartStats?.specAttribute?.cdtTarget,
       controlChartStats?.specAttribute?.compoundLayerTarget,
     );
+
     final avg = _sel(
       controlChartStats?.cdeAverage,
       controlChartStats?.cdtAverage,
       controlChartStats?.compoundLayerAverage,
     );
+
     final ucl = _sel(
       controlChartStats?.cdeControlLimitIChart?.ucl,
       controlChartStats?.cdtControlLimitIChart?.ucl,
       controlChartStats?.compoundLayerControlLimitIChart?.ucl,
     );
+
     final lcl = _sel(
       controlChartStats?.cdeControlLimitIChart?.lcl,
       controlChartStats?.cdtControlLimitIChart?.lcl,
       controlChartStats?.compoundLayerControlLimitIChart?.lcl,
     );
+
     final specLsl = _sel(
       controlChartStats?.specAttribute?.cdeLowerSpec,
       controlChartStats?.specAttribute?.cdtLowerSpec,
       controlChartStats?.specAttribute?.compoundLayerLowerSpec,
     );
 
-    Widget item(String label, Color color, String value) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(width: 8, height: 2, child: DecoratedBox(decoration: BoxDecoration(color: color))),
-        const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack, fontWeight: FontWeight.bold)),
-        const SizedBox(width: 4),
-        Text(value, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack, fontWeight: FontWeight.bold)),
-      ],
-    );
-
+    // ==== build legend using responsive legendItem ====
     return Wrap(
-      spacing: 4,
+      spacing: 8,
       runSpacing: 4,
       alignment: WrapAlignment.spaceEvenly,
       children: [
-        if (fmt(specUsl) != 'N/A') item('Spec', Colors.red, fmt(specUsl)),
-        if (fmt(ucl)     != 'N/A') item('UCL', Colors.orange, fmt(ucl)),
-        if (fmt(target)  != 'N/A') item('Target', Colors.deepPurple.shade300, fmt(target)),
-        if (fmt(avg)     != 'N/A') item('AVG', Colors.green, fmt(avg)),
-        if (fmt(lcl)     != 'N/A') item('LCL', Colors.orange, fmt(lcl)),
-        if (fmt(specLsl) != 'N/A') item('Spec', Colors.red, fmt(specLsl)),
+        if (fmt(specUsl) != 'N/A')
+          legendItem(context, 'Spec', Colors.red, fmt(specUsl)),
+
+        if (fmt(ucl) != 'N/A')
+          legendItem(context, 'UCL', Colors.orange, fmt(ucl)),
+
+        if (fmt(target) != 'N/A')
+          legendItem(context, 'Target', Colors.deepPurple.shade300, fmt(target)),
+
+        if (fmt(avg) != 'N/A')
+          legendItem(context, 'AVG', Colors.green, fmt(avg)),
+
+        if (fmt(lcl) != 'N/A')
+          legendItem(context, 'LCL', Colors.orange, fmt(lcl)),
+
+        if (fmt(specLsl) != 'N/A')
+          legendItem(context, 'Spec', Colors.red, fmt(specLsl)),
       ],
     );
   }
@@ -417,14 +426,20 @@ void _ensureYScale() {
     final double step = _xInterval(periodType, minXv, maxXv);
 
     Widget bottomLabel(double value, TitleMeta meta) {
-      final dt = DateTime.fromMillisecondsSinceEpoch(value.round(), isUtc: true);
+      final dt = DateTime.fromMillisecondsSinceEpoch(
+        value.round(), 
+        isUtc: true);
       final text = df.format(dt);
       return SideTitleWidget(
         meta: meta,
         space: 8,
         child: Transform.rotate(
           angle: -30 * math.pi / 180,
-          child: Text(text, style: const TextStyle(fontSize: 8, color: AppColors.colorBlack), overflow: TextOverflow.ellipsis),
+          child: Text(text, 
+          style: const TextStyle(
+            fontSize: 8, 
+            color: AppColors.colorBlack), 
+            overflow: TextOverflow.ellipsis),
         ),
       );
     }

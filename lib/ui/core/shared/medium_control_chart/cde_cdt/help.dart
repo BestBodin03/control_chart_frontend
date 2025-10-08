@@ -4,12 +4,15 @@ import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/control_chart_stats.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
+import 'package:control_chart/ui/core/shared/common/chart/medium_chart_size_scaler.dart';
+import 'package:control_chart/ui/core/shared/common/chart/size_scaler.dart';
 import 'package:control_chart/ui/core/shared/violations_component.dart';
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
 import 'package:control_chart/utils/app_route.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:control_chart/ui/core/shared/chart_selection.dart';
+import '../../common/chart/font_scaler.dart';
 import '../../fg_last_four_chars.dart';
 import '../../spec_validation.dart';
 import '../../violation_specific_card.dart';
@@ -70,14 +73,12 @@ Widget buildChartsSectionCdeCdt(
 
   final title = parts.join(' | ');
 
-  return SizedBox.expand(
-    child: _MediumContainerCdeCdt(
+  return  _MediumContainerCdeCdt(
       title: title,
       selectedLabel: selectedLabel,
       settingProfile: current,
       searchState: searchState,
       currentIndex: currentIndex,
-    ),
   );
 }
 
@@ -216,7 +217,8 @@ class _MediumContainerCdeCdt extends StatelessWidget {
       color: Colors.transparent,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV) * 2 - 120) / 2)
+          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV)
+           * 2 - mediumChartSizeScaler(context)) / 2)
               .clamp(0.0, double.infinity);
 
           return Column(
@@ -351,7 +353,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                             Padding(
                               padding: const EdgeInsets.all(4),
                               child: SizedBox(
-                                width: 292,
+                                width: sizeScaler(context, 292, 1.4),
                                 child: DecoratedBox(
                                   decoration: BoxDecoration(
                                     color: Colors.white.withValues(alpha:0.2),

@@ -10,6 +10,7 @@ import 'package:control_chart/ui/core/shared/small_control_chart/surface_hardnes
 
 import 'package:control_chart/domain/models/chart_data_point.dart';
 
+import '../../common/chart/small_chart_height_scaler.dart';
 import '../../common/info_content.dart';
 import '../../common/info_overlay.dart';
 import '../../spec_validation.dart';
@@ -32,7 +33,7 @@ class _SmallCard extends StatefulWidget {
 }
 
 class _SmallCardState extends State<_SmallCard> {
-  static const double _chartH = 144; // fixed height ต่อหนึ่งกราฟ
+  static const double _chartH = 248; // fixed height ต่อหนึ่งกราฟ
   static const double _gapV = 4;
 
   bool _showLegend = false;
@@ -373,13 +374,13 @@ class _SmallChartBox extends StatelessWidget {
     required this.searchState,
     required this.dataPoints,
     required this.isMr,
-    required this.fixedHeight,
+    required this.fixedHeight, // kept for API compatibility (not used)
   });
 
   final SearchState searchState;
   final List<ChartDataPoint> dataPoints;
   final bool isMr;
-  final double fixedHeight;
+  final double fixedHeight; // ignored in favor of responsive height
 
   @override
   Widget build(BuildContext context) {
@@ -387,9 +388,11 @@ class _SmallChartBox extends StatelessWidget {
     final keySeed =
         '${q.startDate?.millisecondsSinceEpoch}-${q.endDate?.millisecondsSinceEpoch}-${q.furnaceNo}-${q.materialNo}-${isMr ? 'mr' : 'i'}';
 
+    final double h = responsiveChartHeight(context); // ✅ smooth 144..248
+
     return SizedBox(
       width: double.infinity,
-      height: fixedHeight, // ✅ fixed
+      height: h,
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Colors.grey.shade50,
@@ -411,6 +414,8 @@ class _SmallChartBox extends StatelessWidget {
     );
   }
 }
+
+
 
 /// ----------------------------------------------------------------------------
 /// States

@@ -57,14 +57,14 @@ class _HomeContentState extends State<HomeContent>
     return base.copyWith(startDate: effStart, endDate: effEnd);
   }
 
-  void _handleGoToSearchFromIndex(int i, {DateTime? start, DateTime? end}) {
-    final base = widget.profiles[i];
-    final snap = base.copyWith(
-      startDate: start ?? base.startDate,
-      endDate:   end   ?? base.endDate,
-    );
-    widget.onSendSnapshotToSearch?.call(snap);   // ✅ one-shot ไป Search
-  }
+  // void _handleGoToSearchFromIndex(int i, {DateTime? start, DateTime? end}) {
+  //   final base = widget.profiles[i];
+  //   final snap = base.copyWith(
+  //     startDate: start ?? base.startDate,
+  //     endDate:   end   ?? base.endDate,
+  //   );
+  //   widget.onSendSnapshotToSearch?.call(snap);   // ✅ one-shot ไป Search
+  // }
 
   // ---------- lifecycle ----------
 
@@ -277,44 +277,101 @@ class _HomeContentState extends State<HomeContent>
                                   child: Row(
                                     children: [
                                       // -------- กราฟหลัก (Surface Hardness) --------
-                                    Expanded(
-                                      child: SizedBox(
-                                        height: constraints.maxHeight - (8 + 16),
-                                        child: _ChartFillBox(
-                                          child: KeyedSubtree(
-                                            key: surfKey,                   // ✅ เปลี่ยน key → Flutter ทิ้ง State เก่าทั้งก้อน
-                                            child: shSurface.buildChartsSectionSurfaceHardness(
-                                              adjustedProfiles, i, searchState,
-                                              externalStart: 0, externalWindowSize: 6,
-                                              baseStart: qWindow.startDate, baseEnd: qWindow.endDate,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-
-                                  const SizedBox(width: 16),
-
-                                                                          // -------- กราฟที่สอง (CDE/CDT) --------
-                                    if (visibleSecond)
                                       Expanded(
                                         child: SizedBox(
                                           height: constraints.maxHeight - (8 + 16),
                                           child: _ChartFillBox(
-                                            child: KeyedSubtree(
-                                              key: cdeKey,                  // ✅ key แยกของ CDE/CDT
-                                              child: shCdeCdt.buildChartsSectionCdeCdt(
-                                                adjustedProfiles, i, searchState,
-                                                externalStart: 0, externalWindowSize: 6,
-                                                baseStart: qWindow.startDate, baseEnd: qWindow.endDate,
-                                              ),
+                                            child: Builder(
+                                              builder: (context) {
+                                                final media = MediaQuery.of(context);
+                                                final width = media.size.width;
+
+                                                // ✅ Responsive font scaling
+                                                double scale;
+                                                if (width <= 1280) {
+                                                  scale = 1.0;
+                                                } else if (width >= 1920) {
+                                                  scale = 1.25;
+                                                } else {
+                                                  final ratio = (width - 1280) / (1920 - 1280);
+                                                  scale = 1.0 + (0.25 * ratio);
+                                                }
+
+                                                return MediaQuery(
+                                                  data: media.copyWith(
+                                                    textScaler: TextScaler.linear(scale),
+                                                    // Or: textScaler: TextScaler.linear(scale), (for Flutter >=3.13)
+                                                  ),
+                                                  child: KeyedSubtree(
+                                                    key: surfKey, // ✅ reset state correctly when switching profile
+                                                    child: shSurface.buildChartsSectionSurfaceHardness(
+                                                      adjustedProfiles,
+                                                      i,
+                                                      searchState,
+                                                      externalStart: 0,
+                                                      externalWindowSize: 6,
+                                                      baseStart: qWindow.startDate,
+                                                      baseEnd: qWindow.endDate,
+                                                    ),
+                                                  ),
+                                                );
+                                              },
                                             ),
                                           ),
                                         ),
                                       ),
+
+                                      const SizedBox(width: 16),
+
+                                      // -------- กราฟที่สอง (CDE/CDT) --------
+                                      if (visibleSecond)
+                                        Expanded(
+                                          child: SizedBox(
+                                            height: constraints.maxHeight - (8 + 16),
+                                            child: _ChartFillBox(
+                                              child: Builder(
+                                                builder: (context) {
+                                                  final media = MediaQuery.of(context);
+                                                  final width = media.size.width;
+
+                                                  // ✅ Same responsive scale logic
+                                                  double scale;
+                                                  if (width <= 1280) {
+                                                    scale = 1.0;
+                                                  } else if (width >= 1920) {
+                                                    scale = 1.25;
+                                                  } else {
+                                                    final ratio = (width - 1280) / (1920 - 1280);
+                                                    scale = 1.0 + (0.25 * ratio);
+                                                  }
+
+                                                  return MediaQuery(
+                                                    data: media.copyWith(
+                                                      textScaler: TextScaler.linear(scale),
+                                                      // For Flutter >=3.13: textScaler: TextScaler.linear(scale),
+                                                    ),
+                                                    child: KeyedSubtree(
+                                                      key: cdeKey, // ✅ separate key for CDE/CDT chart
+                                                      child: shCdeCdt.buildChartsSectionCdeCdt(
+                                                        adjustedProfiles,
+                                                        i,
+                                                        searchState,
+                                                        externalStart: 0,
+                                                        externalWindowSize: 6,
+                                                        baseStart: qWindow.startDate,
+                                                        baseEnd: qWindow.endDate,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ),
+
 
                                 // ---------- ปุ่มนำทาง + จุด ----------
                                 _buildPagerControls(

@@ -4,6 +4,8 @@ import 'package:control_chart/domain/models/chart_data_point.dart';
 import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
+import 'package:control_chart/ui/core/shared/common/chart/font_scaler.dart';
+import 'package:control_chart/ui/core/shared/common/chart/size_scaler.dart';
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/control_chart_template.dart';
 import 'package:control_chart/ui/core/shared/violations_component.dart';
 import 'package:control_chart/ui/screen/screen_content/home_screen_content/home_content_var.dart';
@@ -11,6 +13,7 @@ import 'package:control_chart/utils/app_route.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../common/chart/medium_chart_size_scaler.dart';
 import '../../fg_last_four_chars.dart';
 import '../../spec_validation.dart';
 import '../../violation_specific_card.dart';
@@ -171,7 +174,8 @@ class _MediumContainer extends StatelessWidget {
       color: Colors.transparent,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV) * 2 - 120) / 2)
+          final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV)
+           * 2 - mediumChartSizeScaler(context)) / 2)
               .clamp(0.0, double.infinity);
           final combineControlLimit = (violations?.beyondControlLimitLower ?? 0) + (violations?.beyondControlLimitUpper ?? 0);
           final combineSpecLimit    = (violations?.beyondSpecLimitLower ?? 0) + (violations?.beyondSpecLimitUpper ?? 0);
@@ -330,7 +334,7 @@ class _MediumContainer extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.all(4),
                         child: SizedBox(
-                          width: 292,
+                          width: sizeScaler(context, 292, 1.4),
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha:0.2),

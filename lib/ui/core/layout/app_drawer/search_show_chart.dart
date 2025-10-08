@@ -8,7 +8,7 @@ class SearchShowChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return 
-        Flexible(
+        Expanded(
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: AppColors.colorBg,

@@ -42,7 +42,7 @@ class _ViolationSpecificQueueCardState
 
     _blinkController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2), // เดิม 600 -> ช้าลง 2 เท่า
+      duration: const Duration(milliseconds: 500), // เดิม 600 -> ช้าลง 2 เท่า
     )..repeat(reverse: true);
 
     // start timer loop
@@ -70,13 +70,13 @@ class _ViolationSpecificQueueCardState
     final current = widget.violations[_currentIndex];
 
     return FadeTransition(
-      opacity: Tween<double>(begin: 0.6, end: 1.0).animate(_blinkController),
+      opacity: Tween<double>(begin: 0.5, end: 2).animate(_blinkController),
       child: Card(
         elevation: 6,
         color: current.color.withValues(alpha: 0.85),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -84,7 +84,7 @@ class _ViolationSpecificQueueCardState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "${current.type}",
+                    current.type,
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,

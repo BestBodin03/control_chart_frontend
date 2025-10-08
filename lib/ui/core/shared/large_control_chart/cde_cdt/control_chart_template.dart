@@ -168,7 +168,7 @@ class _ControlChartTemplateCdeCdtLargeState
                     height: legendHeight,
                     child: Align(
                       alignment: Alignment.center,
-                      child: (selectedWidget as ChartComponent).buildLegend(),
+                      child: (selectedWidget as ChartComponent).buildLegend(context),
                     ),
                   ),
                   const SizedBox(height: gapLegendToChart),

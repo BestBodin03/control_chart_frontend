@@ -9,6 +9,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../common/chart/legend_item.dart';
+import '../../common/chart/size_scaler.dart';
+
 /// CDE/CDT MR Chart — Surface-like (xStart/xEnd), local tooltip, length-1 points
 class MrChartComponent extends StatefulWidget implements ChartComponent {
   final List<ChartDataPointCdeCdt>? dataPoints;
@@ -35,9 +38,10 @@ class MrChartComponent extends StatefulWidget implements ChartComponent {
 
   // Legend
   @override
-  Widget buildLegend() {
+  Widget buildLegend(BuildContext context) {
     String fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
 
+    // helper to select CDE/CDT/Compound values
     T? _sel<T>(T? cde, T? cdt, T? comp) {
       switch (controlChartStats?.secondChartSelected) {
         case SecondChartSelected.cde:
@@ -51,39 +55,36 @@ class MrChartComponent extends StatefulWidget implements ChartComponent {
       }
     }
 
+    // select corresponding data fields
     final ucl = _sel(
       controlChartStats?.cdeControlLimitMRChart?.ucl,
       controlChartStats?.cdtControlLimitMRChart?.ucl,
       controlChartStats?.compoundLayerControlLimitMRChart?.ucl,
     );
+
     final cl = _sel(
       controlChartStats?.cdeControlLimitMRChart?.cl,
       controlChartStats?.cdtControlLimitMRChart?.cl,
       controlChartStats?.compoundLayerControlLimitMRChart?.cl,
     );
 
-    Widget item(String label, Color color, String value) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(width: 8, height: 2, child: DecoratedBox(decoration: BoxDecoration(color: color))),
-        const SizedBox(width: 8),
-        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack, fontWeight: FontWeight.bold)),
-        const SizedBox(width: 4),
-        Text(value, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack, fontWeight: FontWeight.bold)),
-      ],
-    );
-
     return Wrap(
-      spacing: 4,
+      spacing: 8,
       runSpacing: 4,
       alignment: WrapAlignment.spaceEvenly,
       children: [
-        if (fmt(ucl) != 'N/A') item('UCL', Colors.orange, fmt(ucl)),
-        if (fmt(cl)  != 'N/A') item('AVG', Colors.green, fmt(cl)),
+        if (fmt(ucl) != 'N/A')
+          legendItem(context, 'UCL', Colors.orange, fmt(ucl)),
+
+        if (fmt(cl) != 'N/A')
+          legendItem(context, 'AVG', Colors.green, fmt(cl)),
+
+        if (fmt(controlChartStats?.average) != 'N/A')
+          legendItem(context, 'AVG', Colors.green, fmt(controlChartStats?.average)),
       ],
     );
   }
-
+  
   // interface stubs
   @override
   FlBorderData buildBorderData() => FlBorderData(show: false);
@@ -297,19 +298,34 @@ class _MrChartComponentState extends State<MrChartComponent> {
   FlTitlesData _titlesData(double? minX, double? maxX) {
     final double minXv = minX ?? widget.xStart.millisecondsSinceEpoch.toDouble();
     final double maxXv = maxX ?? widget.xEnd.millisecondsSinceEpoch.toDouble();
-    final PeriodType periodType = widget.controlChartStats?.periodType ?? PeriodType.ONE_MONTH;
+    final PeriodType periodType =
+        widget.controlChartStats?.periodType ?? PeriodType.ONE_MONTH;
+
     final df = DateFormat('dd/MM');
     final double step = _xInterval(periodType, minXv, maxXv);
 
+    // === bottom label builder ===
     Widget bottomLabel(double value, TitleMeta meta) {
       final dt = DateTime.fromMillisecondsSinceEpoch(value.round(), isUtc: true);
       final text = df.format(dt);
+
+      // ✅ use textScaler for font and sizeScaler for spacing
+      final double fontSize = MediaQuery.of(context).textScaler.scale(12);
+      final double labelSpace = sizeScaler(context, 8, 1.5);
+
       return SideTitleWidget(
         meta: meta,
-        space: 8,
+        space: labelSpace,
         child: Transform.rotate(
           angle: -30 * math.pi / 180,
-          child: Text(text, style: const TextStyle(fontSize: 8, color: AppColors.colorBlack), overflow: TextOverflow.ellipsis),
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: fontSize,
+              color: AppColors.colorBlack,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       );
     }
@@ -318,15 +334,25 @@ class _MrChartComponentState extends State<MrChartComponent> {
       leftTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 24,
+          // ✅ scale reserved space consistently with font
+          reservedSize: sizeScaler(context, 36, 1.5),
           interval: _getInterval(),
-          getTitlesWidget: (v, _) => Text(v.toStringAsFixed(2), style: const TextStyle(color: AppColors.colorBlack, fontSize: 8)),
+          getTitlesWidget: (v, meta) {
+            final double fontSize = MediaQuery.of(context).textScaler.scale(12);
+            return Text(
+              v.toStringAsFixed(2),
+              style: TextStyle(
+                color: AppColors.colorBlack,
+                fontSize: fontSize,
+              ),
+            );
+          },
         ),
       ),
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 20,
+          reservedSize: sizeScaler(context, 24, 1.5),
           interval: step,
           getTitlesWidget: bottomLabel,
         ),

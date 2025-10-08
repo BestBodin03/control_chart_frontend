@@ -61,45 +61,80 @@ class _MyHomeScreenState extends State<MyHomeScreen> {
     _pageController = PageController(initialPage: AppRoute.instance.navIndex.value);
 
     // ---- กำหนดหน้าต่าง ๆ แบบ builder (สร้างเมื่อถูกเรียกใช้) ----
-    _pageBuilders = [
-      // Home tab (มี Bloc เฉพาะ)
-      (context) => _ActiveAware(
-            isActiveListenable: AppRoute.instance.navIndex,
-            index: 0,
-            child: MultiBlocProvider(
-              providers: [
-                BlocProvider.value(value: _tvBloc),
-                BlocProvider.value(value: _homeSearchBloc),
-                BlocProvider.value(value: _filterCubit)
-              ],
-              child: HomeContent(
-                profiles: _profilesSnapshot,
-                onSendSnapshotToSearch: (snap) {
-                  AppRoute.instance.searchSnapshot.value = snap;
-                  _jumpTo(1);
-                },
-              ),
+  // ===== _pageBuilders setup =====
+  _pageBuilders = [
+    // ===== 0. HOME TAB =====
+    (context) => _ActiveAware(
+          isActiveListenable: AppRoute.instance.navIndex,
+          index: 0,
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: _tvBloc),
+              BlocProvider.value(value: _homeSearchBloc),
+              BlocProvider.value(value: _filterCubit),
+            ],
+            child: Builder(
+              builder: (context) {
+                // Get current screen info
+                final media = MediaQuery.of(context);
+                final double screenWidth = media.size.width;
+
+                // ✅ Scale font based on screen width
+                //    - Normal (<=1280) : 1.0
+                //    - Large (>=1920)  : 1.25
+                //    - Mid range (1280–1920): interpolate smoothly
+                double scale;
+                if (screenWidth <= 1280) {
+                  scale = 1.0;
+                } else if (screenWidth >= 1920) {
+                  scale = 1.25;
+                } else {
+                  final ratio = (screenWidth - 1280) / (1920 - 1280);
+                  scale = 1.0 + (0.25 * ratio); // linear scaling
+                }
+
+                // ✅ Apply scaling using MediaQuery
+                return MediaQuery(
+                  data: media.copyWith(
+                    // Use .textScaler if on Flutter 3.13+, otherwise .textScaleFactor
+                    textScaler: TextScaler.linear(scale),
+                    // For Flutter ≥3.13: textScaler: TextScaler.linear(scale),
+                  ),
+                  child: HomeContent(
+                    profiles: _profilesSnapshot,
+                    onSendSnapshotToSearch: (snap) {
+                      AppRoute.instance.searchSnapshot.value = snap;
+                      _jumpTo(1);
+                    },
+                  ),
+                );
+              },
             ),
           ),
-      // Search tab (ภายในมี SearchBloc ของตัวเองอยู่แล้ว)
-      (context) => _ActiveAware(
-            isActiveListenable: AppRoute.instance.navIndex,
-            index: 1,
-            child: const SearchingScreen(),
-          ),
-      // Settings
-      (context) => _ActiveAware(
-            isActiveListenable: AppRoute.instance.navIndex,
-            index: 2,
-            child: const SettingScreen(),
-          ),
-      // Chart Detail
-      (context) => _ActiveAware(
-            isActiveListenable: AppRoute.instance.navIndex,
-            index: 3,
-            child: const ChartDetailScreen(),
-          ),
-    ];
+        ),
+
+    // ===== 1. SEARCH TAB =====
+    (context) => _ActiveAware(
+          isActiveListenable: AppRoute.instance.navIndex,
+          index: 1,
+          child: const SearchingScreen(),
+        ),
+
+    // ===== 2. SETTINGS TAB =====
+    (context) => _ActiveAware(
+          isActiveListenable: AppRoute.instance.navIndex,
+          index: 2,
+          child: const SettingScreen(),
+        ),
+
+    // ===== 3. CHART DETAIL TAB =====
+    (context) => _ActiveAware(
+          isActiveListenable: AppRoute.instance.navIndex,
+          index: 3,
+          child: const ChartDetailScreen(),
+        ),
+  ];
+
 
     // sync เมื่อ navIndex ถูกเปลี่ยนจากที่อื่น (เช่นกดใน Drawer)
     AppRoute.instance.navIndex.addListener(() {

@@ -173,92 +173,96 @@ void _recalcWindow(SearchState st) {
 
             const SizedBox(height: 16),
 
-Expanded(
-  child: Row(
-    children: [
-      // ---- เนื้อหาแผงกราฟ ----
-      Expanded(
-        child: (_layout == 2)
-            // ====== โหมด Double: โชว์สองกราฟพร้อมกัน ======
-            ? Row(
+            Expanded(
+              child: Row(
                 children: [
+                  // ---- เนื้อหาแผงกราฟ ----
                   Expanded(
-                    child: buildChartsSectionSurfaceHardnessLargeDouble(
-                      searchState,
-                      xIntervalSize: xIntervalSize,
-                      windowStart: left,
-                      windowEnd: right,
-                    ),
+                    child: (_layout == 2)
+                        // ====== โหมด Double: โชว์สองกราฟพร้อมกัน ======
+                        ? Expanded(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: buildChartsSectionSurfaceHardnessLargeDouble(
+                                    searchState,
+                                    xIntervalSize: xIntervalSize,
+                                    windowStart: left,
+                                    windowEnd: right,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: buildChartsSectionCdeCdtLargeDouble(
+                                    searchState,
+                                    xIntervalSize: xIntervalSize,
+                                    windowStart: left,
+                                    windowEnd: right,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+
+                        // ====== โหมด Single: สลับกราฟด้วย Next ======
+                        : AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 220),
+                            transitionBuilder: (child, anim) => SlideTransition(
+                              position: Tween<Offset>(begin: const Offset(0.15, 0), end: Offset.zero).animate(anim),
+                              child: FadeTransition(opacity: anim, child: child),
+                            ),
+                            child: (_chartIndex == 0)
+                                ? KeyedSubtree(
+                                    key: const ValueKey('pane_surface'),
+                                    child: buildChartsSectionSurfaceHardnessLarge(
+                                      searchState,
+                                      xIntervalSize: xIntervalSize,
+                                      windowStart: left,
+                                      windowEnd: right,
+                                    ),
+                                  )
+                                : KeyedSubtree(
+                                    key: const ValueKey('pane_cde_cdt'),
+                                    child: buildChartsSectionCdeCdtLarge(
+                                      searchState,
+                                      xIntervalSize: xIntervalSize,
+                                      windowStart: left,
+                                      windowEnd: right,
+                                    ),
+                                  ),
+                          ),
                   ),
+
                   const SizedBox(width: 16),
-                  Expanded(
-                    child: buildChartsSectionCdeCdtLargeDouble(
-                      searchState,
-                      xIntervalSize: xIntervalSize,
-                      windowStart: left,
-                      windowEnd: right,
-                    ),
-                  ),
-                ],
-              )
-            // ====== โหมด Single: สลับกราฟด้วย Next ======
-            : AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                transitionBuilder: (child, anim) => SlideTransition(
-                  position: Tween<Offset>(begin: const Offset(0.15, 0), end: Offset.zero).animate(anim),
-                  child: FadeTransition(opacity: anim, child: child),
-                ),
-                child: (_chartIndex == 0)
-                    ? KeyedSubtree(
-                        key: const ValueKey('pane_surface'),
-                        child: buildChartsSectionSurfaceHardnessLarge(
-                          searchState,
-                          xIntervalSize: xIntervalSize,
-                          windowStart: left,
-                          windowEnd: right,
-                        ),
-                      )
-                    : KeyedSubtree(
-                        key: const ValueKey('pane_cde_cdt'),
-                        child: buildChartsSectionCdeCdtLarge(
-                          searchState,
-                          xIntervalSize: xIntervalSize,
-                          windowStart: left,
-                          windowEnd: right,
+
+                  // ---- ปุ่ม Next: ปิดและเป็นสีเทาในโหมด Double ----
+                  Builder(builder: (_) {
+                    final hasSecond = widget.searchState.controlChartStats?.secondChartSelected != null &&
+                        widget.searchState.controlChartStats?.secondChartSelected != SecondChartSelected.na;
+
+                    final bool disableNext = (_layout == 2) || !hasSecond;
+
+                    return Opacity(
+                      opacity: disableNext ? 0.4 : 1.0, // ทำให้ดูเป็นสีเทา
+                      child: AbsorbPointer(              // กันการกดจริงๆ
+                        absorbing: disableNext,
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_circle_right_rounded),
+                          tooltip: disableNext ? 'Next Chart (disabled in Double layout)' : 'Next Chart',
+                          color: AppColors.colorBrand,
+                          onPressed: () {
+                            setState(() {
+                              _chartIndex = (_chartIndex + 1) % 2; // 0 ↔ 1
+                            });
+                          },
                         ),
                       ),
+                    );
+                  }),
+                ],
               ),
-      ),
-
-      const SizedBox(width: 16),
-
-      // ---- ปุ่ม Next: ปิดและเป็นสีเทาในโหมด Double ----
-      Builder(builder: (_) {
-        final hasSecond = widget.searchState.controlChartStats?.secondChartSelected != null &&
-            widget.searchState.controlChartStats?.secondChartSelected != SecondChartSelected.na;
-
-        final bool disableNext = (_layout == 2) || !hasSecond;
-
-        return Opacity(
-          opacity: disableNext ? 0.4 : 1.0, // ทำให้ดูเป็นสีเทา
-          child: AbsorbPointer(              // กันการกดจริงๆ
-            absorbing: disableNext,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_circle_right_rounded),
-              tooltip: disableNext ? 'Next Chart (disabled in Double layout)' : 'Next Chart',
-              color: AppColors.colorBrand,
-              onPressed: () {
-                setState(() {
-                  _chartIndex = (_chartIndex + 1) % 2; // 0 ↔ 1
-                });
-              },
             ),
-          ),
-        );
-      }),
-    ],
-  ),
-),
 
 
 

@@ -11,6 +11,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../common/chart/legend_item.dart';
 import '../small_control_chart_var.dart';
 
 class ControlChartComponentSmall extends StatefulWidget implements ChartComponent{
@@ -41,7 +42,7 @@ class ControlChartComponentSmall extends StatefulWidget implements ChartComponen
   });
 
   @override
-  Widget buildLegend() {
+  Widget buildLegend(context) {
     String fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
     return Wrap(
       spacing: 8,
@@ -50,45 +51,23 @@ class ControlChartComponentSmall extends StatefulWidget implements ChartComponen
       alignment: WrapAlignment.spaceEvenly,
       children: [
         if (fmt(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec) != 'N/A')
-          _legendItem('Spec', Colors.red, 
+          legendItem(context, 'Spec', Colors.red, 
           fmt(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec)),
         if (fmt(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec) != 'N/A')
-          _legendItem('Spec', Colors.red, 
+          legendItem(context, 'Spec', Colors.red, 
           fmt(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec)),
         if (fmt(controlChartStats?.controlLimitIChart?.ucl) != 'N/A')
-          _legendItem('UCL', Colors.orange, 
+          legendItem(context, 'UCL', Colors.orange, 
           fmt(controlChartStats?.controlLimitIChart?.ucl)),
         if (fmt(controlChartStats?.controlLimitIChart?.lcl) != 'N/A')
-          _legendItem('LCL', Colors.orange, 
+          legendItem(context, 'LCL', Colors.orange, 
           fmt(controlChartStats?.controlLimitIChart?.lcl)),
         if (fmt(controlChartStats?.specAttribute?.surfaceHardnessTarget) != 'N/A')
-          _legendItem('Target', Colors.deepPurple.shade300, 
+          legendItem(context, 'Target', Colors.deepPurple.shade300, 
           fmt(controlChartStats?.specAttribute?.surfaceHardnessTarget)),
         if (fmt(controlChartStats?.average) != 'N/A')
-          _legendItem('AVG', Colors.green, 
+          legendItem(context, 'AVG', Colors.green, 
           fmt(controlChartStats?.average)),
-      ],
-    );
-  }
-
-  Widget _legendItem(String label, Color color, String value) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(width: 8, height: 2, 
-        child: DecoratedBox(decoration: BoxDecoration(color: color))),
-        const SizedBox(width: 8),
-        Text(label, 
-        style: const TextStyle(
-          fontSize: 10, 
-          color: AppColors.colorBlack, 
-          fontWeight: FontWeight.bold)),
-        const SizedBox(width: 4),
-        Text(value, 
-        style: const TextStyle(
-          fontSize: 10, 
-          color: AppColors.colorBlack, 
-          fontWeight: FontWeight.bold)),
       ],
     );
   }

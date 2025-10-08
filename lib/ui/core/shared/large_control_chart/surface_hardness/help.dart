@@ -25,16 +25,15 @@ Widget buildChartsSectionSurfaceHardnessLarge(
   DateTime? windowStart,
   DateTime? windowEnd,
 }) {
-  return SizedBox.expand(
-    child: _LargeContainer(
-      searchState: searchState,
-      externalStart: externalStart,
-      externalWindowSize: externalWindowSize,
-      xIntervalSize: xIntervalSize,
-      windowStart: windowStart,
-      windowEnd: windowEnd,
-    ),
-  );
+  return _LargeContainer(
+  searchState: searchState,
+  externalStart: externalStart,
+  externalWindowSize: externalWindowSize,
+  xIntervalSize: xIntervalSize,
+  windowStart: windowStart,
+  windowEnd: windowEnd,
+);
+
 }
 
 class _LargeContainer extends StatelessWidget {
@@ -179,7 +178,7 @@ class _LargeContainer extends StatelessWidget {
                         ],
                       ),
                     ),
-                                          Align(
+                      Align(
                         alignment: Alignment.center,
                         child: ViolationSpecificQueueCard(
                           violations: _buildViolationsFromState(searchState),

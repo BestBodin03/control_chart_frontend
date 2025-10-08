@@ -225,6 +225,7 @@ class _LargeContainerCdeCdt extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          const SizedBox(height: 4),
                           Text(_selectedLabel(), style: AppTypography.textBody2BBold),
                           const SizedBox(height: 4),
                           Text('$spotCount Records', style: AppTypography.textBody3BBold),
@@ -271,45 +272,47 @@ class _LargeContainerCdeCdt extends StatelessWidget {
                           ViolationSpecificQueueCard(
                             violations: buildViolationsFromStateCdeCdt(searchState),
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minWidth: 200),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: AppColors.colorBg,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(width: 1, color: Colors.grey.shade500),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.colorBg.withValues(alpha: 0.4),
-                                  offset: const Offset(0, -2),
-                                ),
-                              ],
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: SizedBox(
-                                width: 156,
-                                child: ViolationForDashboard(
-                                  combinedControlLimit: vOverCtrlL + vOverCtrlU,
-                                  combinedSpecLimit:    vOverSpecL + vOverSpecU,
-                                  trend:                vTrend,
-                                  overCtrlLower:        vOverCtrlL,
-                                  overCtrlUpper:        vOverCtrlU,
-                                  overSpecLower:        vOverSpecL,
-                                  overSpecUpper:        vOverSpecU,
+
+                          const SizedBox(height: 8),
+                          
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minWidth: 200),
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: AppColors.colorBg,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(width: 1, color: Colors.grey.shade500),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.colorBg.withValues(alpha: 0.4),
+                                        offset: const Offset(0, -2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8),
+                                    child: SizedBox(
+                                      width: 156,
+                                      child: ViolationForDashboard(
+                                        combinedControlLimit: vOverCtrlL + vOverCtrlU,
+                                        combinedSpecLimit:    vOverSpecL + vOverSpecU,
+                                        trend:                vTrend,
+                                        overCtrlLower:        vOverCtrlL,
+                                        overCtrlUpper:        vOverCtrlU,
+                                        overSpecLower:        vOverSpecL,
+                                        overSpecUpper:        vOverSpecU,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ],
