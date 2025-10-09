@@ -218,7 +218,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV)
-           * 2 - mediumChartSizeScaler(context)) / 2 -4)
+           * 2 - mediumChartSizeScaler(context)) / 2 + 6)
               .clamp(0.0, double.infinity);
 
           return Column(
@@ -353,7 +353,7 @@ class _MediumContainerCdeCdt extends StatelessWidget {
                             Padding(
                               padding: const EdgeInsets.all(4),
                               child: SizedBox(
-                                width: sizeScaler(context, 232, 1.4),
+                                width: sizeScaler(context, 200, 1.4),
                                 child: DecoratedBox(
                                   decoration: BoxDecoration(
                                     color: Colors.white.withValues(alpha:0.2),

@@ -7,7 +7,6 @@ import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/common/chart/font_scaler.dart';
 import 'package:control_chart/ui/core/shared/dashed_line_painter.dart' show DashedLinePainter;
-import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/help.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -154,72 +153,134 @@ class _ControlChartComponentState extends State<ControlChartComponent> {
     return niceSteps[left];
   }
 
-  void _ensureYScale() {
-    if (_cachedInterval != null) return;
+void _ensureYScale() {
+  if (_cachedInterval != null) return;
 
-    const divisions = 5; // -> 6 ticks (divisions + 1)
+  const divisions = 5; // -> 6 ticks (divisions + 1)
+  const epsilon = 1e-9;
 
-    final minSel = widget.controlChartStats?.yAxisRange?.minYsurfaceHardnessControlChart ?? 0.0;
-    final maxSel = widget.controlChartStats?.yAxisRange?.maxYsurfaceHardnessControlChart ?? minSel;
+  final minSel = widget.controlChartStats?.yAxisRange?.minYsurfaceHardnessControlChart ?? 0.0;
+  final maxSel = widget.controlChartStats?.yAxisRange?.maxYsurfaceHardnessControlChart ?? minSel;
 
-    if (maxSel <= minSel) {
-      _cachedMinY = minSel;
-      _cachedMaxY = minSel + divisions;
-      _cachedInterval = 1.0;
-      return;
+  if (maxSel <= minSel) {
+    _cachedMinY = minSel;
+    _cachedMaxY = minSel + divisions;
+    _cachedInterval = 1.0;
+    return;
+  }
+
+  // Collect all critical lines that must not sit on boundaries
+  final spec = widget.controlChartStats?.specAttribute;
+  final pins = <double?>[
+    spec?.surfaceHardnessLowerSpec,
+    spec?.surfaceHardnessUpperSpec,
+    widget.controlChartStats?.controlLimitIChart?.lcl,
+    widget.controlChartStats?.controlLimitIChart?.ucl,
+  ];
+  final activePins = pins.where((p) => p != null).map((p) => p!).toList();
+
+  // Calculate initial interval for expansion amount
+  final initialIdeal = (maxSel - minSel) / divisions;
+  final initialInterval = _niceStepCeil(initialIdeal);
+  final expansionAmount = initialInterval * 0.8;
+
+  // Expand working range if pins sit on boundaries
+  double workingMin = minSel;
+  double workingMax = maxSel;
+
+  for (final pin in activePins) {
+    if ((pin - workingMin).abs() < epsilon) {
+      workingMin = pin - expansionAmount;
     }
+    if ((pin - workingMax).abs() < epsilon) {
+      workingMax = pin + expansionAmount;
+    }
+  }
 
-    // 1) เลือก interval แบบ nice จาก ideal
-    final ideal = (maxSel - minSel) / divisions;
-    double interval = _niceStepCeil(ideal);
+  // Main calculation loop
+  int maxAttempts = 15;
+  int attempt = 0;
+  double minY = 0, maxY = 0, interval = 0;
+  bool isValid = false;
 
-    // 2) จัด minY ให้ตรง multiple ของ interval แล้วกำหนด maxY = minY + divisions*interval (คง span)
-    double minY = (minSel / interval).floor() * interval;
-    double maxY = minY + divisions * interval;
+  while (attempt < maxAttempts && !isValid) {
+    attempt++;
 
-    // 3) ถ้าคุมไม่ถึง maxSel เลื่อนช่วงแบบคง span หรืออัพ step
-    while (maxY < maxSel - 1e-12) {
-      // ลองเลื่อนช่วงขึ้นทั้งก้อน
+    // 1) Calculate ideal interval
+    final ideal = (workingMax - workingMin) / divisions;
+    interval = _niceStepCeil(ideal);
+
+    // 2) Align minY to multiple of interval
+    minY = (workingMin / interval).floor() * interval;
+    maxY = minY + divisions * interval;
+
+    // 3) Ensure coverage of workingMax
+    while (maxY < workingMax - epsilon) {
       minY += interval;
       maxY = minY + divisions * interval;
 
-      // ถ้ายังไม่ถึง แสดงว่า interval เล็กไป → ใช้ next nice step และ realign
-      if (maxY < maxSel - 1e-12) {
+      if (maxY < workingMax - epsilon) {
         interval = _nextNiceStep(interval);
-        minY = (minSel / interval).floor() * interval;
+        minY = (workingMin / interval).floor() * interval;
         maxY = minY + divisions * interval;
       }
     }
 
-    // 4) กันเส้นสำคัญมานั่งบน min/max → เลื่อนช่วงแบบคง span
-    final spec = widget.controlChartStats?.specAttribute;
-    final pins = <double?>[
-      spec?.surfaceHardnessLowerSpec,
-      spec?.surfaceHardnessUpperSpec,
-      widget.controlChartStats?.controlLimitIChart?.lcl,
-      widget.controlChartStats?.controlLimitIChart?.ucl,
-    ];
+    // 4) Check for pin collisions
+    bool hasCollision = false;
 
-    for (final v in pins) {
-      if (v == null) continue;
-      if ((v - minY).abs() < 1e-9) {
-        minY -= interval;
-        maxY = minY + divisions * interval;
-      } else if ((v - maxY).abs() < 1e-9) {
-        maxY += interval;
-        minY = maxY - divisions * interval;
+    for (final pin in activePins) {
+      // Check if pin equals minY or maxY
+      if ((pin - minY).abs() < epsilon) {
+        workingMin = minY - interval * 0.8;
+        hasCollision = true;
+        break;
+      }
+      
+      if ((pin - maxY).abs() < epsilon) {
+        workingMax = maxY + interval * 0.8;
+        hasCollision = true;
+        break;
+      }
+
+      // Check if pin sits on any tick line
+      final tickPos = (pin - minY) / interval;
+      final nearestTick = tickPos.round();
+      if ((tickPos - nearestTick).abs() < epsilon) {
+        workingMin -= interval * 0.8;
+        workingMax += interval * 0.8;
+        hasCollision = true;
+        break;
       }
     }
 
-    // 5) snap ลด floating error และย้ำ span คงที่
-    double _snap(double val, double step) => (val / step).roundToDouble() * step;
-    minY = _snap(minY, interval);
-    maxY = minY + divisions * interval;
-
-    _cachedMinY = minY;
-    _cachedMaxY = maxY;
-    _cachedInterval = interval;
+    if (!hasCollision) {
+      // Verify final coverage of original data
+      if (minY <= minSel + epsilon && maxY >= maxSel - epsilon) {
+        isValid = true;
+      } else {
+        if (minY > minSel) workingMin = minSel - interval * 0.8;
+        if (maxY < maxSel) workingMax = maxSel + interval * 0.8;
+      }
+    }
   }
+
+  // Fallback if max attempts reached
+  if (!isValid) {
+    interval = _nextNiceStep(interval);
+    minY = (minSel / interval).floor() * interval - interval;
+    maxY = minY + (divisions + 2) * interval;
+  }
+
+  // 5) snap ลด floating error และย้ำ span คงที่
+  double _snap(double val, double step) => (val / step).roundToDouble() * step;
+  minY = _snap(minY, interval);
+  maxY = minY + divisions * interval;
+
+  _cachedMinY = minY;
+  _cachedMaxY = maxY;
+  _cachedInterval = interval;
+}
 
   // Tooltip state
   final ValueNotifier<_Tip?> _tip = ValueNotifier<_Tip?>(null);
@@ -398,16 +459,15 @@ class _ControlChartComponentState extends State<ControlChartComponent> {
       final dt = DateTime.fromMillisecondsSinceEpoch(value.round(), isUtc: true);
       final text = df.format(dt);
 
-      final double fontSize = fontScaler(context, 12);
-      final double labelSpace = sizeScaler(context, 8, 1.5);
+      final double fontSize = fontScaler(context, 10);
 
       return SideTitleWidget(
         meta: meta,
-        space: labelSpace,
         child: Transform.rotate(
           angle: -30 * math.pi / 180,
           child: Text(
             text,
+            textAlign: TextAlign.right,
             style: TextStyle(
               fontSize: fontSize,
               color: AppColors.colorBlack,
@@ -422,10 +482,10 @@ class _ControlChartComponentState extends State<ControlChartComponent> {
       leftTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: sizeScaler(context, 32, 1.5),  // ✅ เติม base ให้ถูกต้อง
+          reservedSize: sizeScaler(context, 14, 2.5),  // ✅ เติม base ให้ถูกต้อง
           interval: _getInterval(),
           getTitlesWidget: (v, meta) {
-            final double fontSize = fontScaler(context, 12);
+            final double fontSize = fontScaler(context, 10);
             return Text(
               v.toStringAsFixed(0),
               style: TextStyle(
@@ -439,7 +499,7 @@ class _ControlChartComponentState extends State<ControlChartComponent> {
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: sizeScaler(context, 24, 1.5),
+          reservedSize: sizeScaler(context, 12, 2.25),
           interval: step,
           getTitlesWidget: bottomLabel,
         ),

@@ -21,9 +21,9 @@ class ViolationsColumn extends StatelessWidget {
     this.combinedSpecLimit,
 
     this.dotSize = 12,
-    this.fontSize = 12,
+    this.fontSize = 10,
     this.gap = 8,
-    this.pillHeight = 16,
+    this.pillHeight = 12,
     this.pillRadius = 999,
   });
 
@@ -169,15 +169,16 @@ class _ViolationRow extends StatelessWidget {
         ),
 
         // Label — keep visible as much as possible
-        Expanded(
-          child: Text(
-            label,
-            maxLines: 1,
-            softWrap: false,
-            overflow: TextOverflow.fade, // looks less like “deleted”
-            style: TextStyle(color: color, fontSize: fontScaler(context, fontSize), fontWeight: FontWeight.bold),
+          SizedBox(
+            width: sizeScaler(context, 48, 2),
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.fade, // looks less like “deleted”
+              style: TextStyle(color: color, fontSize: fontScaler(context, fontSize), fontWeight: FontWeight.bold),
+            ),
           ),
-        ),
 
         // Status icon
         SizedBox(
@@ -188,30 +189,29 @@ class _ViolationRow extends StatelessWidget {
           ),
         ),
 
-        const SizedBox(width: 8),
+        const SizedBox(width: 16),
 
         // Right side: pills or single count — FLEXIBLE (no fixed width)
-        Flexible(
-          fit: FlexFit.loose,
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: (splitPills != null)
-                ? _HorizontalPills(color: color, fontSize: fontScaler(context, fontSize), data: splitPills!)
-                : (showCount
-                    ? Text(
-                        countText ?? '',
-                        maxLines: 1,
-                        overflow: TextOverflow.fade,
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          fontSize: fontScaler(context, fontSize),
-                          color: violated ? AppColors.colorBlack : Colors.grey.shade600,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      )
-                    : const SizedBox.shrink()),
+          Flexible(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: (splitPills != null)
+                  ? _HorizontalPills(color: color, fontSize: fontScaler(context, fontSize), data: splitPills!)
+                  : (showCount
+                      ? Text(
+                          countText ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontSize: fontScaler(context, fontSize),
+                            color: violated ? AppColors.colorBlack : Colors.grey.shade600,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        )
+                      : const SizedBox.shrink()),
+            ),
           ),
-        ),
       ],
     );
   }

@@ -551,16 +551,15 @@ void _ensureYScale() {
     final text = df.format(dt);
 
     // ✅ use textScaler for font and reversedSizeScale for spacing
-    final double fontSize = fontScaler(context, 12);
-    final double labelSpace = sizeScaler(context, 4, 1.5);
+    final double fontSize = fontScaler(context, 10);
 
     return SideTitleWidget(
       meta: meta,
-      space: labelSpace,
       child: Transform.rotate(
         angle: -30 * math.pi / 180,
         child: Text(
           text,
+          textAlign: TextAlign.right,
           style: TextStyle(
             fontSize: fontSize,
             color: AppColors.colorBlack,
@@ -576,10 +575,10 @@ void _ensureYScale() {
         sideTitles: SideTitles(
           showTitles: true,
           // ✅ make reserved space scale consistently with text
-          reservedSize: sizeScaler(context, 32, 1.5),
+          reservedSize: sizeScaler(context, 14, 2.5),
           interval: _getInterval(),
           getTitlesWidget: (v, meta) {
-            final double fontSize = fontScaler(context,12);
+            final double fontSize = fontScaler(context,10);
             return Text(
               v.toStringAsFixed(2),
               style: TextStyle(
@@ -593,7 +592,7 @@ void _ensureYScale() {
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: sizeScaler(context, 24, 1.5),
+          reservedSize: sizeScaler(context, 12, 2.25),
           interval: step,
           getTitlesWidget: bottomLabel,
         ),

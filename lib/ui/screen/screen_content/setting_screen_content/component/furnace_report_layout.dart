@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
-import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/help.dart';
-import 'package:control_chart/ui/core/shared/small_control_chart/surface_hardness/help.dart';
+import 'package:control_chart/ui/core/shared/small_control_chart/cde_cdt/container_decorator.dart';
+import 'package:control_chart/ui/core/shared/small_control_chart/surface_hardness/container_decorator.dart';
 import 'package:control_chart/ui/core/shared/table_component.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
