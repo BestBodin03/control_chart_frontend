@@ -5,12 +5,14 @@ import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
+import 'package:control_chart/ui/core/shared/chart_selection.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../common/chart/legend_item.dart';
 import '../../common/chart/size_scaler.dart';
+import '../../small_control_chart/small_control_chart_var.dart';
 
 /// CDE/CDT MR Chart — Surface-like (xStart/xEnd), local tooltip, length-1 points
 class MrChartComponent extends StatefulWidget implements ChartComponent {
@@ -110,9 +112,119 @@ class MrChartComponent extends StatefulWidget implements ChartComponent {
 class _MrChartComponentState extends State<MrChartComponent> {
   final GlobalKey _chartKey = GlobalKey();
 
-  double? _cachedMinY;
+    double? _cachedMinY;
   double? _cachedMaxY;
   double? _cachedInterval;
+
+
+  // หมายเหตุ: ต้องมี niceSteps ที่อื่นอยู่แล้ว (เช่น [1,2,2.5,5,10,...])
+  double _niceStepCeil(double x) {
+    int left = 0, right = niceSteps.length - 1;
+    while (left < right) {
+      final mid = (left + right) >> 1;
+      if (niceSteps[mid] >= x) {
+        right = mid;
+      } else {
+        left = mid + 1;
+      }
+    }
+    return niceSteps[left];
+  }
+
+  double _nextNiceStep(double step) {
+    int left = 0, right = niceSteps.length - 1;
+    while (left < right) {
+      final mid = (left + right) >> 1;
+      if (niceSteps[mid] > step) {
+        right = mid;
+      } else {
+        left = mid + 1;
+      }
+    }
+    return niceSteps[left];
+  }
+
+  void _ensureYScale() {
+    if (_cachedInterval != null) return;
+
+    const divisions = 5; // -> 6 ticks (divisions + 1)
+
+    // Select matching chart fields
+
+    final ucl = widget.controlChartStats.sel(
+      widget.controlChartStats?.cdeControlLimitMRChart?.ucl,
+      widget.controlChartStats?.cdtControlLimitMRChart?.ucl,
+      widget.controlChartStats?.compoundLayerControlLimitMRChart?.ucl,
+    );
+
+    final lcl = 0.0;
+
+    final minSel = 0.0;
+    final maxSel = widget.controlChartStats?.sel(
+      widget.controlChartStats?.yAxisRange?.maxYcdeMrChart ?? 0.0,
+      widget.controlChartStats?.yAxisRange?.maxYcdtMrChart ?? 0.0,
+      widget.controlChartStats?.yAxisRange?.maxYcompoundLayerMrChart ?? 0.0,
+    );
+
+    if (maxSel! <= minSel!) {
+      _cachedMinY = minSel;
+      _cachedMaxY = minSel + divisions;
+      _cachedInterval = 1.0;
+      return;
+    }
+
+    // 1) เลือก interval แบบ nice จาก ideal
+    final ideal = (maxSel - minSel) / divisions;
+    double interval = _niceStepCeil(ideal);
+
+    // 2) จัด minY ให้ตรง multiple ของ interval แล้วกำหนด maxY = minY + divisions*interval (คง span)
+    double minY = (minSel / interval).floor() * interval;
+    double maxY = minY + divisions * interval;
+
+    // 3) ถ้าคุมไม่ถึง maxSel เลื่อนช่วงแบบคง span หรืออัพ step
+    while (maxY < maxSel - 1e-12) {
+      // ลองเลื่อนช่วงขึ้นทั้งก้อน
+      minY += interval;
+      maxY = minY + divisions * interval;
+
+      // ถ้ายังไม่ถึง แสดงว่า interval เล็กไป → ใช้ next nice step และ realign
+      if (maxY < maxSel - 1e-12) {
+        interval = _nextNiceStep(interval);
+        minY = (minSel / interval).floor() * interval;
+        maxY = minY + divisions * interval;
+      }
+    }
+
+    // 4) กันเส้นสำคัญมานั่งบน min/max → เลื่อนช่วงแบบคง span
+    final pins = <double?>[
+      lcl,
+      ucl
+    ];
+
+    for (final v in pins) {
+      if (v == null) continue;
+      if ((v - minY).abs() < 1e-9) {
+        minY -= interval;
+        maxY = minY + divisions * interval;
+      } else if ((v - maxY).abs() < 1e-9) {
+        maxY += interval;
+        minY = maxY - divisions * interval;
+      }
+    }
+
+    // 5) snap ลด floating error และย้ำ span คงที่
+    double _snap(double val, double step) => (val / step).roundToDouble() * step;
+    minY = _snap(minY, interval);
+    maxY = minY + (divisions+1) * interval;
+
+    if(minY <= 0.0){
+      minY = 0.0;
+    }
+
+    _cachedMinY = minY;
+    _cachedMaxY = maxY;
+    _cachedInterval = interval;
+  }
 
   final ValueNotifier<_MrTip?> _tip = ValueNotifier<_MrTip?>(null);
 
@@ -160,6 +272,12 @@ class _MrChartComponentState extends State<MrChartComponent> {
     final double safeRange = (maxXv - minXv).abs().clamp(1.0, double.infinity);
     final int desiredTick = (widget.controlChartStats?.xTick ?? 6).clamp(2, 100);
     final double tickInterval = safeRange / (desiredTick - 1);
+    final maxSel = widget.controlChartStats?.sel(
+      widget.controlChartStats?.yAxisRange?.maxYcdeMrChart ?? 0.0,
+      widget.controlChartStats?.yAxisRange?.maxYcdtMrChart ?? 0.0,
+      widget.controlChartStats?.yAxisRange?.maxYcompoundLayerMrChart ?? 0.0,
+    );
+    final minSel =0.0;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -186,8 +304,8 @@ class _MrChartComponentState extends State<MrChartComponent> {
                     LineChartData(
                       minX: minXv,
                       maxX: maxXv,
-                      minY: _getMinY(),
-                      maxY: _getMaxY(),
+                      minY: _getMinY(minSel),
+                      maxY: _getMaxY(maxSel ?? 0.0),
                       gridData: _gridData(minXv, maxXv, tickInterval),
                       titlesData: _titlesData(minXv, maxXv),
                       borderData: _borderData(),
@@ -335,7 +453,7 @@ class _MrChartComponentState extends State<MrChartComponent> {
         sideTitles: SideTitles(
           showTitles: true,
           // ✅ scale reserved space consistently with font
-          reservedSize: sizeScaler(context, 36, 1.5),
+          reservedSize: sizeScaler(context, 32, 1.5),
           interval: _getInterval(),
           getTitlesWidget: (v, meta) {
             final double fontSize = MediaQuery.of(context).textScaler.scale(12);
@@ -478,92 +596,24 @@ class _MrChartComponentState extends State<MrChartComponent> {
   }
 
   // --------------- Y SCALE ---------------
-  double _getMaxY() {
-    if (_cachedInterval == null) _getInterval();
-    return _cachedMaxY ?? 0.0;
-  }
-  double _getMinY() {
-    if (_cachedInterval == null) _getInterval();
+  double _getMinY(double _) {
+    if (_cachedInterval == null) _ensureYScale();
     return _cachedMinY ?? 0.0;
   }
 
+  double _getMaxY(double __) {
+    if (_cachedInterval == null) _ensureYScale();
+    return _cachedMaxY ?? 0.0;
+  }
+
   double _getInterval() {
-    const divisions = 5;
-    final minSel = 0.0;
-    final maxSel = _sel(
-          widget.controlChartStats?.yAxisRange?.maxYcdeMrChart,
-          widget.controlChartStats?.yAxisRange?.maxYcdtMrChart,
-          widget.controlChartStats?.yAxisRange?.maxYcompoundLayerMrChart,
-        ) ?? 0.0;
-
-    if (maxSel <= minSel) {
-      _cachedMinY = minSel;
-      _cachedMaxY = minSel + divisions;
-      _cachedInterval = 1.0;
-      return _cachedInterval!;
-    }
-
-    final ideal = (maxSel - minSel) / divisions;
-    double interval = _niceStepCeil(ideal);
-
-    double minY = (minSel / interval).floor() * interval;
-    double maxY = minY + divisions * interval;
-
-    while (maxY < maxSel - 1e-12) {
-      interval = _nextNiceStep(interval);
-      minY = (minSel / interval).floor() * interval;
-      maxY = minY + divisions * interval;
-    }
-
-    _cachedMinY = minY;
-    _cachedMaxY = maxY;
-    _cachedInterval = interval;
-    return interval;
-  }
-
-  double _niceStepCeil(double x) {
-    if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
-    final exp = (math.log(x) / math.log(10)).floor();
-    final mag = math.pow(10.0, exp).toDouble();
-    final mant = x / mag;
-    if (mant <= 0.025) return 0.025 * mag;
-    if (mant <= 0.050) return 0.050 * mag;
-    if (mant <= 0.075) return 0.075 * mag;
-    if (mant <= 0.125) return 0.125 * mag;
-    if (mant <= 0.25) return 0.25 * mag;
-    if (mant <= 0.5) return 0.5 * mag;
-    if (mant <= 1.0) return 1.0 * mag;
-    if (mant <= 1.25) return 1.25 * mag;
-    if (mant <= 1.5) return 1.5 * mag;
-    if (mant <= 2.0) return 2.0 * mag;
-    if (mant <= 2.5) return 2.5 * mag;
-    if (mant <= 3.0) return 3.0 * mag;
-    if (mant <= 4.0) return 4.0 * mag;
-    if (mant <= 5.0) return 5.0 * mag;
-    return 10.0 * mag;
-  }
-
-  double _nextNiceStep(double step) {
-    final exp = (math.log(step) / math.log(10)).floor();
-    final mag = math.pow(10.0, exp).toDouble();
-    final mant = step / mag;
-    if (mant <= 0.025) return 0.050 * mag;
-    if (mant <= 0.050) return 0.075 * mag;
-    if (mant <= 0.075) return 0.125 * mag;
-    if (mant <= 0.125) return 0.25 * mag;
-    if (mant <= 0.25) return 0.5 * mag;
-    if (mant <= 0.5) return 1.0 * mag;
-    if (mant < 1.0) return 2.0 * mag;
-    if (mant < 2.0) return 2.5 * mag;
-    if (mant < 2.5) return 3.0 * mag;
-    if (mant < 3.0) return 3.5 * mag;
-    if (mant < 5.0) return 10.0 * mag;
-    return 10.0 * mag;
+    if (_cachedInterval == null) _ensureYScale();
+    return _cachedInterval!;
   }
 
   double _xInterval(PeriodType periodType, double minX, double maxX) {
     final safeRange = (maxX - minX).abs().clamp(1.0, double.infinity);
-    return safeRange / 6.0;
+    return safeRange / 6.0; // 6 ticks บนแกน X
   }
 }
 

@@ -5,10 +5,12 @@ import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
+import 'package:control_chart/ui/core/shared/chart_selection.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../common/chart/font_scaler.dart';
 import '../../common/chart/legend_item.dart';
 import '../../common/chart/size_scaler.dart';
 import '../../small_control_chart/small_control_chart_var.dart';
@@ -42,52 +44,38 @@ class ControlChartComponent extends StatefulWidget implements ChartComponent {
   Widget buildLegend(BuildContext context) {
     String fmt(double? v) => (v == null || v == 0.0) ? 'N/A' : v.toStringAsFixed(2);
 
-    // chart selector helper
-    T? _sel<T>(T? cde, T? cdt, T? comp) {
-      switch (controlChartStats?.secondChartSelected) {
-        case SecondChartSelected.cde:
-          return cde;
-        case SecondChartSelected.cdt:
-          return cdt;
-        case SecondChartSelected.compoundLayer:
-          return comp;
-        default:
-          return null;
-      }
-    }
-
     // Select matching chart fields
-    final specUsl = _sel(
+    final specUsl = controlChartStats.sel(
       controlChartStats?.specAttribute?.cdeUpperSpec,
       controlChartStats?.specAttribute?.cdtUpperSpec,
       controlChartStats?.specAttribute?.compoundLayerUpperSpec,
     );
 
-    final target = _sel(
+    final target = controlChartStats.sel(
       controlChartStats?.specAttribute?.cdeTarget,
       controlChartStats?.specAttribute?.cdtTarget,
       controlChartStats?.specAttribute?.compoundLayerTarget,
     );
 
-    final avg = _sel(
+    final avg = controlChartStats.sel(
       controlChartStats?.cdeAverage,
       controlChartStats?.cdtAverage,
       controlChartStats?.compoundLayerAverage,
     );
 
-    final ucl = _sel(
+    final ucl = controlChartStats.sel(
       controlChartStats?.cdeControlLimitIChart?.ucl,
       controlChartStats?.cdtControlLimitIChart?.ucl,
       controlChartStats?.compoundLayerControlLimitIChart?.ucl,
     );
 
-    final lcl = _sel(
+    final lcl = controlChartStats.sel(
       controlChartStats?.cdeControlLimitIChart?.lcl,
       controlChartStats?.cdtControlLimitIChart?.lcl,
       controlChartStats?.compoundLayerControlLimitIChart?.lcl,
     );
 
-    final specLsl = _sel(
+    final specLsl = controlChartStats.sel(
       controlChartStats?.specAttribute?.cdeLowerSpec,
       controlChartStats?.specAttribute?.cdtLowerSpec,
       controlChartStats?.specAttribute?.compoundLayerLowerSpec,
@@ -145,87 +133,216 @@ class ControlChartComponent extends StatefulWidget implements ChartComponent {
 class _ControlChartComponentState extends State<ControlChartComponent> {
   final GlobalKey _chartKey = GlobalKey();
 
-  double? _cachedMinY;
-  double? _cachedMaxY;
-  double? _cachedInterval;
+double? _cachedMinY;
+double? _cachedMaxY;
+double? _cachedInterval;
 
+double _niceStepCeil(double x) {
+  int left = 0, right = niceSteps.length - 1;
+  while (left < right) {
+    final mid = (left + right) >> 1;
+    if (niceSteps[mid] >= x) {
+      right = mid;
+    } else {
+      left = mid + 1;
+    }
+  }
+  return niceSteps[left];
+}
+
+double _nextNiceStep(double step) {
+  int left = 0, right = niceSteps.length - 1;
+  while (left < right) {
+    final mid = (left + right) >> 1;
+    if (niceSteps[mid] > step) {
+      right = mid;
+    } else {
+      left = mid + 1;
+    }
+  }
+  return niceSteps[left];
+}
 
 void _ensureYScale() {
-    if (_cachedInterval != null) return;
+  if (_cachedInterval != null) return;
 
-    const divisions = 5;
-    final yr = widget.controlChartStats?.yAxisRange;
+  const divisions = 5;
+  const epsilon = 1e-9;
 
-    final minSel = _sel<double?>(
-          yr?.minYcdeControlChart,
-          yr?.minYcdtControlChart,
-          yr?.minYcompoundLayerControlChart,
-        ) ?? 0.0;
+  final specUsl = widget.controlChartStats.sel(
+    widget.controlChartStats?.specAttribute?.cdeUpperSpec,
+    widget.controlChartStats?.specAttribute?.cdtUpperSpec,
+    widget.controlChartStats?.specAttribute?.compoundLayerUpperSpec,
+  );
 
-    final maxSel = _sel<double?>(
-          yr?.maxYcdeControlChart,
-          yr?.maxYcdtControlChart,
-          yr?.maxYcompoundLayerControlChart,
-        ) ?? minSel;
+  final target = widget.controlChartStats.sel(
+    widget.controlChartStats?.specAttribute?.cdeTarget,
+    widget.controlChartStats?.specAttribute?.cdtTarget,
+    widget.controlChartStats?.specAttribute?.compoundLayerTarget,
+  );
 
-    if (maxSel <= minSel) {
-      _cachedMinY = minSel;
-      _cachedMaxY = minSel + divisions;
-      _cachedInterval = 1.0;
-      return;
+  final avg = widget.controlChartStats.sel(
+    widget.controlChartStats?.cdeAverage,
+    widget.controlChartStats?.cdtAverage,
+    widget.controlChartStats?.compoundLayerAverage,
+  );
+
+  final ucl = widget.controlChartStats.sel(
+    widget.controlChartStats?.cdeControlLimitIChart?.ucl,
+    widget.controlChartStats?.cdtControlLimitIChart?.ucl,
+    widget.controlChartStats?.compoundLayerControlLimitIChart?.ucl,
+  );
+
+  final lcl = widget.controlChartStats.sel(
+    widget.controlChartStats?.cdeControlLimitIChart?.lcl,
+    widget.controlChartStats?.cdtControlLimitIChart?.lcl,
+    widget.controlChartStats?.compoundLayerControlLimitIChart?.lcl,
+  );
+
+  final specLsl = widget.controlChartStats.sel(
+    widget.controlChartStats?.specAttribute?.cdeLowerSpec,
+    widget.controlChartStats?.specAttribute?.cdtLowerSpec,
+    widget.controlChartStats?.specAttribute?.compoundLayerLowerSpec,
+  );
+
+  final minSel = widget.controlChartStats.sel(
+    widget.controlChartStats?.yAxisRange?.minYcdeControlChart ?? 0.0,
+    widget.controlChartStats?.yAxisRange?.minYcdtControlChart ?? 0.0,
+    widget.controlChartStats?.yAxisRange?.minYcompoundLayerControlChart ?? 0.0,
+  );
+  final maxSel = widget.controlChartStats.sel(
+    widget.controlChartStats?.yAxisRange?.maxYcdeControlChart ?? 0.0,
+    widget.controlChartStats?.yAxisRange?.maxYcdtControlChart ?? 0.0,
+    widget.controlChartStats?.yAxisRange?.maxYcompoundLayerControlChart ?? 0.0,
+  );
+
+  if (maxSel! <= minSel!) {
+    _cachedMinY = minSel;
+    _cachedMaxY = minSel + divisions;
+    _cachedInterval = 1.0;
+    return;
+  }
+
+  // Collect all pins
+  final pins = <double?>[specLsl, specUsl, lcl, ucl];
+  final activePins = pins.where((p) => p != null).map((p) => p!).toList();
+
+  debugPrint('Initial range: [$minSel, $maxSel]');
+  debugPrint('Active pins: $activePins');
+
+  // Expand initial range to avoid pins on boundaries
+  double workingMin = minSel;
+  double workingMax = maxSel;
+
+  for (final pin in activePins) {
+    if ((pin - workingMin).abs() < epsilon) {
+      workingMin = pin - 0.1; // Push min below the pin
+    }
+    if ((pin - workingMax).abs() < epsilon) {
+      workingMax = pin + 0.1; // Push max above the pin
+    }
+  }
+
+  debugPrint('Adjusted working range: [$workingMin, $workingMax]');
+
+  // Calculate ideal interval
+  final ideal = (workingMax - workingMin) / divisions;
+  double interval = _niceStepCeil(ideal);
+
+  debugPrint('Initial interval: $interval (from ideal: $ideal)');
+
+  // Align to grid
+  double minY = (workingMin / interval).floor() * interval;
+  double maxY = minY + divisions * interval;
+
+  // Ensure coverage of workingMax
+  while (maxY < workingMax - epsilon) {
+    interval = _nextNiceStep(interval);
+    minY = (workingMin / interval).floor() * interval;
+    maxY = minY + divisions * interval;
+  }
+
+  debugPrint('After coverage check: minY=$minY, maxY=$maxY, interval=$interval');
+
+  // Check and avoid collisions by shifting grid
+  bool needsAdjustment = true;
+  int attempts = 0;
+  const maxAttempts = 10;
+
+  while (needsAdjustment && attempts < maxAttempts) {
+    attempts++;
+    needsAdjustment = false;
+
+    for (final pin in activePins) {
+      // Check if pin is too close to minY
+      if ((pin - minY).abs() < epsilon) {
+        debugPrint('Attempt $attempts: Pin $pin collides with minY=$minY');
+        // Shift entire grid down by one interval
+        minY -= interval;
+        maxY = minY + divisions * interval;
+        needsAdjustment = true;
+        break;
+      }
+      
+      // Check if pin is too close to maxY
+      if ((pin - maxY).abs() < epsilon) {
+        debugPrint('Attempt $attempts: Pin $pin collides with maxY=$maxY');
+        // Shift entire grid up by one interval
+        minY += interval;
+        maxY = minY + divisions * interval;
+        needsAdjustment = true;
+        break;
+      }
+
+      // Check if pin sits exactly on any tick mark
+      final tickPosition = (pin - minY) / interval;
+      if ((tickPosition - tickPosition.round()).abs() < epsilon) {
+        debugPrint('Attempt $attempts: Pin $pin sits on tick at position ${tickPosition.round()}');
+        // Shift grid by half interval to offset all ticks
+        minY -= interval * 0.5;
+        maxY = minY + divisions * interval;
+        needsAdjustment = true;
+        break;
+      }
     }
 
-    final ideal = (maxSel - minSel) / divisions;
-    double interval = _niceStepCeil(ideal);
-
-    double minY = (minSel / interval).floor() * interval;
-    double maxY = minY + divisions * interval;
-
-    while (maxY < maxSel - 1e-12) {
+    // After adjustment, verify we still cover the data range
+    if (minY > minSel + epsilon || maxY < maxSel - epsilon) {
+      debugPrint('Lost coverage after adjustment, increasing interval');
       interval = _nextNiceStep(interval);
-      minY = (minSel / interval).floor() * interval;
+      minY = (workingMin / interval).floor() * interval;
+      maxY = minY + divisions * interval;
+      needsAdjustment = true;
+    }
+  }
+
+  // If we hit max attempts, use fallback: increase interval significantly
+  if (attempts >= maxAttempts) {
+    debugPrint('Max attempts reached, using fallback');
+    interval = _nextNiceStep(interval);
+    minY = (workingMin / interval).floor() * interval;
+    maxY = minY + divisions * interval;
+    
+    // Ensure coverage
+    while (maxY < workingMax - epsilon) {
+      minY -= interval;
       maxY = minY + divisions * interval;
     }
-
-    // ===== ดึงค่า Spec และ Control Limits =====
-    final specAttr = widget.controlChartStats?.specAttribute;
-    final lsl = specAttr?.compoundLayerLowerSpec ??
-                specAttr?.cdeLowerSpec ??
-                specAttr?.cdtLowerSpec;
-    final usl = specAttr?.compoundLayerUpperSpec ??
-                specAttr?.cdeUpperSpec ??
-                specAttr?.cdtUpperSpec;
-
-    final lcl = widget.controlChartStats?.cdeControlLimitIChart?.lcl ??
-                widget.controlChartStats?.cdtControlLimitIChart?.lcl ??
-                widget.controlChartStats?.compoundLayerControlLimitIChart?.lcl;
-
-    final ucl = widget.controlChartStats?.cdeControlLimitIChart?.ucl ??
-                widget.controlChartStats?.cdtControlLimitIChart?.ucl ??
-                widget.controlChartStats?.compoundLayerControlLimitIChart?.ucl;
-
-  // ===== เช็คว่าชนกับ minY หรือ maxY หรือไม่ =====
-  final checkValues = <double?>[lsl, usl, lcl, ucl];
-
-  for (final val in checkValues) {
-    if (val == null) continue;
-
-    // ถ้าชนกับ minY → ลด minY แต่ไม่ให้ติดลบ
-    if ((val - minY).abs() < 1e-9) {
-      minY = (minY - interval).clamp(0.0, double.infinity);
-    }
-
-    // ถ้าชนกับ maxY → เพิ่ม maxY
-    if ((val - maxY).abs() < 1e-9) {
-      maxY += interval;
-    }
   }
 
+  // Final snap
+  double _snap(double val, double step) => (val / step).roundToDouble() * step;
+  minY = _snap(minY, interval);
+  maxY = minY + divisions * interval;
 
-    _cachedMinY = minY;
-    _cachedMaxY = maxY;
-    _cachedInterval = interval;
-  }
+  debugPrint('Final: minY=$minY, maxY=$maxY, interval=$interval');
+
+  _cachedMinY = minY;
+  _cachedMaxY = maxY;
+  _cachedInterval = interval;
+}
+
+
 
   final ValueNotifier<_Tip?> _tip = ValueNotifier<_Tip?>(null);
 
@@ -434,8 +551,8 @@ void _ensureYScale() {
     final text = df.format(dt);
 
     // ✅ use textScaler for font and reversedSizeScale for spacing
-    final double fontSize = MediaQuery.of(context).textScaler.scale(12);
-    final double labelSpace = sizeScaler(context, 8, 1.5);
+    final double fontSize = fontScaler(context, 12);
+    final double labelSpace = sizeScaler(context, 4, 1.5);
 
     return SideTitleWidget(
       meta: meta,
@@ -459,10 +576,10 @@ void _ensureYScale() {
         sideTitles: SideTitles(
           showTitles: true,
           // ✅ make reserved space scale consistently with text
-          reservedSize: sizeScaler(context, 36, 1.5),
+          reservedSize: sizeScaler(context, 32, 1.5),
           interval: _getInterval(),
           getTitlesWidget: (v, meta) {
-            final double fontSize = MediaQuery.of(context).textScaler.scale(12);
+            final double fontSize = fontScaler(context,12);
             return Text(
               v.toStringAsFixed(2),
               style: TextStyle(
@@ -714,7 +831,7 @@ void _ensureYScale() {
 
     return LineTouchData(
       handleBuiltInTouches: true,
-      touchSpotThreshold: 8,
+      touchSpotThreshold: 4,
       mouseCursorResolver: (event, response) {
         final hasHit = response?.lineBarSpots?.isNotEmpty ?? false;
         return hasHit ? SystemMouseCursors.click : SystemMouseCursors.basic;
@@ -808,112 +925,26 @@ void _ensureYScale() {
     );
   }
 
-  double _niceStepCeil(double x) {
-    int left = 0;
-    int right = niceSteps.length - 1;
-
-    while (left < right) {
-      int mid = (left + right) >> 1; // หาร 2 แบบ integer
-      if (niceSteps[mid] >= x) {
-        right = mid;
-      } else {
-        left = mid + 1;
-      }
-    }
-    return niceSteps[left];
+  double _getMinY(double _) {
+    if (_cachedInterval == null) _ensureYScale();
+    return _cachedMinY ?? 0.0;
   }
 
-  /// คืนค่า step ถัดไป (strictly bigger than step)
-  double _nextNiceStep(double step) {
-    int left = 0;
-    int right = niceSteps.length - 1;
-
-    while (left < right) {
-      int mid = (left + right) >> 1;
-      if (niceSteps[mid] > step) {
-        right = mid;
-      } else {
-        left = mid + 1;
-      }
-    }
-    return niceSteps[left];
+  double _getMaxY(double __) {
+    if (_cachedInterval == null) _ensureYScale();
+    return _cachedMaxY ?? 0.0;
   }
 
-
-    double _getMinY(double minSel) {
-      if (_cachedInterval == null) _ensureYScale();
-      double minY = _cachedMinY ?? 0.0;
-      final interval = _cachedInterval ?? 1.0;
-
-      // ถ้า minSel เท่ากับ minY (หรือใกล้กว่า threshold) → ขยับลง 1 step
-      if ((minSel - minY).abs() < interval * 0.5) {
-        minY = (minY - interval).clamp(0.0, double.infinity);
-      }
-      return minY;
-    }
-
-    double _getMaxY(double maxSel) {
-      if (_cachedInterval == null) _ensureYScale();
-      double maxY = _cachedMaxY ?? 0.0;
-      final interval = _cachedInterval ?? 1.0;
-
-      if ((maxSel - maxY).abs() < interval * 0.5) {
-        maxY = maxY + interval;
-      }
-      return maxY;
-    }
-
-
-    double _getInterval() {
-      const divisions = 5; // -> 6 ticks
-      final spec = widget.controlChartStats?.yAxisRange;
-      double? _spotMin() =>
-      _sel(
-        spec?.minYcdeControlChart ?? 0, 
-        spec?.minYcdtControlChart ?? 0, 
-        spec?.minYcompoundLayerControlChart ?? 0);
-
-      double? _spotMax() =>
-      _sel(
-        spec?.maxYcdeControlChart ?? 0, 
-        spec?.maxYcdtControlChart ?? 0, 
-        spec?.maxYcompoundLayerControlChart ?? 0);
-      final spotMin = _spotMin()
-      ?? 0.0;
-      final spotMax = _spotMax()
-      ?? spotMin;
-
-      if (spotMax <= spotMin) {
-        _cachedMinY = spotMin;
-        _cachedMaxY = spotMin + divisions;
-        _cachedInterval = 1.0;
-        return _cachedInterval!;
-      }
-
-      final ideal = (spotMax - spotMin) / divisions;
-      double interval = _niceStepCeil(ideal);
-
-      double minY = (spotMin / interval).floor() * interval;
-      double maxY = minY + divisions * interval;
-
-      while (maxY < spotMax - 1e-12) {
-        interval = _nextNiceStep(interval);
-        minY = (spotMin / interval).floor() * interval;
-        maxY = minY + divisions * interval;
-      }
-
-      _cachedMinY = minY;
-      _cachedMaxY = maxY;
-      _cachedInterval = interval;
-      return interval;
-    }
-}
-
+  double _getInterval() {
+    if (_cachedInterval == null) _ensureYScale();
+    return _cachedInterval!;
+  }
 
   double _xInterval(PeriodType periodType, double minX, double maxX) {
     final safeRange = (maxX - minX).abs().clamp(1.0, double.infinity);
-    return safeRange / 6.0;
+    return safeRange / 6.0; // 6 ticks บนแกน X
   }
+}
 
 // ---------- Tooltip UI ----------
 class _Tip {

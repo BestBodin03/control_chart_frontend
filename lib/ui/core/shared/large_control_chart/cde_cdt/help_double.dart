@@ -268,7 +268,7 @@ class _LargeContainerCdeCdt extends StatelessWidget {
                   ),
                   const Spacer(),
                   Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
+                    padding: const EdgeInsets.only(top: 16.0),
                     child: ViolationSpecificQueueCard(
                         violations: buildViolationsFromStateCdeCdt(searchState),
                       ),
@@ -294,7 +294,7 @@ class _LargeContainerCdeCdt extends StatelessWidget {
                         child: Padding(
                           padding: const EdgeInsets.all(8),
                           child: SizedBox(
-                            width: 264,
+                            width: 280,
                             child: ViolationsColumn(
                               combinedControlLimit: vOverCtrlL + vOverCtrlU,
                               combinedSpecLimit: vOverSpecL + vOverSpecU,

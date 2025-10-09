@@ -5,6 +5,7 @@ import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
+import 'package:control_chart/ui/core/shared/common/chart/font_scaler.dart';
 import 'package:control_chart/ui/core/shared/dashed_line_painter.dart' show DashedLinePainter;
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/help.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -53,42 +54,42 @@ class ControlChartComponent extends StatefulWidget implements ChartComponent {
       alignment: WrapAlignment.spaceEvenly,
       children: [
         if (fmt(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec) != 'N/A')
-          legendItem(context, 
+          legendItem(context,
             'Spec',
             Colors.red,
             fmt(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec),
           ),
 
         if (fmt(controlChartStats?.controlLimitIChart?.ucl) != 'N/A')
-          legendItem(context, 
+          legendItem(context,
             'UCL',
             Colors.orange,
             fmt(controlChartStats?.controlLimitIChart?.ucl),
           ),
 
         if (fmt(controlChartStats?.specAttribute?.surfaceHardnessTarget) != 'N/A')
-          legendItem(context, 
+          legendItem(context,
             'Target',
             Colors.deepPurple.shade300,
             fmt(controlChartStats?.specAttribute?.surfaceHardnessTarget),
           ),
 
         if (fmt(controlChartStats?.average) != 'N/A')
-          legendItem(context, 
+          legendItem(context,
             'AVG',
             Colors.green,
             fmt(controlChartStats?.average),
           ),
 
         if (fmt(controlChartStats?.controlLimitIChart?.lcl) != 'N/A')
-          legendItem(context, 
+          legendItem(context,
             'LCL',
             Colors.orange,
             fmt(controlChartStats?.controlLimitIChart?.lcl),
           ),
 
         if (fmt(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec) != 'N/A')
-          legendItem(context, 
+          legendItem(context,
             'Spec',
             Colors.red,
             fmt(controlChartStats?.specAttribute?.surfaceHardnessLowerSpec),
@@ -96,7 +97,6 @@ class ControlChartComponent extends StatefulWidget implements ChartComponent {
       ],
     );
   }
-
 
   @override
   FlBorderData buildBorderData() => FlBorderData(show: false);
@@ -122,20 +122,45 @@ class ControlChartComponent extends StatefulWidget implements ChartComponent {
 class _ControlChartComponentState extends State<ControlChartComponent> {
   final GlobalKey _chartKey = GlobalKey();
 
-  // ---------- คำนวณ/แคชสเกลแกน Y ----------
-  double? _cachedMinY = 0.0;
+  // ---------- คำนวณ/แคชสเกลแกน Y (ล็อก 6 ticks) ----------
+  double? _cachedMinY;
   double? _cachedMaxY;
   double? _cachedInterval;
+
+  // หมายเหตุ: ต้องมี niceSteps ที่อื่นอยู่แล้ว (เช่น [1,2,2.5,5,10,...])
+  double _niceStepCeil(double x) {
+    int left = 0, right = niceSteps.length - 1;
+    while (left < right) {
+      final mid = (left + right) >> 1;
+      if (niceSteps[mid] >= x) {
+        right = mid;
+      } else {
+        left = mid + 1;
+      }
+    }
+    return niceSteps[left];
+  }
+
+  double _nextNiceStep(double step) {
+    int left = 0, right = niceSteps.length - 1;
+    while (left < right) {
+      final mid = (left + right) >> 1;
+      if (niceSteps[mid] > step) {
+        right = mid;
+      } else {
+        left = mid + 1;
+      }
+    }
+    return niceSteps[left];
+  }
 
   void _ensureYScale() {
     if (_cachedInterval != null) return;
 
-    const divisions = 5;
-    final yr = widget.controlChartStats?.yAxisRange;
+    const divisions = 5; // -> 6 ticks (divisions + 1)
 
-    final minSel = yr?.minYsurfaceHardnessControlChart ?? 0.0;
-
-    final maxSel = yr?.maxYsurfaceHardnessControlChart ?? 0.0;
+    final minSel = widget.controlChartStats?.yAxisRange?.minYsurfaceHardnessControlChart ?? 0.0;
+    final maxSel = widget.controlChartStats?.yAxisRange?.maxYsurfaceHardnessControlChart ?? minSel;
 
     if (maxSel <= minSel) {
       _cachedMinY = minSel;
@@ -144,50 +169,59 @@ class _ControlChartComponentState extends State<ControlChartComponent> {
       return;
     }
 
+    // 1) เลือก interval แบบ nice จาก ideal
     final ideal = (maxSel - minSel) / divisions;
     double interval = _niceStepCeil(ideal);
 
+    // 2) จัด minY ให้ตรง multiple ของ interval แล้วกำหนด maxY = minY + divisions*interval (คง span)
     double minY = (minSel / interval).floor() * interval;
     double maxY = minY + divisions * interval;
 
+    // 3) ถ้าคุมไม่ถึง maxSel เลื่อนช่วงแบบคง span หรืออัพ step
     while (maxY < maxSel - 1e-12) {
-      interval = _nextNiceStep(interval);
-      minY = (minSel / interval).floor() * interval;
+      // ลองเลื่อนช่วงขึ้นทั้งก้อน
+      minY += interval;
       maxY = minY + divisions * interval;
+
+      // ถ้ายังไม่ถึง แสดงว่า interval เล็กไป → ใช้ next nice step และ realign
+      if (maxY < maxSel - 1e-12) {
+        interval = _nextNiceStep(interval);
+        minY = (minSel / interval).floor() * interval;
+        maxY = minY + divisions * interval;
+      }
     }
 
-    // ===== ดึงค่า Spec และ Control Limits =====
-    final specAttr = widget.controlChartStats?.specAttribute;
-    final lsl = specAttr?.surfaceHardnessLowerSpec;
-    final usl = specAttr?.surfaceHardnessUpperSpec;
+    // 4) กันเส้นสำคัญมานั่งบน min/max → เลื่อนช่วงแบบคง span
+    final spec = widget.controlChartStats?.specAttribute;
+    final pins = <double?>[
+      spec?.surfaceHardnessLowerSpec,
+      spec?.surfaceHardnessUpperSpec,
+      widget.controlChartStats?.controlLimitIChart?.lcl,
+      widget.controlChartStats?.controlLimitIChart?.ucl,
+    ];
 
-    final lcl = widget.controlChartStats?.controlLimitIChart?.lcl ?? 0.0;
-
-    final ucl = widget.controlChartStats?.controlLimitIChart?.ucl ?? 0.0;
-
-    // ===== เช็คว่าชนกับ minY หรือ maxY หรือไม่ =====
-    final checkValues = <double?>[ lsl, usl, lcl, ucl];
-    
-    for (final val in checkValues) {
-      if (val == null) continue;
-      
-      // ถ้าชนกับ minY → ลด minY
-      if ((val - minY).abs() < 1e-9) {
+    for (final v in pins) {
+      if (v == null) continue;
+      if ((v - minY).abs() < 1e-9) {
         minY -= interval;
-      }
-      
-      // ถ้าชนกับ maxY → เพิ่ม maxY
-      if ((val - maxY).abs() < 1e-9) {
+        maxY = minY + divisions * interval;
+      } else if ((v - maxY).abs() < 1e-9) {
         maxY += interval;
+        minY = maxY - divisions * interval;
       }
     }
+
+    // 5) snap ลด floating error และย้ำ span คงที่
+    double _snap(double val, double step) => (val / step).roundToDouble() * step;
+    minY = _snap(minY, interval);
+    maxY = minY + divisions * interval;
 
     _cachedMinY = minY;
     _cachedMaxY = maxY;
     _cachedInterval = interval;
   }
 
-  // Tooltip state ภายใน widget
+  // Tooltip state
   final ValueNotifier<_Tip?> _tip = ValueNotifier<_Tip?>(null);
 
   List<ChartDataPoint> get _pointsInWindow {
@@ -196,8 +230,8 @@ class _ControlChartComponentState extends State<ControlChartComponent> {
     final lo = math.min(widget.xStart.millisecondsSinceEpoch, widget.xEnd.millisecondsSinceEpoch).toDouble();
     final hi = math.max(widget.xStart.millisecondsSinceEpoch, widget.xEnd.millisecondsSinceEpoch).toDouble();
     return src.where((p) {
-          final t = p.collectDate.millisecondsSinceEpoch.toDouble();
-          return t >= lo && t <= hi;
+      final t = p.collectDate.millisecondsSinceEpoch.toDouble();
+      return t >= lo && t <= hi;
     }).toList();
   }
 
@@ -207,205 +241,191 @@ class _ControlChartComponentState extends State<ControlChartComponent> {
     super.dispose();
   }
 
-@override
-Widget build(BuildContext context) {
-  final double minXv = widget.xStart.millisecondsSinceEpoch.toDouble();
-  final double maxXv = widget.xEnd.millisecondsSinceEpoch.toDouble();
-  final double safeRange = (maxXv - minXv).abs().clamp(1.0, double.infinity);
-  final int desiredTick = (widget.controlChartStats?.xTick ?? 6).clamp(2, 100);
-  final double tickInterval = safeRange / (desiredTick - 1);
-  final double minSel = widget.controlChartStats?.yAxisRange?.minYsurfaceHardnessControlChart ?? 0.0;
-  final double maxSel = widget.controlChartStats?.yAxisRange?.maxYsurfaceHardnessControlChart ?? 0.0;
+  @override
+  Widget build(BuildContext context) {
+    final double minXv = widget.xStart.millisecondsSinceEpoch.toDouble();
+    final double maxXv = widget.xEnd.millisecondsSinceEpoch.toDouble();
+    final double safeRange = (maxXv - minXv).abs().clamp(1.0, double.infinity);
+    final int desiredTick = (widget.controlChartStats?.xTick ?? 6).clamp(2, 100);
+    final double tickInterval = safeRange / (desiredTick - 1);
 
-  return LayoutBuilder(
-    builder: (context, constraints) {
-      final Size chartSize = Size(
-        widget.width  ?? constraints.maxWidth,
-        widget.height ?? constraints.maxHeight,
-      );
+    final double minSel = widget.controlChartStats?.yAxisRange?.minYsurfaceHardnessControlChart ?? 0.0;
+    final double maxSel = widget.controlChartStats?.yAxisRange?.maxYsurfaceHardnessControlChart ?? 0.0;
 
-      return Container(
-        height: chartSize.height,
-        width: chartSize.width,
-        decoration: BoxDecoration(
-          color: widget.backgroundColor ?? Colors.white,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Chart
-            Positioned.fill(
-              child: KeyedSubtree(
-                key: _chartKey,
-                child: LineChart(
-                  LineChartData(
-                    minX: minXv,
-                    maxX: maxXv,
-                    minY: _getMinY(minSel),
-                    maxY: _getMaxY(maxSel),
-                    gridData: _gridData(minXv, maxXv, tickInterval),
-                    titlesData: _titlesData(minXv, maxXv),
-                    borderData: _borderData(),
-                    extraLinesData: _controlLines(),
-                    lineBarsData: _lineBarsData(),
-                    lineTouchData: _touchData(),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final Size chartSize = Size(
+          widget.width  ?? constraints.maxWidth,
+          widget.height ?? constraints.maxHeight,
+        );
+
+        return Container(
+          height: chartSize.height,
+          width: chartSize.width,
+          decoration: BoxDecoration(
+            color: widget.backgroundColor ?? Colors.white,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Chart
+              Positioned.fill(
+                child: KeyedSubtree(
+                  key: _chartKey,
+                  child: LineChart(
+                    LineChartData(
+                      minX: minXv,
+                      maxX: maxXv,
+                      minY: _getMinY(minSel),
+                      maxY: _getMaxY(maxSel),
+                      gridData: _gridData(minXv, maxXv, tickInterval),
+                      titlesData: _titlesData(minXv, maxXv),
+                      borderData: _borderData(),
+                      extraLinesData: _controlLines(),
+                      lineBarsData: _lineBarsData(),
+                      lineTouchData: _touchData(),
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            // Tooltip (local-only, non-blocking)
-            ValueListenableBuilder<_Tip?>(
-              valueListenable: _tip,
-              builder: (context, tip, _) {
-                if (tip == null) return const SizedBox.shrink();
+              // Tooltip (local-only, non-blocking)
+              ValueListenableBuilder<_Tip?>(
+                valueListenable: _tip,
+                builder: (context, tip, _) {
+                  if (tip == null) return const SizedBox.shrink();
 
-                const double maxWidth = 144;
-                const double boxH = 196;
-                const double dotR = 8;
-                const double gap = 8;
-                const double pad = 8;
+                  const double maxWidth = 144;
+                  const double boxH = 196;
+                  const double dotR = 8;
+                  const double gap = 8;
+                  const double pad = 8;
 
-                final dx = tip.local.dx;
-                final dy = tip.local.dy;
+                  final dx = tip.local.dx;
+                  final dy = tip.local.dy;
 
-                // available room checks
-                final bool canAbove = dy - (dotR + gap + boxH) >= pad;
-                final bool canBelow = dy + (dotR + gap + boxH) <= chartSize.height - pad;
-                final bool canRight = dx + (dotR + gap + maxWidth) <= chartSize.width  - 6*pad;
-                final bool canLeft  = dx - (dotR + gap + maxWidth) >= pad; // ✅ fix
+                  final bool canAbove = dy - (dotR + gap + boxH) >= pad;
+                  final bool canBelow = dy + (dotR + gap + boxH) <= chartSize.height - pad;
+                  final bool canRight = dx + (dotR + gap + maxWidth) <= chartSize.width  - 6*pad;
+                  final bool canLeft  = dx - (dotR + gap + maxWidth) >= pad;
 
-                double left, top;
+                  double left, top;
 
-                if (canAbove) {
-                  // above
-                  left = dx - maxWidth / 2;
-                  top  = dy - dotR - gap - boxH;
+                  if (canAbove) {
+                    left = dx - maxWidth / 2;
+                    top  = dy - dotR - gap - boxH;
+                    final hiX = chartSize.width - maxWidth - pad;
+                    left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
+                  } else if (canBelow) {
+                    left = dx - maxWidth / 2;
+                    top  = dy + dotR + gap;
+                    final hiX = chartSize.width - maxWidth - pad;
+                    left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
+                  } else if (canRight) {
+                    left = dx + dotR + 4*gap;
+                    top  = dy - boxH / 2;
+                    final hiY = chartSize.height - boxH - pad;
+                    top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
+                  } else if (canLeft) {
+                    left = dx - dotR - gap - maxWidth;
+                    top  = dy - boxH / 2;
+                    final hiY = chartSize.height - boxH - pad;
+                    top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
+                  } else {
+                    left = (chartSize.width  - maxWidth) / 2;
+                    top  = (chartSize.height - boxH) / 2;
+                  }
+
                   final hiX = chartSize.width - maxWidth - pad;
-                  left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
-                } else if (canBelow) {
-                  // below
-                  left = dx - maxWidth / 2;
-                  top  = dy + dotR + gap;
-                  final hiX = chartSize.width - maxWidth - pad;
-                  left = (hiX <= pad) ? (chartSize.width - maxWidth) / 2 : left.clamp(pad, hiX);
-                } else if (canRight) {
-                  // right (vertically centered)
-                  left = dx + dotR + 4*gap;
-                  top  = dy - boxH / 2;
                   final hiY = chartSize.height - boxH - pad;
-                  top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
-                } else if (canLeft) {
-                  // left (vertically centered)
-                  left = dx - dotR - gap - maxWidth;
-                  top  = dy - boxH / 2;
-                  final hiY = chartSize.height - boxH - pad;
-                  top = (hiY <= pad) ? (chartSize.height - boxH) / 2 : top.clamp(pad, hiY);
-                } else {
-                  // very tight: center in the box
-                  left = (chartSize.width  - maxWidth) / 2;
-                  top  = (chartSize.height - boxH) / 2;
-                }
+                  if (hiX > pad) left = left.clamp(pad, hiX);
+                  if (hiY > pad) top  = top.clamp(pad, hiY);
 
-                // final clamp (safety)
-                final hiX = chartSize.width - maxWidth - pad;
-                final hiY = chartSize.height - boxH - pad;
-                if (hiX > pad) left = left.clamp(pad, hiX);
-                if (hiY > pad) top  = top.clamp(pad, hiY);
-
-                return Positioned(
-                  left: left,
-                  top: top,
-                  width: maxWidth,
-                  child: IgnorePointer(
-                    ignoring: true,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.colorBrand.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(8),
+                  return Positioned(
+                    left: left,
+                    top: top,
+                    width: maxWidth,
+                    child: IgnorePointer(
+                      ignoring: true,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.colorBrand.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: tip.content,
                         ),
-                        child: tip.content,
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      );
-    },
-  );
-}
-
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // GRID / TITLES / BORDER
   // ---------------------------------------------------------------------------
- FlGridData _gridData(double? minX, double? maxX, double? tickInterval) {
+  FlGridData _gridData(double? minX, double? maxX, double? tickInterval) {
     return FlGridData(
       show: true,
       drawHorizontalLine: true,
       drawVerticalLine: true,
-      horizontalInterval: _getInterval(),
+      horizontalInterval: _getInterval(),         // ✅ ใช้ interval จาก cache
       verticalInterval: tickInterval ?? 1,
-      getDrawingHorizontalLine: (_) => FlLine(
-        color: Colors.grey.shade200, 
-        strokeWidth: 0.5),
-      getDrawingVerticalLine: (_) => FlLine(
-        color: Colors.grey.shade200, 
-        strokeWidth: 0.5),
+      getDrawingHorizontalLine: (_) => FlLine(color: Colors.grey.shade200, strokeWidth: 0.5),
+      getDrawingVerticalLine: (_) => FlLine(color: Colors.grey.shade200, strokeWidth: 0.5),
     );
   }
 
   FlTitlesData _titlesData(double? minX, double? maxX) {
-  final double minXv = minX ?? widget.xStart.millisecondsSinceEpoch.toDouble();
-  final double maxXv = maxX ?? widget.xEnd.millisecondsSinceEpoch.toDouble();
-  final PeriodType periodType =
-      widget.controlChartStats?.periodType ?? PeriodType.ONE_MONTH;
+    final double minXv = minX ?? widget.xStart.millisecondsSinceEpoch.toDouble();
+    final double maxXv = maxX ?? widget.xEnd.millisecondsSinceEpoch.toDouble();
+    final PeriodType periodType = widget.controlChartStats?.periodType ?? PeriodType.ONE_MONTH;
 
-  final df = DateFormat('dd/MM');
-  final double step = _xInterval(periodType, minXv, maxXv);
+    final df = DateFormat('dd/MM');
+    final double step = _xInterval(periodType, minXv, maxXv);
 
-  // === bottom label builder ===
-  Widget bottomLabel(double value, TitleMeta meta) {
-    final dt = DateTime.fromMillisecondsSinceEpoch(value.round(), isUtc: true);
-    final text = df.format(dt);
+    // bottom label
+    Widget bottomLabel(double value, TitleMeta meta) {
+      final dt = DateTime.fromMillisecondsSinceEpoch(value.round(), isUtc: true);
+      final text = df.format(dt);
 
-    // ✅ use textScaler for font and reversedSizeScale for spacing
-    final double fontSize = MediaQuery.of(context).textScaler.scale(12);
-    final double labelSpace = sizeScaler(context, 8, 1.5);
+      final double fontSize = fontScaler(context, 12);
+      final double labelSpace = sizeScaler(context, 8, 1.5);
 
-    return SideTitleWidget(
-      meta: meta,
-      space: labelSpace,
-      child: Transform.rotate(
-        angle: -30 * math.pi / 180,
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: fontSize,
-            color: AppColors.colorBlack,
+      return SideTitleWidget(
+        meta: meta,
+        space: labelSpace,
+        child: Transform.rotate(
+          angle: -30 * math.pi / 180,
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: fontSize,
+              color: AppColors.colorBlack,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
-          overflow: TextOverflow.ellipsis,
         ),
-      ),
-    );
-  }
+      );
+    }
 
     return FlTitlesData(
       leftTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          // ✅ make reserved space scale consistently with text
-          reservedSize: sizeScaler(context, 36, 1.5),
+          reservedSize: sizeScaler(context, 32, 1.5),  // ✅ เติม base ให้ถูกต้อง
           interval: _getInterval(),
           getTitlesWidget: (v, meta) {
-            final double fontSize = MediaQuery.of(context).textScaler.scale(12);
+            final double fontSize = fontScaler(context, 12);
             return Text(
               v.toStringAsFixed(0),
               style: TextStyle(
@@ -429,16 +449,12 @@ Widget build(BuildContext context) {
     );
   }
 
-
-
   FlBorderData _borderData() => FlBorderData(
-    show: true, 
-    border: Border.all(
-      color: Colors.black54, 
-      width: 1));
+    show: true,
+    border: Border.all(color: Colors.black54, width: 1),
+  );
 
   // -------------------------- CONTROL LINES --------------------------
-
   ExtraLinesData _controlLines() {
     return ExtraLinesData(
       extraLinesOnTop: false,
@@ -481,7 +497,6 @@ Widget build(BuildContext context) {
   }
 
   // ---------------------------- DATA LAYERS ----------------------------
-
   List<LineChartBarData> _lineBarsData() {
     final pts = _pointsInWindow;
     if (pts.isEmpty) {
@@ -528,7 +543,6 @@ Widget build(BuildContext context) {
     if (cur.isNotEmpty) {
       (curIsR3 == true ? r3Segments : nonR3Segments).add(cur);
     }
-
 
     final baseColor = widget.dataLineColor ?? AppColors.colorBrand;
 
@@ -617,18 +631,8 @@ Widget build(BuildContext context) {
     final r3Overlay = r3Segments
         .where((seg) => seg.length >= 2)
         .expand((seg) => [
-              LineChartBarData(
-                spots: seg, 
-                isCurved: false, 
-                color: Colors.white, 
-                barWidth: 5, 
-                dotData: const FlDotData(show: false)),
-              LineChartBarData(
-                spots: seg, 
-                isCurved: false, 
-                color: Colors.pinkAccent, 
-                barWidth: 3, 
-                dotData: const FlDotData(show: false)),
+              LineChartBarData(spots: seg, isCurved: false, color: Colors.white,      barWidth: 5, dotData: const FlDotData(show: false)),
+              LineChartBarData(spots: seg, isCurved: false, color: Colors.pinkAccent, barWidth: 3, dotData: const FlDotData(show: false)),
             ])
         .toList();
 
@@ -636,7 +640,6 @@ Widget build(BuildContext context) {
   }
 
   // --------------------------- TOUCH / TOOLTIP ---------------------------
-
   static List<LineTooltipItem?> _emptyTooltip(List<LineBarSpot> touchedSpots) =>
       List<LineTooltipItem?>.filled(touchedSpots.length, null);
 
@@ -644,16 +647,13 @@ Widget build(BuildContext context) {
     final points = _pointsInWindow;
     const hoverColor = Colors.blueAccent;
 
-    // debugPrint(points.first.fgNo);
-
     return LineTouchData(
       handleBuiltInTouches: true,
-      touchSpotThreshold: 8,
-    mouseCursorResolver: (event, response) {
-      final hasHit = response?.lineBarSpots?.isNotEmpty ?? false;
-      return hasHit ? SystemMouseCursors.click : SystemMouseCursors.basic;
-    },
-
+      touchSpotThreshold: 4,
+      mouseCursorResolver: (event, response) {
+        final hasHit = response?.lineBarSpots?.isNotEmpty ?? false;
+        return hasHit ? SystemMouseCursors.click : SystemMouseCursors.basic;
+      },
       getTouchedSpotIndicator: (barData, indexes) => indexes.map((_) {
         return TouchedSpotIndicatorData(
           FlLine(color: hoverColor.withValues(alpha: 0.5), strokeWidth: 3),
@@ -668,9 +668,7 @@ Widget build(BuildContext context) {
           ),
         );
       }).toList(),
-
       touchTooltipData: LineTouchTooltipData(getTooltipItems: _emptyTooltip),
-      
       touchCallback: (event, resp) {
         final noHit = !event.isInterestedForInteractions ||
             resp?.lineBarSpots == null || resp!.lineBarSpots!.isEmpty;
@@ -697,7 +695,7 @@ Widget build(BuildContext context) {
         final bool trend      = nearestPoint.isViolatedR3 == true;
 
         final chips = <_ChipData>[
-          if (trend)      _ChipData('Trend', Colors.pinkAccent),
+          if (trend)       _ChipData('Trend', Colors.pinkAccent),
           if (beyondSpecL) _ChipData('Over Spec (L)', Colors.red),
           if (beyondSpecU) _ChipData('Over Spec (U)', Colors.red),
           if (beyondCLL)   _ChipData('Over Control (L)', Colors.orange),
@@ -719,102 +717,26 @@ Widget build(BuildContext context) {
     );
   }
 
-
-  /// คืนค่า step ที่เล็กที่สุดซึ่ง >= x
-  double _niceStepCeil(double x) {
-    int left = 0;
-    int right = niceSteps.length - 1;
-
-    while (left < right) {
-      int mid = (left + right) >> 1; // หาร 2 แบบ integer
-      if (niceSteps[mid] >= x) {
-        right = mid;
-      } else {
-        left = mid + 1;
-      }
-    }
-    return niceSteps[left];
-  }
-
-  /// คืนค่า step ถัดไป (strictly bigger than step)
-  double _nextNiceStep(double step) {
-    int left = 0;
-    int right = niceSteps.length - 1;
-
-    while (left < right) {
-      int mid = (left + right) >> 1;
-      if (niceSteps[mid] > step) {
-        right = mid;
-      } else {
-        left = mid + 1;
-      }
-    }
-    return niceSteps[left];
-  }
-
-
-  double _getMinY(double minSel) {
+  // ---------- getters ที่อ่านจาก cache เท่านั้น ----------
+  double _getMinY(double _) {
     if (_cachedInterval == null) _ensureYScale();
-    double minY = _cachedMinY ?? 0.0;
-    final interval = _cachedInterval ?? 1.0;
-
-    // ถ้า minSel เท่ากับ minY (หรือใกล้กว่า threshold) → ขยับลง 1 step
-    if ((minSel - minY).abs() < interval * 0.5) {
-      minY = (minY - interval).clamp(0.0, double.infinity);
-    }
-    return minY;
+    return _cachedMinY ?? 0.0;
   }
 
-  double _getMaxY(double maxSel) {
+  double _getMaxY(double __) {
     if (_cachedInterval == null) _ensureYScale();
-    double maxY = _cachedMaxY ?? 0.0;
-    final interval = _cachedInterval ?? 1.0;
-
-    if ((maxSel - maxY).abs() < interval * 0.5) {
-      maxY = maxY + interval;
-    }
-    return maxY;
+    return _cachedMaxY ?? 0.0;
   }
-
 
   double _getInterval() {
-    const divisions = 5; // -> 6 ticks
-    final spec = widget.controlChartStats?.yAxisRange;
-    final spotMin = spec?.minYsurfaceHardnessControlChart
-    ?? 0.0;
-    final spotMax = spec?.maxYsurfaceHardnessControlChart
-    ?? spotMin;
-
-    if (spotMax <= spotMin) {
-      _cachedMinY = spotMin;
-      _cachedMaxY = spotMin + divisions;
-      _cachedInterval = 1.0;
-      return _cachedInterval!;
-    }
-
-    final ideal = (spotMax - spotMin) / divisions;
-    double interval = _niceStepCeil(ideal);
-
-    double minY = (spotMin / interval).floor() * interval;
-    double maxY = minY + divisions * interval;
-
-    while (maxY < spotMax - 1e-12) {
-      interval = _nextNiceStep(interval);
-      minY = (spotMin / interval).floor() * interval;
-      maxY = minY + divisions * interval;
-    }
-
-    _cachedMinY = minY;
-    _cachedMaxY = maxY;
-    _cachedInterval = interval;
-    return interval;
+    if (_cachedInterval == null) _ensureYScale();
+    return _cachedInterval!;
   }
 
   // ---------------------------- HELPERS ----------------------------
-
   double _xInterval(PeriodType periodType, double minX, double maxX) {
     final safeRange = (maxX - minX).abs().clamp(1.0, double.infinity);
-    return safeRange / 6.0;
+    return safeRange / 6.0; // 6 ticks บนแกน X
   }
 }
 
@@ -824,7 +746,6 @@ class _Tip {
   final Widget content;
   _Tip({required this.local, required this.content});
 }
-
 
 class TooltipContent extends StatelessWidget {
   final String title;
@@ -850,31 +771,30 @@ class TooltipContent extends StatelessWidget {
           Text(title, style: AppTypography.textBody4WBold),
           const SizedBox(height: 4),
           ...rows.map((e) =>
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(e.key, style: AppTypography.textBody4WBold),
-                    Text(e.value, style: AppTypography.textBody4W),
-                  ],
-                )),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(e.key, style: AppTypography.textBody4WBold),
+                Text(e.value, style: AppTypography.textBody4W),
+              ],
+            )),
           if (chips.isNotEmpty) ...[
             const SizedBox(height: 4),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: chips
-                        .map((c) => Container(
-                              margin: const EdgeInsets.only(bottom: 8), // เว้นระยะระหว่างแต่ละบรรทัด
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: c.color.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: c.color),
-                              ),
-                              child: Text(c.label, style: AppTypography.textBody4W),
-                            ))
-                        .toList(),
-                  )
-
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: chips
+                  .map((c) => Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: c.color.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: c.color),
+                        ),
+                        child: Text(c.label, style: AppTypography.textBody4W),
+                      ))
+                  .toList(),
+            )
           ],
           const SizedBox(height: 6),
           Container(height: 2, color: accent),

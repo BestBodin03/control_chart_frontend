@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../domain/types/chart_component.dart';
-import 'control_chart_component.dart';
+import 'control_chart_component/control_chart_component.dart';
 import 'mr_chart_component.dart' as mr;
 
 class ControlChartTemplateCdeCdtLarge extends StatefulWidget {

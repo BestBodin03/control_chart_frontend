@@ -5,10 +5,12 @@ import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
+import 'package:control_chart/ui/core/shared/common/chart/size_scaler.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../common/chart/font_scaler.dart';
 import '../../common/chart/legend_item.dart';
 
 /// MR-Chart (Moving Range) with local Tooltip (no Overlay), quadrant placement.
@@ -271,6 +273,7 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
     final PeriodType periodType = widget.controlChartStats?.periodType ?? PeriodType.ONE_MONTH;
     final df = DateFormat('dd/MM');
     final double step = _xInterval(periodType, minXv, maxXv);
+    final axisFont = fontScaler(context, 14);
 
     Widget bottomLabel(double value, TitleMeta meta) {
       final dt = DateTime.fromMillisecondsSinceEpoch(value.round(), isUtc: true);
@@ -280,8 +283,8 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
         space: 8,
         child: Transform.rotate(
           angle: -30 * math.pi / 180,
-          child: Text(text, style: const TextStyle(
-            fontSize: 8, 
+          child: Text(text, style: TextStyle(
+            fontSize: axisFont, 
             color: AppColors.colorBlack), 
             overflow: TextOverflow.ellipsis),
         ),
@@ -292,19 +295,19 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
       leftTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 24,
+          reservedSize: sizeScaler(context, 32, 1.5),
           interval: _getInterval(),
           getTitlesWidget: (v, _) => Text(
             v.toStringAsFixed(0), 
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.colorAlert1, 
-              fontSize: 8)),
+              fontSize: axisFont)),
         ),
       ),
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 20,
+          reservedSize: sizeScaler(context, 24, 1.5),
           interval: step,
           getTitlesWidget: bottomLabel,
         ),

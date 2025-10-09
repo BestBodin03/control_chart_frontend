@@ -160,7 +160,7 @@ Widget _buildFromData({
 
         final ChartComponent selectedWidget = widget.isMovingRange ? useMr : useI;
 
-        const legendRightPad = 16.0;
+        const legendRightPad = 24.0;
         const legendHeight = 16.0;
         const gapLegendToChart = 4.0;
 

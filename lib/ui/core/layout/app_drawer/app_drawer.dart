@@ -78,10 +78,10 @@ class AppDrawer extends StatelessWidget {
                 ),
             ),
       
-            _buildTile(context, Icons.tv,            'Home',         0),
+            _buildTile(context, Icons.settings_rounded,            'Setting',         0),
             _buildTile(context, Icons.search_rounded,'Search',       1),
-            _buildTile(context, Icons.settings_rounded,'Setting',    2),
-            _buildTile(context, Icons.show_chart,    'Chart Detail', 3),
+            _buildTile(context, Icons.tv,'Home',    2),
+            // _buildTile(context, Icons.show_chart,    'Chart Detail', 3),
 
           ],
         ),

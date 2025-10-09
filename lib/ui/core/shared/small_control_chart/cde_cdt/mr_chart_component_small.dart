@@ -312,7 +312,7 @@ class _MrChartComponentSmallCdeCdtState extends State<MrChartComponentSmallCdeCd
         space: 8,
         child: Transform.rotate(
           angle: -30 * math.pi / 180,
-          child: Text(text, style: const TextStyle(fontSize: 8, color: AppColors.colorBlack), overflow: TextOverflow.ellipsis),
+          child: Text(text, style: const TextStyle(fontSize: 12, color: AppColors.colorBlack), overflow: TextOverflow.ellipsis),
         ),
       );
     }
@@ -321,15 +321,17 @@ class _MrChartComponentSmallCdeCdtState extends State<MrChartComponentSmallCdeCd
       leftTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 24,
+          reservedSize: 40,
           interval: _getInterval(),
-          getTitlesWidget: (v, _) => Text(v.toStringAsFixed(2), style: const TextStyle(color: AppColors.colorBlack, fontSize: 8)),
+          getTitlesWidget: (v, _) => Text(v.toStringAsFixed(2), style: const TextStyle(
+            color: AppColors.colorBlack, 
+            fontSize: 12)),
         ),
       ),
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 20,
+          reservedSize: 28,
           interval: step,
           getTitlesWidget: bottomLabel,
         ),

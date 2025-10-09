@@ -355,7 +355,7 @@ Widget build(BuildContext context) {
           angle: -30 * math.pi / 180,
           child: Text(text, 
           style: const TextStyle(
-            fontSize: 8, 
+            fontSize: 12, 
             color: AppColors.colorBlack), 
             overflow: TextOverflow.ellipsis),
         ),
@@ -366,18 +366,18 @@ Widget build(BuildContext context) {
       leftTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 24,
+          reservedSize: 40,
           interval: _getInterval(),
           getTitlesWidget: (v, _) => Text(v.toStringAsFixed(0), 
           style: const TextStyle(
             color: AppColors.colorBlack, 
-            fontSize: 8)),
+            fontSize: 12)),
         ),
       ),
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 20,
+          reservedSize: 28,
           interval: step,
           getTitlesWidget: bottomLabel,
         ),

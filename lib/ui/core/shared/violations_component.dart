@@ -1,4 +1,5 @@
 import 'package:control_chart/ui/core/design_system/app_color.dart';
+import 'package:control_chart/ui/core/shared/common/chart/size_scaler.dart';
 import 'package:flutter/material.dart';
 
 import 'common/chart/font_scaler.dart';
@@ -22,7 +23,7 @@ class ViolationsColumn extends StatelessWidget {
     this.dotSize = 12,
     this.fontSize = 12,
     this.gap = 8,
-    this.pillHeight = 20,
+    this.pillHeight = 16,
     this.pillRadius = 999,
   });
 
@@ -243,8 +244,8 @@ class _HorizontalPills extends StatelessWidget {
           icon: data.upperIcon,
           label: 'U',
           value: data.upper,
-          fontSize: fontScaler(context, fontSize),
-          height: data.pillHeight,
+          fontSize: fontSize,
+          height: sizeScaler(context, data.pillHeight, 1.5),
           radius: data.pillRadius,
           textColor: textColor,
         ),
@@ -255,8 +256,8 @@ class _HorizontalPills extends StatelessWidget {
           icon: data.lowerIcon,
           label: 'L',
           value: data.lower,
-          fontSize: fontScaler(context, fontSize),
-          height: data.pillHeight,
+          fontSize: fontSize,
+          height: sizeScaler(context, data.pillHeight, 1.5),
           radius: data.pillRadius,
           textColor: textColor,
         ),
@@ -301,12 +302,12 @@ class _PillBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: fontScaler(context, fontSize), color: textColor),
+          Icon(icon, size: fontSize, color: textColor),
           const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
-              fontSize: fontScaler(context, fontSize),
+              fontSize: fontSize,
               color: textColor,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.2,
@@ -316,7 +317,7 @@ class _PillBadge extends StatelessWidget {
           Text(
             '$value',
             style: TextStyle(
-              fontSize: fontScaler(context, fontSize),
+              fontSize: fontSize,
               color: AppColors.colorBlack,
               fontWeight: FontWeight.w700,
             ),

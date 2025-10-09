@@ -5,6 +5,8 @@ import 'package:control_chart/domain/models/setting.dart';
 import 'package:control_chart/domain/types/chart_component.dart';
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
+import 'package:control_chart/ui/core/shared/common/chart/font_scaler.dart';
+import 'package:control_chart/ui/core/shared/common/chart/size_scaler.dart';
 import 'package:control_chart/ui/core/shared/dashed_line_painter.dart' show DashedLinePainter;
 import 'package:control_chart/ui/core/shared/medium_control_chart/surface_hardness/help.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -375,6 +377,7 @@ Widget build(BuildContext context) {
     final PeriodType periodType = widget.controlChartStats?.periodType ?? PeriodType.ONE_MONTH;
     final df = DateFormat('dd/MM');
     final double step = _xInterval(periodType, minXv, maxXv);
+    final axisFont = fontScaler(context, 14);
 
     Widget bottomLabel(double value, TitleMeta meta) {
       final dt = DateTime.fromMillisecondsSinceEpoch(value.round(), isUtc: true);
@@ -385,8 +388,8 @@ Widget build(BuildContext context) {
         child: Transform.rotate(
           angle: -30 * math.pi / 180,
           child: Text(text, 
-          style: const TextStyle(
-            fontSize: 8, 
+          style: TextStyle(
+            fontSize: axisFont, 
             color: AppColors.colorBlack), 
             overflow: TextOverflow.ellipsis),
         ),
@@ -397,18 +400,18 @@ Widget build(BuildContext context) {
       leftTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 24,
+          reservedSize: sizeScaler(context, 32, 1.5),
           interval: _getInterval(),
           getTitlesWidget: (v, _) => Text(v.toStringAsFixed(0), 
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.colorBlack, 
-            fontSize: 8)),
+            fontSize: axisFont)),
         ),
       ),
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 20,
+          reservedSize: sizeScaler(context, 24, 1.5),
           interval: step,
           getTitlesWidget: bottomLabel,
         ),
@@ -635,7 +638,7 @@ Widget build(BuildContext context) {
 
     return LineTouchData(
       handleBuiltInTouches: true,
-      touchSpotThreshold: 8,
+      touchSpotThreshold: 4,
     mouseCursorResolver: (event, response) {
       final hasHit = response?.lineBarSpots?.isNotEmpty ?? false;
       return hasHit ? SystemMouseCursors.click : SystemMouseCursors.basic;

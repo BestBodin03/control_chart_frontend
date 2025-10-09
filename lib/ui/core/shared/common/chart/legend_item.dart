@@ -1,14 +1,11 @@
+import 'package:control_chart/ui/core/shared/common/chart/font_scaler.dart';
 import 'package:flutter/material.dart';
 import '../../../design_system/app_color.dart';
 
 Widget legendItem(BuildContext context, String label, Color color, String value) {
-  final media = MediaQuery.of(context);
-  final textScaler = media.textScaler;
-
-  final double baseFontSize = 10;
 
   // ✅ dynamically scaled font using TextScaler
-  final double scaledSize = textScaler.scale(baseFontSize);
+  final double scaledSize = fontScaler(context, 12);
 
   return Row(
     mainAxisSize: MainAxisSize.min,
