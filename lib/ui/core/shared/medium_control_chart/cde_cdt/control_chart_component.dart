@@ -236,10 +236,10 @@ void _ensureYScale() {
 
   for (final pin in activePins) {
     if ((pin - workingMin).abs() < epsilon) {
-      workingMin = pin - 0.1; // Push min below the pin
+      workingMin = pin - 0.1;
     }
     if ((pin - workingMax).abs() < epsilon) {
-      workingMax = pin + 0.1; // Push max above the pin
+      workingMax = pin + 0.1;
     }
   }
 
@@ -251,82 +251,74 @@ void _ensureYScale() {
 
   debugPrint('Initial interval: $interval (from ideal: $ideal)');
 
+  // Track tried intervals to detect infinite loop
+  final Set<double> triedIntervals = {interval};
+
   // Align to grid
   double minY = (workingMin / interval).floor() * interval;
   double maxY = minY + divisions * interval;
 
   // Ensure coverage of workingMax
   while (maxY < workingMax - epsilon) {
+    final oldInterval = interval;
     interval = _nextNiceStep(interval);
+    
+    if (interval == oldInterval || interval >= niceSteps.last) {
+      debugPrint('⚠️ Reached end of niceSteps during coverage check');
+      maxY = workingMax + interval;
+      break;
+    }
+    
     minY = (workingMin / interval).floor() * interval;
     maxY = minY + divisions * interval;
   }
 
   debugPrint('After coverage check: minY=$minY, maxY=$maxY, interval=$interval');
 
-  // Check and avoid collisions by shifting grid
-  bool needsAdjustment = true;
-  int attempts = 0;
-  const maxAttempts = 10;
-
-  while (needsAdjustment && attempts < maxAttempts) {
-    attempts++;
-    needsAdjustment = false;
+  // Check and avoid collisions with minY and maxY only
+  bool hasCollision = true;
+  
+  while (hasCollision) {
+    hasCollision = false;
 
     for (final pin in activePins) {
-      // Check if pin is too close to minY
-      if ((pin - minY).abs() < epsilon) {
-        debugPrint('Attempt $attempts: Pin $pin collides with minY=$minY');
-        // Shift entire grid down by one interval
-        minY -= interval;
+      // Check if pin collides with minY or maxY
+      if ((pin - minY).abs() < epsilon || (pin - maxY).abs() < epsilon) {
+        debugPrint('Pin $pin collides with boundary (minY=$minY or maxY=$maxY)');
+        
+        final oldInterval = interval;
+        interval = _nextNiceStep(interval);
+        
+        // Check if we've tried this interval before or reached the end
+        if (triedIntervals.contains(interval) || interval == oldInterval || interval >= niceSteps.last) {
+          debugPrint('⚠️ Cannot find collision-free interval, using current: $interval');
+          hasCollision = false;
+          break;
+        }
+        
+        triedIntervals.add(interval);
+        debugPrint('Trying new interval: $interval');
+        
+        // Recalculate grid with new interval
+        minY = (workingMin / interval).floor() * interval;
         maxY = minY + divisions * interval;
-        needsAdjustment = true;
+        
+        // Ensure coverage with new interval
+        while (maxY < workingMax - epsilon) {
+          final coverageInterval = _nextNiceStep(interval);
+          if (coverageInterval == interval || coverageInterval >= niceSteps.last) {
+            maxY = workingMax + interval;
+            break;
+          }
+          interval = coverageInterval;
+          triedIntervals.add(interval);
+          minY = (workingMin / interval).floor() * interval;
+          maxY = minY + divisions * interval;
+        }
+        
+        hasCollision = true;
         break;
       }
-      
-      // Check if pin is too close to maxY
-      if ((pin - maxY).abs() < epsilon) {
-        debugPrint('Attempt $attempts: Pin $pin collides with maxY=$maxY');
-        // Shift entire grid up by one interval
-        minY += interval;
-        maxY = minY + divisions * interval;
-        needsAdjustment = true;
-        break;
-      }
-
-      // Check if pin sits exactly on any tick mark
-      final tickPosition = (pin - minY) / interval;
-      if ((tickPosition - tickPosition.round()).abs() < epsilon) {
-        debugPrint('Attempt $attempts: Pin $pin sits on tick at position ${tickPosition.round()}');
-        // Shift grid by half interval to offset all ticks
-        minY -= interval * 0.5;
-        maxY = minY + divisions * interval;
-        needsAdjustment = true;
-        break;
-      }
-    }
-
-    // After adjustment, verify we still cover the data range
-    if (minY > minSel + epsilon || maxY < maxSel - epsilon) {
-      debugPrint('Lost coverage after adjustment, increasing interval');
-      interval = _nextNiceStep(interval);
-      minY = (workingMin / interval).floor() * interval;
-      maxY = minY + divisions * interval;
-      needsAdjustment = true;
-    }
-  }
-
-  // If we hit max attempts, use fallback: increase interval significantly
-  if (attempts >= maxAttempts) {
-    debugPrint('Max attempts reached, using fallback');
-    interval = _nextNiceStep(interval);
-    minY = (workingMin / interval).floor() * interval;
-    maxY = minY + divisions * interval;
-    
-    // Ensure coverage
-    while (maxY < workingMax - epsilon) {
-      minY -= interval;
-      maxY = minY + divisions * interval;
     }
   }
 
@@ -336,6 +328,7 @@ void _ensureYScale() {
   maxY = minY + divisions * interval;
 
   debugPrint('Final: minY=$minY, maxY=$maxY, interval=$interval');
+  debugPrint('Tried intervals: $triedIntervals');
 
   _cachedMinY = minY;
   _cachedMaxY = maxY;

@@ -36,7 +36,7 @@ class ProfileDetailSheet extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'รายละเอียดโปรไฟล์',
+                  'Profile Details',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF0F172A),
@@ -52,21 +52,21 @@ class ProfileDetailSheet extends StatelessWidget {
             const SizedBox(height: 16),
             
             // Profile details
-            _buildDetailRow(context, 'ชื่อโปรไฟล์', profile.name),
-            _buildDetailRow(context, 'ประเภทการแสดงผล', profile.displayType),
+            _buildDetailRow(context, 'Profile Name', profile.name),
+            _buildDetailRow(context, 'Display type', profile.displayType),
             if (profile.specifics != null && profile.specifics!.isNotEmpty)
-              _buildDetailRow(context, 'ระยะเวลา', _formatDate(profile.specifics!)),
+              _buildDetailRow(context, 'Period', _formatDate(profile.specifics!)),
 
-            _buildDetailRow(context, 'สถานะ', profile.active ? 'เปิดใช้งาน' : 'ปิดใช้งาน'),
+            _buildDetailRow(context, 'Status', profile.active ? 'Used' : 'Not Use'),
             
             if (profile.chartChangeInterval != null)
-              _buildDetailRow(context, 'ช่วงเวลาเปลี่ยนหน้า', '${profile.chartChangeInterval} วินาที'),
+              _buildDetailRow(context, 'Page Duration (second)', '${profile.chartChangeInterval} seconds'),
             
             if (profile.ruleSelected != null && profile.ruleSelected!.isNotEmpty)
-              _buildDetailRow(context, 'กฎที่เลือก', _formatSelectedRules(profile.ruleSelected!)),
+              _buildDetailRow(context, 'Rule', _formatSelectedRules(profile.ruleSelected!)),
         
             if (profile.specifics != null && profile.specifics!.isNotEmpty)
-              _buildDetailRow(context, 'รายละเอียด \nการแสดงผล', _formatSettingSpecificDetails(profile.specifics!)),
+              _buildDetailRow(context, 'Page Details', _formatSettingSpecificDetails(profile.specifics!)),
             
             const SizedBox(height: 24),
             
@@ -81,7 +81,7 @@ class ProfileDetailSheet extends StatelessWidget {
                       backgroundColor: AppColors.colorBrand,
                       foregroundColor: Colors.white,
                     ),
-                    child: const Text('ปิด'),
+                    child: const Text('close'),
                   ),
                 ),
               ],
@@ -148,7 +148,7 @@ class ProfileDetailSheet extends StatelessWidget {
         ? DateFormat('dd/MM/yyyy').format(first.endDate!)
         : "-";
 
-    return '$start ถึง $end';
+    return '$start To $end';
   }
 
 
@@ -159,9 +159,9 @@ class ProfileDetailSheet extends StatelessWidget {
       final (i, s) = entry;
       final page = i + 1;
 
-      return 'หน้าที่ $page'
-            ' - เตาที่: ${s.furnaceNo ?? "-"}'
-            ' - เลขแมต: ${s.cpNo ?? "-"}';
+      return 'Page $page'
+            ' - Furnace No. ${s.furnaceNo ?? "-"}'
+            ' - Material No. ${s.cpNo ?? "-"}';
     }).join("\n");
   }
 }

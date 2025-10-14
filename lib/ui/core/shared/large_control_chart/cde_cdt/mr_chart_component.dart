@@ -302,7 +302,7 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
     final PeriodType periodType = widget.controlChartStats?.periodType ?? PeriodType.ONE_MONTH;
     final df = DateFormat('dd/MM');
     final double step = _xInterval(periodType, minXv, maxXv);
-    final axisFont = fontScaler(context, 14);
+    final axisFont = 10.0;
 
     Widget bottomLabel(double value, TitleMeta meta) {
       final dt = DateTime.fromMillisecondsSinceEpoch(value.round(), isUtc: true);
@@ -324,7 +324,7 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
       leftTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: sizeScaler(context, 32, 1.5),
+          reservedSize: 32.0,
           interval: _getInterval(),
           getTitlesWidget: (v, _) => Text(
             v.toStringAsFixed(2), 
@@ -336,7 +336,7 @@ class _MrChartComponentLargeState extends State<MrChartComponentLarge> {
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: sizeScaler(context, 24, 1.5),
+          reservedSize: 24.0,
           interval: step,
           getTitlesWidget: bottomLabel,
         ),

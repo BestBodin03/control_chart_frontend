@@ -71,8 +71,8 @@ extension SettingFormStateToRequest on SettingFormState {
 
       return SpecificReq(
         type: type,
-        startDate: start.toUtc(),
-        endDate: end.toUtc(),
+        startDate: start.toLocal(),
+        endDate: end.toLocal(),
         furnaceNo: furnaceNoVal,
         cpNo: cpNoVal,
       );

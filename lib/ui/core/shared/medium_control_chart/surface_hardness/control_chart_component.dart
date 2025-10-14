@@ -153,135 +153,65 @@ class _ControlChartComponentState extends State<ControlChartComponent> {
     return niceSteps[left];
   }
 
-void _ensureYScale() {
-  if (_cachedInterval != null) return;
+  void _ensureYScale() {
+    if (_cachedInterval != null) return;
 
-  const divisions = 5; // -> 6 ticks (divisions + 1)
-  const epsilon = 1e-9;
+    const divisions = 5;
+    final yr = widget.controlChartStats?.yAxisRange;
 
-  final minSel = widget.controlChartStats?.yAxisRange?.minYsurfaceHardnessControlChart ?? 0.0;
-  final maxSel = widget.controlChartStats?.yAxisRange?.maxYsurfaceHardnessControlChart ?? minSel;
+    final minSel = yr?.minYsurfaceHardnessControlChart ?? 0.0;
 
-  if (maxSel <= minSel) {
-    _cachedMinY = minSel;
-    _cachedMaxY = minSel + divisions;
-    _cachedInterval = 1.0;
-    return;
-  }
+    final maxSel = yr?.maxYsurfaceHardnessControlChart ?? 0.0;
 
-  // Collect all critical lines that must not sit on boundaries
-  final spec = widget.controlChartStats?.specAttribute;
-  final pins = <double?>[
-    spec?.surfaceHardnessLowerSpec,
-    spec?.surfaceHardnessUpperSpec,
-    widget.controlChartStats?.controlLimitIChart?.lcl,
-    widget.controlChartStats?.controlLimitIChart?.ucl,
-  ];
-  final activePins = pins.where((p) => p != null).map((p) => p!).toList();
-
-  // Calculate initial interval for expansion amount
-  final initialIdeal = (maxSel - minSel) / divisions;
-  final initialInterval = _niceStepCeil(initialIdeal);
-  final expansionAmount = initialInterval * 0.8;
-
-  // Expand working range if pins sit on boundaries
-  double workingMin = minSel;
-  double workingMax = maxSel;
-
-  for (final pin in activePins) {
-    if ((pin - workingMin).abs() < epsilon) {
-      workingMin = pin - expansionAmount;
+    if (maxSel <= minSel) {
+      _cachedMinY = minSel;
+      _cachedMaxY = minSel + divisions;
+      _cachedInterval = 1.0;
+      return;
     }
-    if ((pin - workingMax).abs() < epsilon) {
-      workingMax = pin + expansionAmount;
-    }
-  }
 
-  // Main calculation loop
-  int maxAttempts = 15;
-  int attempt = 0;
-  double minY = 0, maxY = 0, interval = 0;
-  bool isValid = false;
+    final ideal = (maxSel - minSel) / divisions;
+    double interval = _niceStepCeil(ideal);
 
-  while (attempt < maxAttempts && !isValid) {
-    attempt++;
+    double minY = (minSel / interval).floor() * interval;
+    double maxY = minY + divisions * interval;
 
-    // 1) Calculate ideal interval
-    final ideal = (workingMax - workingMin) / divisions;
-    interval = _niceStepCeil(ideal);
-
-    // 2) Align minY to multiple of interval
-    minY = (workingMin / interval).floor() * interval;
-    maxY = minY + divisions * interval;
-
-    // 3) Ensure coverage of workingMax
-    while (maxY < workingMax - epsilon) {
-      minY += interval;
+    while (maxY < maxSel - 1e-12) {
+      interval = _nextNiceStep(interval);
+      minY = (minSel / interval).floor() * interval;
       maxY = minY + divisions * interval;
-
-      if (maxY < workingMax - epsilon) {
-        interval = _nextNiceStep(interval);
-        minY = (workingMin / interval).floor() * interval;
-        maxY = minY + divisions * interval;
-      }
     }
 
-    // 4) Check for pin collisions
-    bool hasCollision = false;
+    // ===== ดึงค่า Spec และ Control Limits =====
+    final specAttr = widget.controlChartStats?.specAttribute;
+    final lsl = specAttr?.surfaceHardnessLowerSpec;
+    final usl = specAttr?.surfaceHardnessUpperSpec;
 
-    for (final pin in activePins) {
-      // Check if pin equals minY or maxY
-      if ((pin - minY).abs() < epsilon) {
-        workingMin = minY - interval * 0.8;
-        hasCollision = true;
-        break;
+    final lcl = widget.controlChartStats?.controlLimitIChart?.lcl ?? 0.0;
+
+    final ucl = widget.controlChartStats?.controlLimitIChart?.ucl ?? 0.0;
+
+    // ===== เช็คว่าชนกับ minY หรือ maxY หรือไม่ =====
+    final checkValues = <double?>[ lsl, usl, lcl, ucl];
+    
+    for (final val in checkValues) {
+      if (val == null) continue;
+      
+      // ถ้าชนกับ minY → ลด minY
+      if ((val - minY).abs() < 1e-9) {
+        minY -= interval;
       }
       
-      if ((pin - maxY).abs() < epsilon) {
-        workingMax = maxY + interval * 0.8;
-        hasCollision = true;
-        break;
-      }
-
-      // Check if pin sits on any tick line
-      final tickPos = (pin - minY) / interval;
-      final nearestTick = tickPos.round();
-      if ((tickPos - nearestTick).abs() < epsilon) {
-        workingMin -= interval * 0.8;
-        workingMax += interval * 0.8;
-        hasCollision = true;
-        break;
+      // ถ้าชนกับ maxY → เพิ่ม maxY
+      if ((val - maxY).abs() < 1e-9) {
+        maxY += interval;
       }
     }
 
-    if (!hasCollision) {
-      // Verify final coverage of original data
-      if (minY <= minSel + epsilon && maxY >= maxSel - epsilon) {
-        isValid = true;
-      } else {
-        if (minY > minSel) workingMin = minSel - interval * 0.8;
-        if (maxY < maxSel) workingMax = maxSel + interval * 0.8;
-      }
-    }
+    _cachedMinY = minY;
+    _cachedMaxY = maxY;
+    _cachedInterval = interval;
   }
-
-  // Fallback if max attempts reached
-  if (!isValid) {
-    interval = _nextNiceStep(interval);
-    minY = (minSel / interval).floor() * interval - interval;
-    maxY = minY + (divisions + 2) * interval;
-  }
-
-  // 5) snap ลด floating error และย้ำ span คงที่
-  double _snap(double val, double step) => (val / step).roundToDouble() * step;
-  minY = _snap(minY, interval);
-  maxY = minY + divisions * interval;
-
-  _cachedMinY = minY;
-  _cachedMaxY = maxY;
-  _cachedInterval = interval;
-}
-
   // Tooltip state
   final ValueNotifier<_Tip?> _tip = ValueNotifier<_Tip?>(null);
 

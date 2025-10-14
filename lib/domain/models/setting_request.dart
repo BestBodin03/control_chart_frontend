@@ -65,8 +65,8 @@ class SpecificReq {
   Map<String, dynamic> toJson() => {
         "period": {
           "type": type.name, // e.g. "THREE_MONTHS"
-          "startDate": startDate.toUtc().toIso8601String(),
-          "endDate": endDate.toUtc().toIso8601String(),
+          "startDate": startDate.toIso8601String(),
+          "endDate": endDate.toIso8601String(),
         },
         "furnaceNo": furnaceNo,
         "cpNo": cpNo,

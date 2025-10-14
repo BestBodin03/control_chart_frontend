@@ -1,6 +1,7 @@
 import 'dart:core';
 
 import 'package:control_chart/domain/models/setting.dart';
+import 'package:intl/intl.dart';
 
 class SettingFormState {
   final String profileId;
@@ -24,6 +25,8 @@ class SettingFormState {
   final Map<int, List<String>> cpOptionsByIndex;
   final Map<int, List<String>> cpNameOptionsByIndex;
 
+  final int recordCount;
+
   const SettingFormState({
     this.profileId = '',
     this.settingProfileName = '',
@@ -42,7 +45,8 @@ class SettingFormState {
     this.dropdownLoading = false,
     this.furnaceOptionsByIndex = const {},
     this.cpOptionsByIndex = const {},
-    this.cpNameOptionsByIndex = const {}
+    this.cpNameOptionsByIndex = const {},
+    this.recordCount = 0
   });
 
   bool get isValid {
@@ -82,7 +86,8 @@ class SettingFormState {
     bool? dropdownLoading,
     Map<int, List<String>>? furnaceOptionsByIndex,
     Map<int, List<String>>? cpOptionsByIndex,
-    Map<int, List<String>>? cpNameOptionsByIndex
+    Map<int, List<String>>? cpNameOptionsByIndex,
+    int? recordCount
   }) {
     return SettingFormState(
       profileId: profileId ?? this.profileId,
@@ -100,7 +105,8 @@ class SettingFormState {
       dropdownLoading: dropdownLoading ?? this.dropdownLoading,
       furnaceOptionsByIndex: furnaceOptionsByIndex ?? this.furnaceOptionsByIndex,
       cpOptionsByIndex: cpOptionsByIndex ?? this.cpOptionsByIndex,
-      cpNameOptionsByIndex: cpNameOptionsByIndex ?? this.cpNameOptionsByIndex
+      cpNameOptionsByIndex: cpNameOptionsByIndex ?? this.cpNameOptionsByIndex,
+      recordCount: recordCount ?? this.recordCount
     );
   }
 
@@ -131,38 +137,40 @@ class SpecificSettingState {
     this.cpNo,
   });
 
-  factory SpecificSettingState.fromJson(Map<String, dynamic> json) {
-    return SpecificSettingState(
-      id: json['_id'] as String?,
-      periodType: json['period']?['type'] != null
-          ? PeriodType.values.firstWhere(
-              (e) => e.name.toUpperCase() == json['period']['type'].toString().toUpperCase(),
-              orElse: () => PeriodType.ONE_MONTH,
-            )
-          : null,
-      startDate: json['period']?['startDate'] != null
-          ? DateTime.tryParse(json['period']['startDate'])
-          : null,
-      endDate: json['period']?['endDate'] != null
-          ? DateTime.tryParse(json['period']['endDate'])
-          : null,
-      furnaceNo: json['furnaceNo'] as int?,
-      cpNo: json['cpNo'] as String?,
-    );
-  }
+factory SpecificSettingState.fromJson(Map<String, dynamic> json) {
+  return SpecificSettingState(
+    id: json['_id'] as String?,
+    periodType: json['period']?['type'] != null
+        ? PeriodType.values.firstWhere(
+            (e) => e.name.toUpperCase() == json['period']['type'].toString().toUpperCase(),
+            orElse: () => PeriodType.ONE_MONTH,
+          )
+        : null,
+    startDate: json['period']?['startDate'] != null
+        ? DateTime.parse(json['period']['startDate'])
+        : null,
+    endDate: json['period']?['endDate'] != null
+        ? DateTime.parse(json['period']['endDate'])
+        : null,
+    furnaceNo: json['furnaceNo'] as int?,
+    cpNo: json['cpNo'] as String?,
+  );
+}
 
-  Map<String, dynamic> toJson() {
-    return {
-      if (id != null) '_id': id,
-      'period': {
-        if (periodType != null) 'type': periodType!.name.toUpperCase(),
-        if (startDate != null) 'startDate': startDate!.toIso8601String(),
-        if (endDate != null) 'endDate': endDate!.toIso8601String(),
-      },
-      if (furnaceNo != null) 'furnaceNo': furnaceNo,
-      if (cpNo != null) 'cpNo': cpNo,
-    };
-  }
+Map<String, dynamic> toJson() {
+  final fmt = DateFormat('yyyy-MM-dd');
+  return {
+    if (id != null) '_id': id,
+    'period': {
+      if (periodType != null) 'type': periodType!.name.toUpperCase(),
+      if (startDate != null) 'startDate': fmt.format(startDate!),
+      if (endDate != null) 'endDate': fmt.format(endDate!),
+    },
+    if (furnaceNo != null) 'furnaceNo': furnaceNo,
+    if (cpNo != null) 'cpNo': cpNo,
+  };
+}
+
 
   SpecificSettingState copyWith({
     String? id,
@@ -171,6 +179,7 @@ class SpecificSettingState {
     DateTime? endDate,
     int? furnaceNo,
     String? cpNo,
+    int? recordCount
   }) {
     return SpecificSettingState(
       id: id ?? this.id,

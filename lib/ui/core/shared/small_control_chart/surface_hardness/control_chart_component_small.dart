@@ -103,7 +103,7 @@ class _ControlChartComponentSmallState extends State<ControlChartComponentSmall>
   void _ensureYScale() {
     if (_cachedInterval != null) return;
 
-    const divisions = 5;
+    const divisions = 4;
     final yr = widget.controlChartStats?.yAxisRange;
 
     final minSel = yr?.minYsurfaceHardnessControlChart ?? 0.0;
@@ -733,7 +733,7 @@ Widget build(BuildContext context) {
 
 
   double _getInterval() {
-    const divisions = 5; // -> 6 ticks
+    const divisions = 4; // -> 6 ticks
     final spec = widget.controlChartStats?.yAxisRange;
     final spotMin = spec?.minYsurfaceHardnessControlChart
     ?? 0.0;

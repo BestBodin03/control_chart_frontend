@@ -129,59 +129,119 @@ class ControlChartLargeLogic {
     return safeRange / (ticks - 1);
   }
 
-  /// Compute nice Y-scale with 5 divisions and avoid collisions with spec/control lines.
+/// Compute nice Y-scale with 5 divisions and avoid collisions with spec/control lines.
+/// Behaves *exactly* like `_ensureYScale` logic, even for small ranges (e.g. 0.4–0.9).
 YScaleResult computeYScale(YAxisSpec spec, {int divisions = 5}) {
-  final double minSel = spec.minSel;
-  final double maxSel = (spec.maxSel <= minSel) ? minSel : spec.maxSel;
+  // --- 1) Extract min/max selection ---
+  final double minSel = spec.minSel ?? 0.0;
+  final double maxSel = (spec.maxSel == null || spec.maxSel! <= minSel)
+      ? minSel
+      : spec.maxSel!;
 
-  // Flat fallback
+  // --- 2) Flat fallback ---
   if (maxSel <= minSel) {
     final minY = minSel;
     final maxY = minSel + divisions;
     return YScaleResult(minY: minY, maxY: maxY, interval: 1.0);
   }
 
-  // 1) pick a "nice" interval from the ideal
+  // --- 3) Pick "nice" initial interval ---
   final ideal = (maxSel - minSel) / divisions;
   double interval = _niceStepCeil(ideal);
 
-  // 2) align min to interval, keep a fixed span (divisions * interval)
+  // Track tried intervals to prevent infinite loops
+  final Set<double> triedIntervals = {interval};
+
+  // --- 4) Align min to interval ---
   double minY = (minSel / interval).floor() * interval;
   double maxY = minY + divisions * interval;
 
-  // 3) ensure we fully cover maxSel:
-  //    first try shifting the whole window; if still short, bump to next nice step and realign
-  while (maxY < maxSel - 1e-12) {
-    minY += interval;
+  // --- 5) Ensure we fully cover maxSel ---
+  const epsilon = 1e-9;
+  
+  while (maxY < maxSel - epsilon) {
+    final oldInterval = interval;
+    interval = _nextNiceStep(interval);
+    
+    // Check if we reached the end of niceSteps
+    if (interval == oldInterval || interval >= niceSteps.last) {
+      // Can't increase interval anymore, extend maxY instead
+      maxY = maxSel + interval;
+      break;
+    }
+    
+    minY = (minSel / interval).floor() * interval;
     maxY = minY + divisions * interval;
+  }
 
-    if (maxY < maxSel - 1e-12) {
-      interval = _nextNiceStep(interval);
-      minY = (minSel / interval).floor() * interval;
-      maxY = minY + divisions * interval;
+  // --- 6) Get spec/control limits ---
+  final lsl = spec.lsl;
+  final usl = spec.usl;
+  final lcl = spec.lcl;
+  final ucl = spec.ucl;
+
+  final checkValues = <double?>[lsl, usl, lcl, ucl];
+
+  // --- 7) Adjust to avoid collisions with boundaries ---
+  bool hasCollision = true;
+  
+  while (hasCollision) {
+    hasCollision = false;
+    
+    for (final val in checkValues) {
+      if (val == null) continue;
+
+      // Check if value collides with minY or maxY
+      if ((val - minY).abs() < epsilon || (val - maxY).abs() < epsilon) {
+        // Try next interval
+        final oldInterval = interval;
+        interval = _nextNiceStep(interval);
+        
+        // Check if we've exhausted interval options
+        if (triedIntervals.contains(interval) || 
+            interval == oldInterval || 
+            interval >= niceSteps.last) {
+          // Can't find better interval, keep current one
+          // debugPrint('⚠️ Cannot avoid collision for value $val, keeping interval $interval');
+          hasCollision = false;
+          break;
+        }
+        
+        triedIntervals.add(interval);
+        // debugPrint('Collision detected with $val, trying interval: $interval');
+        
+        // Recalculate with new interval
+        minY = (minSel / interval).floor() * interval;
+        maxY = minY + divisions * interval;
+        
+        // Ensure coverage again
+        while (maxY < maxSel - epsilon) {
+          final coverageInterval = _nextNiceStep(interval);
+          if (coverageInterval == interval || coverageInterval >= niceSteps.last) {
+            maxY = maxSel + interval;
+            break;
+          }
+          interval = coverageInterval;
+          triedIntervals.add(interval);
+          minY = (minSel / interval).floor() * interval;
+          maxY = minY + divisions * interval;
+        }
+        
+        hasCollision = true;
+        break;
+      }
     }
   }
 
-  // 4) keep spec/control pins off exact min/max; shift window but keep span fixed
-  final pins = <double?>[spec.lsl, spec.usl, spec.lcl, spec.ucl];
-  for (final v in pins) {
-    if (v == null) continue;
-    if ((v - minY).abs() < 1e-9) {
-      minY -= interval;
-      maxY = minY + divisions * interval;
-    } else if ((v - maxY).abs() < 1e-9) {
-      maxY += interval;
-      minY = maxY - divisions * interval;
-    }
-  }
-
-  // 5) snap to multiples to avoid floating-point drift; keep span fixed
+  // --- 8) Snap to multiples to remove drift ---
   double _snap(double val, double step) => (val / step).roundToDouble() * step;
   minY = _snap(minY, interval);
   maxY = minY + divisions * interval;
 
   return YScaleResult(minY: minY, maxY: maxY, interval: interval);
 }
+
+
 
 
   /// Split points into contiguous R3 / non-R3 segments, plus bridge segments

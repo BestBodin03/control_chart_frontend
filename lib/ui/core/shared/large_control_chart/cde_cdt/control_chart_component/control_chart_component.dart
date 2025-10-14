@@ -252,7 +252,7 @@ class _ControlChartComponentLargeState extends State<ControlChartComponentLarge>
 
     // Titles & grid
     final df = DateFormat('dd/MM');
-    final axisFont = fontScaler(context, 14);
+    final axisFont = 10.0;
     Widget bottomLabel(double value, TitleMeta meta) {
       final dt = DateTime.fromMillisecondsSinceEpoch(value.round(), isUtc: true);
       final text = df.format(dt);

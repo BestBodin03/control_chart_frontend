@@ -186,8 +186,7 @@ final query = <String, dynamic>{ if (furnaceNo?.isNotEmpty ?? false) 'furnaceNo'
   }) async {
     final req = form.toRequest(ruleNameById: ruleNameById);
     final body = req.toJson();
-    debugPrint('UPDATE NEW SETTING PROFILE');
-    print('/setting/update/$id');
+    debugPrint('the req is: $body');
     return await ApiConfig().patch<Map<String, dynamic>>(
       '/setting/update/$id',
       data: body,

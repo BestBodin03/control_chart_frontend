@@ -17,6 +17,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../domain/models/chart_detail.dart';
+
 class SettingFormCubit extends Cubit<SettingFormState> {
   // Inject your repository/service here
   final SettingApis _settingApis;
@@ -39,6 +41,20 @@ class SettingFormCubit extends Cubit<SettingFormState> {
   void updateIsUsed(bool isUsed) {
     emit(state.copyWith(isUsed: isUsed));
   }
+
+  void updateCountsFrom(List<ChartDetail> chartDetails) {
+    final updated = state.specifics.map((sp) {
+      final count = chartDetails.where((c) =>
+        (sp.furnaceNo == null || c.chartGeneralDetail.furnaceNo == sp.furnaceNo) &&
+        (sp.cpNo == null || c.cpNo == sp.cpNo)
+      ).length;
+
+      return sp.copyWith(recordCount: count);
+    }).toList();
+
+    emit(state.copyWith(specifics: updated));
+  }
+
 
   /// Update display type
   void updateDisplayType(DisplayType displayType) {
@@ -68,6 +84,14 @@ class SettingFormCubit extends Cubit<SettingFormState> {
 
     emit(state.copyWith(ruleSelected: rules));
   }
+
+
+Future<void> preloadCounts(Profile profile, List<ChartDetail> details) async {
+  updateSpecifics(profile.specifics!);
+  updateCountsFrom(details);
+  await Future.delayed(Duration.zero);
+}
+
 
 
   /// Add or update a single rule
@@ -268,7 +292,7 @@ class SettingFormCubit extends Cubit<SettingFormState> {
   Future<bool> saveForm({String? id}) async {
     // กันยิงซ้ำระหว่างกำลัง submit หรือ cubit ถูกปิดไปแล้ว
     if (state.status == SubmitStatus.submitting || isClosed) return false;
-    debugPrint(state.copyWith().toString());
+    // debugPrint(state.copyWith().toString());
 
     // ตรวจความถูกต้องก่อนส่ง
     if (!state.isValid) {
@@ -328,7 +352,7 @@ class SettingFormCubit extends Cubit<SettingFormState> {
         return true;
       } else {
         final msg = serverMsg ?? 'Unexpected response: ${res.toString()}';
-        debugPrint('[saveForm] Fail: $msg');
+        // debugPrint('[saveForm] Fail: $msg');
         emit(state.copyWith(status: SubmitStatus.failure, error: msg));
         return false;
       }
@@ -351,14 +375,14 @@ class SettingFormCubit extends Cubit<SettingFormState> {
         msg = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ (connection refused)';
       }
 
-      debugPrint('[saveForm] DioException HTTP $status : $msg');
-      debugPrint('[saveForm] Stack: $st');
+      // debugPrint('[saveForm] DioException HTTP $status : $msg');
+      // debugPrint('[saveForm] Stack: $st');
 
       emit(state.copyWith(status: SubmitStatus.failure, error: msg));
       return false;
     } catch (e, st) {
-      debugPrint('[saveForm] Unexpected error: $e');
-      debugPrint('[saveForm] Stack: $st');
+      // debugPrint('[saveForm] Unexpected error: $e');
+      // debugPrint('[saveForm] Stack: $st');
       emit(state.copyWith(status: SubmitStatus.failure, error: e.toString()));
       return false;
     }
