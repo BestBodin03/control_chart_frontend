@@ -747,8 +747,19 @@ class _SettingFormState extends State<SettingForm> {
                                 onPressed: isSubmitting
                                     ? null
                                     : () async {
-                                        debugPrint(
-                                            'The ID Value To save $profileId');
+                                        // Get chart details for validation
+                                        final chartDetails = context.read<SearchBloc>().state.chartDetails;
+                                        
+                                        // Validate form with chart details
+                                        final validationErrors = cubit.validateFormWithChartDetails(chartDetails);
+                                        
+                                        // Show error dialog if validation fails
+                                        if (validationErrors.isNotEmpty) {
+                                          await _showErrorDialog(context, validationErrors);
+                                          return;
+                                        }
+
+                                        debugPrint('The ID Value To save $profileId');
 
                                         var savedSuccess = await cubit.saveForm(
                                           id: isEditing ? profileId : null,
@@ -768,10 +779,9 @@ class _SettingFormState extends State<SettingForm> {
                                             error ??
                                                 (isEditing
                                                     ? 'Update Failed'
-                                                    : 'Update Success'),
+                                                    : 'Save Failed'),
                                             kind: ToastKind.error,
-                                            duration: const Duration(
-                                                milliseconds: 2000),
+                                            duration: const Duration(milliseconds: 2000),
                                           );
                                         }
                                       },
@@ -855,4 +865,103 @@ class _SettingFormState extends State<SettingForm> {
     }).toList();
     return filtered.length;
   }
+}
+
+Future<void> _showErrorDialog(BuildContext context, List<String> errors) async {
+  return showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (BuildContext dialogContext) {
+      return AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              color: AppColors.colorAlert1,
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'ข้อมูลไม่ถูกต้อง',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'กรุณาแก้ไขข้อมูลดังนี้:',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.colorBlack,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...errors.asMap().entries.map((entry) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${entry.key + 1}. ',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.colorAlert1,
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          entry.value,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ],
+          ),
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.colorBrand,
+                foregroundColor: AppColors.colorBg,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                elevation: 0,
+              ),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text(
+                'ตกลง',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
 }

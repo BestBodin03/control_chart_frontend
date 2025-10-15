@@ -190,7 +190,7 @@ double _nextNiceStep(double step) {
 void _ensureYScale() {
   if (_cachedInterval != null) return;
 
-  const divisions = 5;
+  const divisions = 3;
   const epsilon = 1e-9;
 
   final specUsl = widget.controlChartStats.sel(
@@ -248,8 +248,11 @@ void _ensureYScale() {
   }
 
   // Collect all pins
-  final pins = <double?>[specLsl, specUsl, lcl, ucl];
-  final activePins = pins.where((p) => p != null).map((p) => p!).toList();
+    final pins = <double?>[specLsl, specUsl, lcl, ucl];
+    final activePins = pins
+        .where((p) => p != null && p!.abs() > 0) // ใช้ abs() เผื่อค่าติดลบ 0.0
+        .cast<double>()
+        .toList();
 
   debugPrint('Initial range: [$minSel, $maxSel]');
   debugPrint('Active pins: $activePins');
@@ -591,7 +594,7 @@ Widget build(BuildContext context) {
           angle: -30 * math.pi / 180,
           child: Text(text, 
           style: const TextStyle(
-            fontSize: 12, 
+            fontSize: 10, 
             color: AppColors.colorBlack), 
             overflow: TextOverflow.ellipsis),
         ),
@@ -602,18 +605,18 @@ Widget build(BuildContext context) {
       leftTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 40,
+          reservedSize: 28,
           interval: _getInterval(),
           getTitlesWidget: (v, _) => Text(v.toStringAsFixed(2), 
           style: const TextStyle(
             color: AppColors.colorBlack, 
-            fontSize: 12)),
+            fontSize: 10)),
         ),
       ),
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 28,
+          reservedSize: 24,
           interval: step,
           getTitlesWidget: bottomLabel,
         ),

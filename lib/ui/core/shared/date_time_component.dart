@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:flutter/material.dart';
 
@@ -8,8 +7,8 @@ class DateTimeComponent extends StatefulWidget {
   final TextStyle? timeStyle;
   final TextStyle? dateStyle;
   final EdgeInsets? padding;
-  
-  const DateTimeComponent ({
+
+  const DateTimeComponent({
     super.key,
     this.timeZone,
     this.timeStyle,
@@ -31,22 +30,12 @@ class _DateTimeComponentState extends State<DateTimeComponent> {
     super.initState();
     _updateDateTime();
     _getTimeZoneName();
-    
-    // Update every second
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      _updateDateTime();
-    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateDateTime());
   }
 
-  void _updateDateTime() {
-    setState(() {
-      _currentDateTime = DateTime.now();
-    });
-  }
+  void _updateDateTime() => setState(() => _currentDateTime = DateTime.now());
 
-  void _getTimeZoneName() {
-    _timeZoneName = _currentDateTime.timeZoneName;
-  }
+  void _getTimeZoneName() => _timeZoneName = _currentDateTime.timeZoneName;
 
   @override
   void dispose() {
@@ -55,51 +44,50 @@ class _DateTimeComponentState extends State<DateTimeComponent> {
   }
 
   String _formatTime(DateTime dateTime) {
-    String hour = dateTime.hour.toString().padLeft(2, '0');
-    String minute = dateTime.minute.toString().padLeft(2, '0');
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
   }
 
   String _formatDate(DateTime dateTime) {
-    List<String> months = [
+    const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
-    
     return '| ${dateTime.day} ${months[dateTime.month - 1]} ${dateTime.year}';
   }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      child: Padding(
-        padding: EdgeInsets.only(left: 32.0),
-        child: Expanded(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Time Display
-              Text(
-                _formatTime(_currentDateTime),
-                style: widget.timeStyle ?? TextStyle(
-                  fontSize: 14.0,
+    final width = MediaQuery.of(context).size.width;
+    // scale smoothly between 1280 → 20 and 1920 → 32
+    final scaledFont = (20 + (width - 1280) / (1920 - 1280) * (32 - 20))
+        .clamp(20, 32)
+        .toDouble();
+
+    return Padding(
+      padding: widget.padding ?? const EdgeInsets.only(left: 32.0),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _formatTime(_currentDateTime),
+            style: widget.timeStyle ??
+                TextStyle(
+                  fontSize: scaledFont,
                   color: AppColors.colorBrand,
                 ),
-              ),
-              
-              SizedBox(width: 4),
-              
-              // Date Display
-              Text(
-                _formatDate(_currentDateTime),
-                style: widget.dateStyle ?? TextStyle(
-                  fontSize: 14.0,
-                  color: AppColors.colorBrand,
-                ),
-              ),
-            ],
           ),
-        ),
+          const SizedBox(width: 4),
+          Text(
+            _formatDate(_currentDateTime),
+            style: widget.dateStyle ??
+                TextStyle(
+                  fontSize: scaledFont,
+                  color: AppColors.colorBrand,
+                ),
+          ),
+        ],
       ),
     );
   }

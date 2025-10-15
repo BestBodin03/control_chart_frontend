@@ -33,43 +33,68 @@ extension SettingFormCubitGlobalPeriod on SettingFormCubit {
     emit(state.copyWith(specifics: updatedSpecifics));
   }
 
-  /// Update global end date and propagate to all specifics
-  void updateGlobalEndDate(DateTime endDate) {
-    emit(state.copyWith(
-      globalEndDate: endDate,
-      globalPeriodType: PeriodType.CUSTOM,
-    ));
-    
-    // Update all specifics with the same end date
-    final updatedSpecifics = state.specifics.map((sp) => 
-      sp.copyWith(
-        endDate: endDate,
-        periodType: PeriodType.CUSTOM,
-      )
-    ).toList();
-    
-    emit(state.copyWith(specifics: updatedSpecifics));
-  }
+/// Update global end date and propagate to all specifics
+void updateGlobalEndDate(DateTime endDate) {
+  // 🔹 Normalize end date → 23:59:59.999 (local)
+  final normalizedEnd = DateTime(
+    endDate.year,
+    endDate.month,
+    endDate.day,
+    23,
+    59,
+    59,
+    999,
+  );
 
-  /// Update all global period settings at once
-  void updateGlobalPeriod(PeriodType periodType, DateTime? startDate, DateTime? endDate) {
-    emit(state.copyWith(
-      globalPeriodType: periodType,
-      globalStartDate: startDate,
-      globalEndDate: endDate,
-    ));
-    
-    // Update all specifics with the same period settings
-    final updatedSpecifics = state.specifics.map((sp) => 
-      sp.copyWith(
-        periodType: periodType,
-        startDate: startDate,
-        endDate: endDate,
-      )
-    ).toList();
-    
-    emit(state.copyWith(specifics: updatedSpecifics));
-  }
+  emit(state.copyWith(
+    globalEndDate: normalizedEnd,
+    globalPeriodType: PeriodType.CUSTOM,
+  ));
+  
+  // Update all specifics with the same normalized end date
+  final updatedSpecifics = state.specifics.map((sp) =>
+    sp.copyWith(
+      endDate: normalizedEnd,
+      periodType: PeriodType.CUSTOM,
+    ),
+  ).toList();
+  
+  emit(state.copyWith(specifics: updatedSpecifics));
+}
+
+/// Update all global period settings at once
+void updateGlobalPeriod(PeriodType periodType, DateTime? startDate, DateTime? endDate) {
+  // 🔹 Normalize end date if provided
+  final normalizedEnd = (endDate != null)
+      ? DateTime(
+          endDate.year,
+          endDate.month,
+          endDate.day,
+          23,
+          59,
+          59,
+          999,
+        )
+      : null;
+
+  emit(state.copyWith(
+    globalPeriodType: periodType,
+    globalStartDate: startDate,
+    globalEndDate: normalizedEnd,
+  ));
+  
+  // Update all specifics with same normalized settings
+  final updatedSpecifics = state.specifics.map((sp) =>
+    sp.copyWith(
+      periodType: periodType,
+      startDate: startDate,
+      endDate: normalizedEnd,
+    ),
+  ).toList();
+
+  emit(state.copyWith(specifics: updatedSpecifics));
+}
+
 
   /// Initialize global period from existing data
   void initializeGlobalPeriod() {

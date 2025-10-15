@@ -136,7 +136,7 @@ YScaleResult computeYScale(YAxisSpec spec, {int divisions = 5}) {
   final double minSel = spec.minSel ?? 0.0;
   final double maxSel = (spec.maxSel == null || spec.maxSel! <= minSel)
       ? minSel
-      : spec.maxSel!;
+      : spec.maxSel;
 
   // --- 2) Flat fallback ---
   if (maxSel <= minSel) {
@@ -180,7 +180,9 @@ YScaleResult computeYScale(YAxisSpec spec, {int divisions = 5}) {
   final lcl = spec.lcl;
   final ucl = spec.ucl;
 
-  final checkValues = <double?>[lsl, usl, lcl, ucl];
+  final checkValues = [lsl, usl, lcl, ucl,]
+  .where((v) => v != null && v != 0).cast<double>().toList();
+
 
   // --- 7) Adjust to avoid collisions with boundaries ---
   bool hasCollision = true;

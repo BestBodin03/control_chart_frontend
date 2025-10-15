@@ -224,8 +224,11 @@ void _ensureYScale() {
   }
 
   // Collect all pins
-  final pins = <double?>[specLsl, specUsl, lcl, ucl];
-  final activePins = pins.where((p) => p != null).map((p) => p!).toList();
+    final pins = <double?>[specLsl, specUsl, lcl, ucl];
+    final activePins = pins
+        .where((p) => p != null && p!.abs() > 0) // ใช้ abs() เผื่อค่าติดลบ 0.0
+        .cast<double>()
+        .toList();
 
   debugPrint('Initial range: [$minSel, $maxSel]');
   debugPrint('Active pins: $activePins');

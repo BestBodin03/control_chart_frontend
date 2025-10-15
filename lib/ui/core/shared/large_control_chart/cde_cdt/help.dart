@@ -241,8 +241,8 @@ class _LargeContainerCdeCdt extends StatelessWidget {
                                 ),
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                                  child: Flex(
-                                    direction: Axis.horizontal,
+                                  child: Column(
+                                    // direction: Axis.horizontal,
                                     children: [
                                       if (hasSpecL)
                                         Text(

@@ -302,6 +302,16 @@ Future<void> preloadCounts(Profile profile, List<ChartDetail> details) async {
       ));
       return false;
     }
+  
+    // ตรวจความถูกต้องก่อนส่ง
+    final validationErrors = validateForm();
+    if (validationErrors.isNotEmpty) {
+      emit(state.copyWith(
+        status: SubmitStatus.failure,
+        error: validationErrors.first,
+      ));
+      return false;
+    }
 
     // สถานะกำลังส่ง
     emit(state.copyWith(status: SubmitStatus.submitting, error: null));
@@ -388,55 +398,218 @@ Future<void> preloadCounts(Profile profile, List<ChartDetail> details) async {
     }
   }
 
-  /// Validate form and return validation errors
-  List<String> validateForm() {
-    final errors = <String>[];
-    
-    if (state.settingProfileName.trim().isEmpty) {
-      errors.add('โปรดตั้งชื่อโปรไฟล์ตั้งคา');
+/// Validate form and return validation errors
+List<String> validateForm() {
+  final errors = <String>[];
+  
+  // Validate profile name
+  if (state.settingProfileName.trim().isEmpty) {
+    errors.add('โปรดตั้งชื่อโปรไฟล์การตั้งค่า');
+  } else {
+    // Check for special characters (allow only letters, numbers, spaces, and Thai characters)
+    final nameRegex = RegExp(r'^[a-zA-Z0-9ก-๙\s]+$');
+    if (!nameRegex.hasMatch(state.settingProfileName)) {
+      errors.add('ชื่อโปรไฟล์ไม่สามารถมีอักขระพิเศษได้');
     }
-    
-    if (state.chartChangeInterval >= 10 && state.chartChangeInterval <= 3600) {
-      errors.add('ระยะเวลาเปลี่ยนหน้าจอต้องอยู่ระหว่าง 10 - 3,600 วินาที');
-    }
-    
-    if (state.specifics.isEmpty) {
-      errors.add('โปรดกรอกข้อมูลอย่างน้อย 1 ชุด');
-    }
-
-    for (int i = 0; i < state.specifics.length; i++) {
-      final sp = state.specifics[i];
-      final blockNum = i + 1;
-      
-      if (sp.periodType == null) {
-        errors.add('โปรดกรอกรูปแบบระยะเวลาของ ชุดข้อมูลที่ $blockNum');
-      }
-      
-      if (sp.startDate == null) {
-        errors.add('โปรดกรอกรูปแบบวันที่เริ่มต้นของ ชุดข้อมูลที่  $blockNum');
-      }
-      
-      if (sp.endDate == null) {
-        errors.add('โปรดกรอกรูปแบบวันที่สิ้นสุดของ ชุดข้อมูลที่ $blockNum');
-      }
-
-      if (state.displayType == DisplayType.FURNACE ||
-          state.displayType == DisplayType.FURNACE_CP) {
-        if (sp.furnaceNo == null) {
-          errors.add('โปรดกรอก Furnace No. ชุดข้อมูลที่ $blockNum');
-        }
-      }
-      
-      if (state.displayType == DisplayType.CP ||
-          state.displayType == DisplayType.FURNACE_CP) {
-        if ((sp.cpNo ?? '').trim().isEmpty) {
-          errors.add('โปรดกรอก Material No. ชุดข้อมูลที่ $blockNum');
-        }
-      }
-    }
-    
-    return errors;
   }
+  
+  // Validate chart change interval
+  if (state.chartChangeInterval < 20) {
+    errors.add('ระยะเวลาเปลี่ยนหน้าจอต้องมากกว่า 20 วินาที');
+  } else if (state.chartChangeInterval > 3600) {
+    errors.add('ระยะเวลาเปลี่ยนหน้าจอต้องไม่เกิน 3,600 วินาที');
+  }
+  
+  // Check if there's at least one specific setting
+  if (state.specifics.isEmpty) {
+    errors.add('โปรดกรอกข้อมูลอย่างน้อย 1 ชุด');
+  }
+
+  // Validate each specific setting
+  for (int i = 0; i < state.specifics.length; i++) {
+    final sp = state.specifics[i];
+    final blockNum = i + 1;
+    
+    if (sp.periodType == null) {
+      errors.add('โปรดกรอกรูปแบบระยะเวลาของชุดข้อมูลที่ $blockNum');
+    }
+    
+    if (sp.startDate == null) {
+      errors.add('โปรดกรอกวันที่เริ่มต้นของชุดข้อมูลที่ $blockNum');
+    }
+    
+    if (sp.endDate == null) {
+      errors.add('โปรดกรอกวันที่สิ้นสุดของชุดข้อมูลที่ $blockNum');
+    }
+
+    // Validate date range
+    if (sp.startDate != null && sp.endDate != null) {
+      if (sp.startDate!.isAfter(sp.endDate!)) {
+        errors.add('วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุดของชุดข้อมูลที่ $blockNum');
+      }
+    }
+
+    // Validate based on display type
+    if (state.displayType == DisplayType.FURNACE ||
+        state.displayType == DisplayType.FURNACE_CP) {
+      if (sp.furnaceNo == null) {
+        errors.add('โปรดเลือก Furnace No. ของชุดข้อมูลที่ $blockNum');
+      }
+    }
+    
+    if (state.displayType == DisplayType.CP ||
+        state.displayType == DisplayType.FURNACE_CP) {
+      if ((sp.cpNo ?? '').trim().isEmpty) {
+        errors.add('โปรดเลือก Material No. ของชุดข้อมูลที่ $blockNum');
+      }
+    }
+  }
+  
+  return errors;
+}
+
+/// Validate form with external chart details
+List<String> validateFormWithChartDetails(List<ChartDetail> chartDetails) {
+  final errors = <String>[];
+  
+  // Validate profile name
+  if (state.settingProfileName.trim().isEmpty) {
+    errors.add('โปรดตั้งชื่อโปรไฟล์การตั้งค่า');
+  } else {
+    // Check for special characters (allow only letters, numbers, spaces, and Thai characters)
+    final nameRegex = RegExp(r'^[a-zA-Z0-9ก-๙\s]+$');
+    if (!nameRegex.hasMatch(state.settingProfileName)) {
+      errors.add('ชื่อโปรไฟล์ไม่สามารถมีอักขระพิเศษได้');
+    }
+  }
+  
+  // Validate chart change interval
+  if (state.chartChangeInterval < 20) {
+    errors.add('ระยะเวลาเปลี่ยนหน้าจอต้องมากกว่า 20 วินาที');
+  } else if (state.chartChangeInterval > 3600) {
+    errors.add('ระยะเวลาเปลี่ยนหน้าจอต้องไม่เกิน 3,600 วินาที');
+  }
+  
+  // Check if there's at least one specific setting
+  if (state.specifics.isEmpty) {
+    errors.add('โปรดกรอกข้อมูลอย่างน้อย 1 ชุด');
+  }
+
+  // Validate each specific setting
+  for (int i = 0; i < state.specifics.length; i++) {
+    final sp = state.specifics[i];
+    final blockNum = i + 1;
+    
+    if (sp.periodType == null) {
+      errors.add('โปรดกรอกรูปแบบระยะเวลาของชุดข้อมูลที่ $blockNum');
+    }
+    
+    if (sp.startDate == null) {
+      errors.add('โปรดกรอกวันที่เริ่มต้นของชุดข้อมูลที่ $blockNum');
+    }
+    
+    if (sp.endDate == null) {
+      errors.add('โปรดกรอกวันที่สิ้นสุดของชุดข้อมูลที่ $blockNum');
+    }
+
+    // Validate date range
+    if (sp.startDate != null && sp.endDate != null) {
+      if (sp.startDate!.isAfter(sp.endDate!)) {
+        errors.add('วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุดของชุดข้อมูลที่ $blockNum');
+      }
+    }
+
+    // Validate based on display type
+    if (state.displayType == DisplayType.FURNACE ||
+        state.displayType == DisplayType.FURNACE_CP) {
+      if (sp.furnaceNo == null) {
+        errors.add('โปรดเลือก Furnace No. ของชุดข้อมูลที่ $blockNum');
+      }
+    }
+    
+    if (state.displayType == DisplayType.CP ||
+        state.displayType == DisplayType.FURNACE_CP) {
+      if ((sp.cpNo ?? '').trim().isEmpty) {
+        errors.add('โปรดเลือก Material No. ของชุดข้อมูลที่ $blockNum');
+      }
+    }
+
+    // Validate record count using provided chartDetails
+    final recordCount = _getRecordCountFromChartDetails(sp, chartDetails);
+    if (recordCount < 5) {
+      errors.add('ชุดข้อมูลที่ $blockNum ต้องมีข้อมูลอย่างน้อย 5 รายการ (ปัจจุบันมี $recordCount รายการ)');
+    }
+  }
+  
+  return errors;
+}
+
+/// Helper method to count records from external chart details
+int _getRecordCountFromChartDetails(
+  SpecificSettingState sp,
+  List<ChartDetail> chartDetails,
+) {
+  if (chartDetails.isEmpty) return 0;
+  
+  final filtered = chartDetails.where((c) {
+    final matchFurnace = sp.furnaceNo == null || 
+        c.chartGeneralDetail.furnaceNo == sp.furnaceNo;
+    final matchCp = sp.cpNo == null || c.cpNo == sp.cpNo;
+    return matchFurnace && matchCp;
+  });
+  
+  return filtered.length;
+}
+
+  // /// Validate form and return validation errors
+  // List<String> validateForm() {
+  //   final errors = <String>[];
+    
+  //   if (state.settingProfileName.trim().isEmpty) {
+  //     errors.add('โปรดตั้งชื่อโปรไฟล์ตั้งคา');
+  //   }
+    
+  //   if (state.chartChangeInterval >= 10 && state.chartChangeInterval <= 3600) {
+  //     errors.add('ระยะเวลาเปลี่ยนหน้าจอต้องอยู่ระหว่าง 10 - 3,600 วินาที');
+  //   }
+    
+  //   if (state.specifics.isEmpty) {
+  //     errors.add('โปรดกรอกข้อมูลอย่างน้อย 1 ชุด');
+  //   }
+
+  //   for (int i = 0; i < state.specifics.length; i++) {
+  //     final sp = state.specifics[i];
+  //     final blockNum = i + 1;
+      
+  //     if (sp.periodType == null) {
+  //       errors.add('โปรดกรอกรูปแบบระยะเวลาของ ชุดข้อมูลที่ $blockNum');
+  //     }
+      
+  //     if (sp.startDate == null) {
+  //       errors.add('โปรดกรอกรูปแบบวันที่เริ่มต้นของ ชุดข้อมูลที่  $blockNum');
+  //     }
+      
+  //     if (sp.endDate == null) {
+  //       errors.add('โปรดกรอกรูปแบบวันที่สิ้นสุดของ ชุดข้อมูลที่ $blockNum');
+  //     }
+
+  //     if (state.displayType == DisplayType.FURNACE ||
+  //         state.displayType == DisplayType.FURNACE_CP) {
+  //       if (sp.furnaceNo == null) {
+  //         errors.add('โปรดกรอก Furnace No. ชุดข้อมูลที่ $blockNum');
+  //       }
+  //     }
+      
+  //     if (state.displayType == DisplayType.CP ||
+  //         state.displayType == DisplayType.FURNACE_CP) {
+  //       if ((sp.cpNo ?? '').trim().isEmpty) {
+  //         errors.add('โปรดกรอก Material No. ชุดข้อมูลที่ $blockNum');
+  //       }
+  //     }
+  //   }
+    
+  //   return errors;
+  // }
 
 Future<void> loadDropdownOptions({
   required int index,

@@ -156,12 +156,17 @@ class _ControlChartComponentState extends State<ControlChartComponent> {
   void _ensureYScale() {
     if (_cachedInterval != null) return;
 
-    const divisions = 5;
-    final yr = widget.controlChartStats?.yAxisRange;
+    const divisions = 3;
+    const epsilon = 1e-9;
 
-    final minSel = yr?.minYsurfaceHardnessControlChart ?? 0.0;
-
-    final maxSel = yr?.maxYsurfaceHardnessControlChart ?? 0.0;
+    final specUsl = widget.controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
+    final target = widget.controlChartStats?.specAttribute?.surfaceHardnessTarget;
+    final avg = widget.controlChartStats?.average;
+    final ucl = widget.controlChartStats?.controlLimitIChart?.ucl;
+    final lcl = widget.controlChartStats?.controlLimitIChart?.lcl;
+    final specLsl = widget.controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;
+    final minSel = widget.controlChartStats?.yAxisRange?.minYsurfaceHardnessControlChart ?? 0.0;
+    final maxSel = widget.controlChartStats?.yAxisRange?.maxYsurfaceHardnessControlChart ?? 0.0;
 
     if (maxSel <= minSel) {
       _cachedMinY = minSel;
@@ -170,48 +175,121 @@ class _ControlChartComponentState extends State<ControlChartComponent> {
       return;
     }
 
-    final ideal = (maxSel - minSel) / divisions;
+    // Collect all pins
+    final pins = <double?>[specLsl, specUsl, lcl, ucl];
+    final activePins = pins
+        .where((p) => p != null && p!.abs() > 0) // ใช้ abs() เผื่อค่าติดลบ 0.0
+        .cast<double>()
+        .toList();
+
+    debugPrint('Initial range: [$minSel, $maxSel]');
+    debugPrint('Active pins: $activePins');
+
+    // Expand initial range to avoid pins on boundaries
+    double workingMin = minSel;
+    double workingMax = maxSel;
+
+    for (final pin in activePins) {
+      if ((pin - workingMin).abs() < epsilon) {
+        workingMin = pin - 0.1;
+      }
+      if ((pin - workingMax).abs() < epsilon) {
+        workingMax = pin + 0.1;
+      }
+    }
+
+    debugPrint('Adjusted working range: [$workingMin, $workingMax]');
+
+    // Calculate ideal interval
+    final ideal = (workingMax - workingMin) / divisions;
     double interval = _niceStepCeil(ideal);
 
-    double minY = (minSel / interval).floor() * interval;
+    debugPrint('Initial interval: $interval (from ideal: $ideal)');
+
+    // Track tried intervals to detect infinite loop
+    final Set<double> triedIntervals = {interval};
+
+    // Align to grid
+    double minY = (workingMin / interval).floor() * interval;
     double maxY = minY + divisions * interval;
 
-    while (maxY < maxSel - 1e-12) {
+    // Ensure coverage of workingMax
+    while (maxY < workingMax - epsilon) {
+      final oldInterval = interval;
       interval = _nextNiceStep(interval);
-      minY = (minSel / interval).floor() * interval;
+      
+      if (interval == oldInterval || interval >= niceSteps.last) {
+        debugPrint('⚠️ Reached end of niceSteps during coverage check');
+        maxY = workingMax + interval;
+        break;
+      }
+      
+      minY = (workingMin / interval).floor() * interval;
       maxY = minY + divisions * interval;
     }
 
-    // ===== ดึงค่า Spec และ Control Limits =====
-    final specAttr = widget.controlChartStats?.specAttribute;
-    final lsl = specAttr?.surfaceHardnessLowerSpec;
-    final usl = specAttr?.surfaceHardnessUpperSpec;
+    debugPrint('After coverage check: minY=$minY, maxY=$maxY, interval=$interval');
 
-    final lcl = widget.controlChartStats?.controlLimitIChart?.lcl ?? 0.0;
-
-    final ucl = widget.controlChartStats?.controlLimitIChart?.ucl ?? 0.0;
-
-    // ===== เช็คว่าชนกับ minY หรือ maxY หรือไม่ =====
-    final checkValues = <double?>[ lsl, usl, lcl, ucl];
+    // Check and avoid collisions with minY and maxY only
+    bool hasCollision = true;
     
-    for (final val in checkValues) {
-      if (val == null) continue;
-      
-      // ถ้าชนกับ minY → ลด minY
-      if ((val - minY).abs() < 1e-9) {
-        minY -= interval;
-      }
-      
-      // ถ้าชนกับ maxY → เพิ่ม maxY
-      if ((val - maxY).abs() < 1e-9) {
-        maxY += interval;
+    while (hasCollision) {
+      hasCollision = false;
+
+      for (final pin in activePins) {
+        // Check if pin collides with minY or maxY
+        if ((pin - minY).abs() < epsilon || (pin - maxY).abs() < epsilon) {
+          debugPrint('Pin $pin collides with boundary (minY=$minY or maxY=$maxY)');
+          
+          final oldInterval = interval;
+          interval = _nextNiceStep(interval);
+          
+          // Check if we've tried this interval before or reached the end
+          if (triedIntervals.contains(interval) || interval == oldInterval || interval >= niceSteps.last) {
+            debugPrint('⚠️ Cannot find collision-free interval, using current: $interval');
+            hasCollision = false;
+            break;
+          }
+          
+          triedIntervals.add(interval);
+          debugPrint('Trying new interval: $interval');
+          
+          // Recalculate grid with new interval
+          minY = (workingMin / interval).floor() * interval;
+          maxY = minY + divisions * interval;
+          
+          // Ensure coverage with new interval
+          while (maxY < workingMax - epsilon) {
+            final coverageInterval = _nextNiceStep(interval);
+            if (coverageInterval == interval || coverageInterval >= niceSteps.last) {
+              maxY = workingMax + interval;
+              break;
+            }
+            interval = coverageInterval;
+            triedIntervals.add(interval);
+            minY = (workingMin / interval).floor() * interval;
+            maxY = minY + divisions * interval;
+          }
+          
+          hasCollision = true;
+          break;
+        }
       }
     }
+
+    // Final snap
+    double _snap(double val, double step) => (val / step).roundToDouble() * step;
+    minY = _snap(minY, interval);
+    maxY = minY + divisions * interval;
+
+    debugPrint('Final: minY=$minY, maxY=$maxY, interval=$interval');
+    debugPrint('Tried intervals: $triedIntervals');
 
     _cachedMinY = minY;
     _cachedMaxY = maxY;
     _cachedInterval = interval;
   }
+  
   // Tooltip state
   final ValueNotifier<_Tip?> _tip = ValueNotifier<_Tip?>(null);
 

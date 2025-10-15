@@ -4,9 +4,6 @@ import '../../../design_system/app_color.dart';
 
 Widget legendItem(BuildContext context, String label, Color color, String value) {
 
-  // ✅ dynamically scaled font using TextScaler
-  final double scaledSize = fontScaler(context, 12);
-
   return Row(
     mainAxisSize: MainAxisSize.min,
     children: [
@@ -19,7 +16,7 @@ Widget legendItem(BuildContext context, String label, Color color, String value)
       Text(
         label,
         style: TextStyle(
-          fontSize: scaledSize,
+          fontSize: 12,
           color: AppColors.colorBlack,
           fontWeight: FontWeight.bold,
         ),
@@ -28,7 +25,7 @@ Widget legendItem(BuildContext context, String label, Color color, String value)
       Text(
         value,
         style: TextStyle(
-          fontSize: scaledSize,
+          fontSize: 12,
           color: AppColors.colorBlack,
           fontWeight: FontWeight.bold,
         ),

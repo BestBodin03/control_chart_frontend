@@ -175,7 +175,7 @@ class _MediumContainer extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final eachChartH = ((constraints.maxHeight - (sectionLabelH + gapV)
-           * 2 - mediumChartSizeScaler(context)) / 2 + 4)
+           * 2 - mediumChartSizeScaler(context)) / 2 + 6)
               .clamp(0.0, double.infinity);
           final combineControlLimit = (violations?.beyondControlLimitLower ?? 0) + (violations?.beyondControlLimitUpper ?? 0);
           final combineSpecLimit    = (violations?.beyondSpecLimitLower ?? 0) + (violations?.beyondSpecLimitUpper ?? 0);

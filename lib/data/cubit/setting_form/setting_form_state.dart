@@ -266,3 +266,4 @@ class RuleSelected {
   @override
   String toString() => 'RuleSelected(ruleId: $ruleId, ruleName: $ruleName, isUsed: $isUsed)';
 }
+

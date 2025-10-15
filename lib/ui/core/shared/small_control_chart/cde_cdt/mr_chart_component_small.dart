@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../common/chart/legend_item.dart';
+import '../small_control_chart_var.dart';
 
 /// CDE/CDT MR Chart — Surface-like time axis with xStart/xEnd
 class MrChartComponentSmallCdeCdt extends StatefulWidget implements ChartComponent  {
@@ -311,7 +312,7 @@ class _MrChartComponentSmallCdeCdtState extends State<MrChartComponentSmallCdeCd
         space: 8,
         child: Transform.rotate(
           angle: -30 * math.pi / 180,
-          child: Text(text, style: const TextStyle(fontSize: 12, color: AppColors.colorBlack), overflow: TextOverflow.ellipsis),
+          child: Text(text, style: const TextStyle(fontSize: 10, color: AppColors.colorBlack), overflow: TextOverflow.ellipsis),
         ),
       );
     }
@@ -320,17 +321,17 @@ class _MrChartComponentSmallCdeCdtState extends State<MrChartComponentSmallCdeCd
       leftTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 40,
+          reservedSize: 36,
           interval: _getInterval(),
           getTitlesWidget: (v, _) => Text(v.toStringAsFixed(2), style: const TextStyle(
             color: AppColors.colorBlack, 
-            fontSize: 12)),
+            fontSize: 10)),
         ),
       ),
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          reservedSize: 28,
+          reservedSize: 24,
           interval: step,
           getTitlesWidget: bottomLabel,
         ),
@@ -466,7 +467,7 @@ class _MrChartComponentSmallCdeCdtState extends State<MrChartComponentSmallCdeCd
   }
 
   double _getInterval() {
-    const divisions = 5;
+    const divisions = 3;
     final minSel = 0.0;
     final maxSel = _sel(
           widget.controlChartStats?.yAxisRange?.maxYcdeMrChart,
@@ -499,44 +500,36 @@ class _MrChartComponentSmallCdeCdtState extends State<MrChartComponentSmallCdeCd
     return interval;
   }
 
+   /// คืนค่า step ที่เล็กที่สุดซึ่ง >= x
   double _niceStepCeil(double x) {
-    if (x <= 0 || x.isNaN || x.isInfinite) return 1.0;
-    final exp = (math.log(x) / math.log(10)).floor();
-    final mag = math.pow(10.0, exp).toDouble();
-    final mant = x / mag;
-    if (mant <= 0.025) return 0.025 * mag;
-    if (mant <= 0.050) return 0.050 * mag;
-    if (mant <= 0.075) return 0.075 * mag;
-    if (mant <= 0.125) return 0.125 * mag;
-    if (mant <= 0.25) return 0.25 * mag;
-    if (mant <= 0.5) return 0.5 * mag;
-    if (mant <= 1.0) return 1.0 * mag;
-    if (mant <= 1.25) return 1.25 * mag;
-    if (mant <= 1.5) return 1.5 * mag;
-    if (mant <= 2.0) return 2.0 * mag;
-    if (mant <= 2.5) return 2.5 * mag;
-    if (mant <= 3.0) return 3.0 * mag;
-    if (mant <= 4.0) return 4.0 * mag;
-    if (mant <= 5.0) return 5.0 * mag;
-    return 10.0 * mag;
+    int left = 0;
+    int right = niceSteps.length - 1;
+
+    while (left < right) {
+      int mid = (left + right) >> 1; // หาร 2 แบบ integer
+      if (niceSteps[mid] >= x) {
+        right = mid;
+      } else {
+        left = mid + 1;
+      }
+    }
+    return niceSteps[left];
   }
 
+  /// คืนค่า step ถัดไป (strictly bigger than step)
   double _nextNiceStep(double step) {
-    final exp = (math.log(step) / math.log(10)).floor();
-    final mag = math.pow(10.0, exp).toDouble();
-    final mant = step / mag;
-    if (mant <= 0.025) return 0.050 * mag;
-    if (mant <= 0.050) return 0.075 * mag;
-    if (mant <= 0.075) return 0.125 * mag;
-    if (mant <= 0.125) return 0.25 * mag;
-    if (mant <= 0.25) return 0.5 * mag;
-    if (mant <= 0.5) return 1.0 * mag;
-    if (mant < 1.0) return 2.0 * mag;
-    if (mant < 2.0) return 2.5 * mag;
-    if (mant < 2.5) return 3.0 * mag;
-    if (mant < 3.0) return 3.5 * mag;
-    if (mant < 5.0) return 10.0 * mag;
-    return 10.0 * mag;
+    int left = 0;
+    int right = niceSteps.length - 1;
+
+    while (left < right) {
+      int mid = (left + right) >> 1;
+      if (niceSteps[mid] > step) {
+        right = mid;
+      } else {
+        left = mid + 1;
+      }
+    }
+    return niceSteps[left];
   }
 
   double _xInterval(PeriodType periodType, double minX, double maxX) {

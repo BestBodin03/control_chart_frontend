@@ -37,7 +37,7 @@ class _SmallCardCdeCdt extends StatefulWidget {
 
 class _SmallCardCdeCdtState extends State<_SmallCardCdeCdt> {
   static const double _chartH = 248; // fixed height ต่อหนึ่งกราฟ
-  static const double _gapV = 4;
+  static const double _gapV = 8;
 
   bool _showLegend = false;
 
