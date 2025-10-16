@@ -76,7 +76,7 @@ class ControlChartComponentLarge extends StatefulWidget implements ChartComponen
     );
 
     return Wrap(
-      spacing: 8,
+      spacing: 12,
       runSpacing: 4,
       alignment: WrapAlignment.spaceEvenly,
       children: [

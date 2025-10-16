@@ -118,7 +118,7 @@ class _ProfilesPageState extends State<ProfilesPage> {
                 children: [
                   // เพิ่มโปรไฟล์
                   PillButton(
-                    label: 'เพิ่มโปรไฟล์',
+                    label: 'New Profile',
                     labelSize: 14,
                     leading: Icons.add,
                     selected: true,
@@ -135,7 +135,7 @@ class _ProfilesPageState extends State<ProfilesPage> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             backgroundColor: AppColors.colorBgGrey,
                             contentPadding: const EdgeInsets.all(8),
-                            title: const Text('เพิ่มโปรไฟล์'),
+                            title: const Text('Add Profile'),
                             content: const SizedBox(width: 360, child: SettingForm()),
                           ),
                         ),
@@ -157,7 +157,7 @@ class _ProfilesPageState extends State<ProfilesPage> {
                   Visibility(
                     visible: !_deleteMode,
                     child: PillButton(
-                      label: _deleteMode ? 'ยกเลิก' : 'ลบโปรไฟล์',
+                      label: _deleteMode ? 'Cancle' : 'Delete',
                       labelSize: 14,
                       leading: _deleteMode ? Icons.close_rounded : Icons.remove_circle_rounded,
                       selected: true,
@@ -225,7 +225,7 @@ class _ProfilesPageState extends State<ProfilesPage> {
                     // ),
                     // const SizedBox(width: 8),
                     PillButton(
-                      label: 'ยกเลิก',
+                      label: 'Cancle',
                       labelSize: 14,
                       leading: Icons.change_circle_rounded,
                       selected: true,
@@ -246,7 +246,7 @@ class _ProfilesPageState extends State<ProfilesPage> {
 
                     // ปุ่มลบที่เลือกโดยตรง (สำรองอีกทาง)
                     PillButton(
-                      label: 'ลบรายการ (${_selectedIds.length})',
+                      label: 'Delete Page (${_selectedIds.length})',
                       labelSize: 14,
                       leading: Icons.delete_forever_rounded,
                       selected: true,
@@ -361,7 +361,7 @@ class _ProfilesPageState extends State<ProfilesPage> {
           backgroundColor: AppColors.colorBgGrey,
           contentPadding: const EdgeInsets.all(8),
           title: Text(
-            'แก้ไขโปรไฟล์: ${profile.name}',
+            'Edit Profile: ${profile.name}',
             style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           content: const SizedBox( // 👈 ให้ฟอร์มมีความกว้างที่พอดี

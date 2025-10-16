@@ -404,12 +404,14 @@ List<String> validateForm() {
   
   // Validate profile name
   if (state.settingProfileName.trim().isEmpty) {
-    errors.add('โปรดตั้งชื่อโปรไฟล์การตั้งค่า');
+    errors.add('โปรดตั้งชื่อโปรไฟล์');
   } else {
-    // Check for special characters (allow only letters, numbers, spaces, and Thai characters)
-    final nameRegex = RegExp(r'^[a-zA-Z0-9ก-๙\s]+$');
-    if (!nameRegex.hasMatch(state.settingProfileName)) {
-      errors.add('ชื่อโปรไฟล์ไม่สามารถมีอักขระพิเศษได้');
+    final name = state.settingProfileName.trim();
+    final nameRegex = RegExp(r'^[A-Za-z0-9ก-๙\s_.()&-,]+$');
+    if (!nameRegex.hasMatch(name)) {
+      errors.add('ชื่อต้องเป็นตัวอักษร ตัวเลข ช่องว่าง หรือ _.()&-, เท่านั้น');
+    } else if (name.length > 100) {  // ✅ แก้จาก <= เป็น >
+      errors.add('ชื่อต้องไม่เกิน 100 อักขระ');
     }
   }
   
@@ -468,34 +470,33 @@ List<String> validateForm() {
   return errors;
 }
 
-/// Validate form with external chart details
 List<String> validateFormWithChartDetails(List<ChartDetail> chartDetails) {
   final errors = <String>[];
   
-  // Validate profile name
+  // ✅ 1. Validate ข้อมูลทั่วไป (ไม่อยู่ใน loop)
   if (state.settingProfileName.trim().isEmpty) {
-    errors.add('โปรดตั้งชื่อโปรไฟล์การตั้งค่า');
+    errors.add('โปรดตั้งชื่อโปรไฟล์');
   } else {
-    // Check for special characters (allow only letters, numbers, spaces, and Thai characters)
-    final nameRegex = RegExp(r'^[a-zA-Z0-9ก-๙\s]+$');
-    if (!nameRegex.hasMatch(state.settingProfileName)) {
-      errors.add('ชื่อโปรไฟล์ไม่สามารถมีอักขระพิเศษได้');
+    final name = state.settingProfileName.trim();
+    final nameRegex = RegExp(r'^[A-Za-z0-9ก-๙\s_.()&-,]+$');
+    if (!nameRegex.hasMatch(name)) {
+      errors.add('ชื่อต้องเป็นตัวอักษร ตัวเลข ช่องว่าง หรือ _.()&-, เท่านั้น');
+    } else if (name.length > 100) {  // ✅ แก้จาก <= เป็น >
+      errors.add('ชื่อต้องไม่เกิน 100 อักขระ');
     }
   }
   
-  // Validate chart change interval
   if (state.chartChangeInterval < 20) {
     errors.add('ระยะเวลาเปลี่ยนหน้าจอต้องมากกว่า 20 วินาที');
   } else if (state.chartChangeInterval > 3600) {
     errors.add('ระยะเวลาเปลี่ยนหน้าจอต้องไม่เกิน 3,600 วินาที');
   }
   
-  // Check if there's at least one specific setting
   if (state.specifics.isEmpty) {
     errors.add('โปรดกรอกข้อมูลอย่างน้อย 1 ชุด');
   }
 
-  // Validate each specific setting
+  // ✅ 2. Validate แต่ละ specific (loop เดียว)
   for (int i = 0; i < state.specifics.length; i++) {
     final sp = state.specifics[i];
     final blockNum = i + 1;
@@ -512,14 +513,12 @@ List<String> validateFormWithChartDetails(List<ChartDetail> chartDetails) {
       errors.add('โปรดกรอกวันที่สิ้นสุดของชุดข้อมูลที่ $blockNum');
     }
 
-    // Validate date range
     if (sp.startDate != null && sp.endDate != null) {
       if (sp.startDate!.isAfter(sp.endDate!)) {
         errors.add('วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุดของชุดข้อมูลที่ $blockNum');
       }
     }
 
-    // Validate based on display type
     if (state.displayType == DisplayType.FURNACE ||
         state.displayType == DisplayType.FURNACE_CP) {
       if (sp.furnaceNo == null) {
@@ -534,8 +533,7 @@ List<String> validateFormWithChartDetails(List<ChartDetail> chartDetails) {
       }
     }
 
-    // Validate record count using provided chartDetails
-    final recordCount = _getRecordCountFromChartDetails(sp, chartDetails);
+    final recordCount = getRecordCountFromChartDetails(sp, chartDetails);
     if (recordCount < 5) {
       errors.add('ชุดข้อมูลที่ $blockNum ต้องมีข้อมูลอย่างน้อย 5 รายการ (ปัจจุบันมี $recordCount รายการ)');
     }
@@ -544,18 +542,44 @@ List<String> validateFormWithChartDetails(List<ChartDetail> chartDetails) {
   return errors;
 }
 
-/// Helper method to count records from external chart details
-int _getRecordCountFromChartDetails(
+int getRecordCountFromChartDetails(
   SpecificSettingState sp,
   List<ChartDetail> chartDetails,
 ) {
   if (chartDetails.isEmpty) return 0;
   
   final filtered = chartDetails.where((c) {
-    final matchFurnace = sp.furnaceNo == null || 
+    final collectedDate = c.chartGeneralDetail.collectedDate;
+    
+    // ✅ 1. กรอง startDate - endDate
+    if (sp.startDate != null && sp.endDate != null && collectedDate != null) {
+      if (collectedDate.isBefore(sp.startDate!) || collectedDate.isAfter(sp.endDate!)) {
+        return false;
+      }
+    }
+    
+    // ✅ 2. กรอง furnace
+    if (sp.furnaceNo != null) {
+      if (c.chartGeneralDetail.furnaceNo != sp.furnaceNo) {
+        return false;
+      }
+    }
+    
+    // ✅ 3. กรอง material no
+    if (sp.cpNo != null && sp.cpNo!.trim().isNotEmpty) {
+      if (c.cpNo != sp.cpNo) {
+        return false;
+      }
+    }
+    
+    // ✅ ต้องมีอย่างน้อย furnace หรือ cp match
+    final hasFurnaceMatch = sp.furnaceNo != null && 
         c.chartGeneralDetail.furnaceNo == sp.furnaceNo;
-    final matchCp = sp.cpNo == null || c.cpNo == sp.cpNo;
-    return matchFurnace && matchCp;
+    final hasCpMatch = sp.cpNo != null && 
+        sp.cpNo!.trim().isNotEmpty && 
+        c.cpNo == sp.cpNo;
+    
+    return hasFurnaceMatch || hasCpMatch;
   });
   
   return filtered.length;

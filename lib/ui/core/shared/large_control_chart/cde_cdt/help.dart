@@ -202,7 +202,10 @@ class _LargeContainerCdeCdt extends StatelessWidget {
           final wide = constraints.maxWidth >= 900;
 
           // LEFT info panel (เหมือน Surface)
-          final Widget leftPanel = Container(
+          final Widget leftPanel = SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Container(
                 decoration: BoxDecoration(
                   color: AppColors.colorBg,
                   borderRadius: BorderRadius.circular(12),
@@ -214,7 +217,7 @@ class _LargeContainerCdeCdt extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Row(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -225,11 +228,16 @@ class _LargeContainerCdeCdt extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const SizedBox(height: 4),
+                          const SizedBox(width: 4),
+                          // ✅ Dynamic Label
                           Text(_selectedLabel(), style: AppTypography.textBody2BBold),
                           const SizedBox(height: 4),
+
+                          // ✅ Record Count
                           Text('$spotCount Records', style: AppTypography.textBody3BBold),
                           const SizedBox(height: 4),
+
+                          // ✅ Capability Box
                           if (hasSpec)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 4.0),
@@ -242,7 +250,7 @@ class _LargeContainerCdeCdt extends StatelessWidget {
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                                   child: Column(
-                                    // direction: Axis.horizontal,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       if (hasSpecL)
                                         Text(
@@ -269,55 +277,68 @@ class _LargeContainerCdeCdt extends StatelessWidget {
                                 ),
                               ),
                             ),
-                          ViolationSpecificQueueCard(
-                            violations: buildViolationsFromStateCdeCdt(searchState),
-                          ),
+                        ],
+                      ),
+                    ),
 
-                          const SizedBox(height: 8),
-                          
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(minWidth: 200),
-                              child: Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    color: AppColors.colorBg,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(width: 1, color: Colors.grey.shade500),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppColors.colorBg.withValues(alpha: 0.4),
-                                        offset: const Offset(0, -2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8),
-                                    child: SizedBox(
-                                      width: 156,
-                                      child: ViolationForDashboard(
-                                        combinedControlLimit: vOverCtrlL + vOverCtrlU,
-                                        combinedSpecLimit:    vOverSpecL + vOverSpecU,
-                                        trend:                vTrend,
-                                        overCtrlLower:        vOverCtrlL,
-                                        overCtrlUpper:        vOverCtrlU,
-                                        overSpecLower:        vOverSpecL,
-                                        overSpecUpper:        vOverSpecU,
-                                      ),
-                                    ),
-                                  ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4.0),
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: ViolationSpecificQueueCard(
+                          violations: buildViolationsFromStateCdeCdt(searchState),
+                        ),
+                      ),
+                    ),
+
+                    // const SizedBox(height: 8),
+                    // const Spacer(),
+
+                    // ✅ Violation Dashboard (same style)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 200),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: AppColors.colorBg,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(width: 1, color: Colors.grey.shade500),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.colorBg.withValues(alpha: 0.4),
+                                  offset: const Offset(0, -2),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: SizedBox(
+                                width: 156,
+                                child: ViolationForDashboard(
+                                  combinedControlLimit: vOverCtrlL + vOverCtrlU,
+                                  combinedSpecLimit:    vOverSpecL + vOverSpecU,
+                                  trend:                vTrend,
+                                  overCtrlLower:        vOverCtrlL,
+                                  overCtrlUpper:        vOverCtrlU,
+                                  overSpecLower:        vOverSpecL,
+                                  overSpecUpper:        vOverSpecU,
                                 ),
                               ),
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ],
                 ),
+              ),
+            ),
           );
+
 
           // RIGHT charts (เหมือน Surface)
           final Widget chartsExpanded = Expanded(
@@ -481,7 +502,12 @@ class _ChartsStackCdeCdt extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.only(left: 8.0),
-              child: Text("Control Chart", style: AppTypography.textBody3B),
+              child: Row(
+                children: [
+                  Text("Control Chart", style: AppTypography.textBody3B),
+                  
+                ],
+              ),
             ),
             const SizedBox(height: 8),
             _buildSingleChartCdeCdt(

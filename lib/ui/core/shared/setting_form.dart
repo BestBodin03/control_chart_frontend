@@ -471,30 +471,30 @@ class _SettingFormState extends State<SettingForm> {
                           child: BlocBuilder<SettingFormCubit, SettingFormState>(
                             builder: (context, state) {
                               final cubit = context.read<SettingFormCubit>();
-                              final chartDetails =
-                                  context.watch<SearchBloc>().state.chartDetails;
+                              final chartDetails = context.watch<SearchBloc>().state.chartDetails;
 
-                              int _getChartDetailCountFor(
-                                  SpecificSettingState sp) {
-                                if (chartDetails.isEmpty) return 0;
-                                final filtered = chartDetails.where((c) {
-                                  final matchFurnace =
-                                      sp.furnaceNo == null ||
-                                          c.chartGeneralDetail.furnaceNo ==
-                                              sp.furnaceNo;
-                                  final matchCp =
-                                      sp.cpNo == null || c.cpNo == sp.cpNo;
-                                  return matchFurnace && matchCp;
-                                });
-                                return filtered.length;
-                              }
+                              // int _getChartDetailCountFor(SpecificSettingState sp) {
+                              //   if (chartDetails.isEmpty) return 0;
+                              //   final filtered = chartDetails.where((c) {
+                              //     final matchFurnace =
+                              //         sp.furnaceNo == null ||
+                              //             c.chartGeneralDetail.furnaceNo ==
+                              //                 sp.furnaceNo;
+                              //     final matchCp =
+                              //         sp.cpNo == null || c.cpNo == sp.cpNo;
+                              //     return matchFurnace && matchCp;
+                              //   });
+                              //   return filtered.length;
+                              // }
 
                               return Column(
                                 children:
                                     List.generate(state.specifics.length, (i) {
                                   final sp = state.specifics[i];
-                                  final recordCount =
-                                      _getChartDetailCountFor(sp);
+                                  final recordCount = cubit.getRecordCountFromChartDetails(
+                                    sp,
+                                    chartDetails, // ส่ง chartDetails ที่มีใน scope นี้
+                                  );
 
                                   return Container(
                                     key: ValueKey(sp.id ?? 'spec_$i'),
@@ -751,13 +751,11 @@ class _SettingFormState extends State<SettingForm> {
                                         final chartDetails = context.read<SearchBloc>().state.chartDetails;
                                         
                                         // Validate form with chart details
-                                        final validationErrors = cubit.validateFormWithChartDetails(chartDetails);
-                                        
-                                        // Show error dialog if validation fails
-                                        if (validationErrors.isNotEmpty) {
-                                          await _showErrorDialog(context, validationErrors);
-                                          return;
-                                        }
+final validationErrors = cubit.validateFormWithChartDetails(chartDetails);
+if (validationErrors.isNotEmpty) {
+  await _showErrorDialog(context, validationErrors);
+  return;
+}
 
                                         debugPrint('The ID Value To save $profileId');
 

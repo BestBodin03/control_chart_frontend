@@ -173,7 +173,7 @@ class _LargeContainer extends StatelessWidget {
                     ),
                   const Spacer(),
                   Padding(
-                    padding: const EdgeInsets.only(top: 16.0),
+                    padding: const EdgeInsets.only(top: 4.0),
                     child: ViolationSpecificQueueCard(
                         violations: _buildViolationsFromState(searchState),
                       ),

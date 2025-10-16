@@ -1,3 +1,4 @@
+// import_page.dart
 import 'package:control_chart/ui/core/design_system/app_color.dart';
 import 'package:control_chart/ui/core/design_system/app_typography.dart';
 import 'package:control_chart/ui/core/shared/form_component.dart';
@@ -5,8 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../../data/bloc/data_importing/import_bloc.dart';
-
-// ... imports เดิมของคุณ
 
 class ImportPage extends StatelessWidget {
   const ImportPage({
@@ -24,21 +23,42 @@ class ImportPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ไม่ใช้ SnackBar กลางแอปแล้ว ตัด BlocListener ออกได้
-    return _body(context);
+    // Centralized messages via SnackBar only
+    return BlocListener<ImportBloc, ImportState>(
+      listenWhen: (prev, next) =>
+          prev.snackId != next.snackId && (next.snackMsg?.isNotEmpty ?? false),
+      listener: (context, st) {
+        final theme = Theme.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  st.snackIsError ? Icons.error_outline : Icons.check_circle_outline,
+                  size: 18,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 8),
+                Expanded(child: Text(st.snackMsg!)),
+              ],
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: st.snackIsError ? AppColors.colorAlert1 : AppColors.colorSuccess1,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      },
+      child: _body(context),
+    );
   }
 
   Widget _body(BuildContext context) {
     final st = context.watch<ImportBloc>().state;
 
-    // ระหว่าง flow “ดึงข้อมูลปัจจุบัน”
     final bool importBusy = st.isWaiting || st.isPolling;
-
-    // แสดง progress เฉพาะตอน import flow เท่านั้น
     final bool showProgress = importBusy;
-
-  final bool hasPercent = st.isPolling && st.importData != null;
-  final int percent = (st.importData?.percent ?? 0).clamp(0, 100);
+    final bool hasPercent = st.isPolling && st.importData != null;
+    final int percent = (st.importData?.percent ?? 0).clamp(0, 100);
 
     return LayoutBuilder(
       builder: (context, c) {
@@ -71,10 +91,10 @@ class ImportPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // ⬇️ หัวข้อ + สถานะในบรรทัดเดียว
+                      // ⬇️ Title + status chip
                       Row(
                         children: [
-                          buildSectionTitle('การดึงข้อมูล'),
+                          buildSectionTitle('Getting Data'),
                           const Spacer(),
                           _buildImportStatusChip(st, percent: percent),
                         ],
@@ -93,7 +113,9 @@ class ImportPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          hasPercent ? 'กำลังดึงข้อมูล... $percent%' : 'กำลังดึงข้อมูล...',
+                          hasPercent
+                              ? 'Getting Current Data... $percent%'
+                              : 'Getting Current Data...',
                           style: const TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                         const SizedBox(height: 16),
@@ -113,19 +135,21 @@ class ImportPage extends StatelessWidget {
                                   height: 16,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor:
+                                        AlwaysStoppedAnimation<Color>(Colors.white),
                                   ),
                                 )
                               : const Icon(Icons.replay_rounded, size: 20),
                           label: Text(
-                            importBusy ? 'กำลังดำเนินการ...' : 'ดึงข้อมูลปัจจุบัน',
+                            importBusy ? 'Getting Current Data...' : 'Get Current Data',
                             style: AppTypography.textBody2WBold,
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.colorBrand,
                             foregroundColor: Colors.white,
                             elevation: 8,
-                            shadowColor: const Color.fromARGB(255, 54, 48, 141).withValues(alpha: 0.4),
+                            shadowColor: const Color.fromARGB(255, 54, 48, 141)
+                                .withValues(alpha: 0.4),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(24),
                             ),
@@ -166,7 +190,7 @@ class ImportPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      buildSectionTitle('เพิ่มข้อมูลใหม่'),
+                      buildSectionTitle('Add New Material No.'),
                       const SizedBox(height: 16),
                       buildTextField(
                         value: nameValue,
@@ -174,7 +198,6 @@ class ImportPage extends StatelessWidget {
                         onChanged: onNameChanged,
                       ),
                       const SizedBox(height: 16),
-
                       Align(
                         alignment: Alignment.centerLeft,
                         child: SizedBox(
@@ -188,19 +211,21 @@ class ImportPage extends StatelessWidget {
                                     height: 16,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      valueColor:
+                                          AlwaysStoppedAnimation<Color>(Colors.white),
                                     ),
                                   )
                                 : const Icon(Icons.check_rounded, size: 20),
                             label: Text(
-                              isAdding ? 'กำลังดำเนินการ...' : 'ยืนยัน',
+                              isAdding ? 'Importing...' : 'Import',
                               style: AppTypography.textBody2WBold,
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.colorSuccess1,
                               foregroundColor: Colors.white,
                               elevation: 8,
-                              shadowColor: AppColors.colorSuccess1.withValues(alpha: 0.4),
+                              shadowColor:
+                                  AppColors.colorSuccess1.withValues(alpha: 0.4),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(24),
                               ),
@@ -221,60 +246,56 @@ class ImportPage extends StatelessWidget {
 
   // ---------- Helpers ----------
 
-Widget _buildImportStatusChip(ImportState st, {required int percent}) {
-  final d = st.importData;
-  final bool running  = st.isWaiting || st.isPolling;
-  final bool hasError = (st.error?.isNotEmpty ?? false) || (d?.hasError ?? false);
+  Widget _buildImportStatusChip(ImportState st, {required int percent}) {
+    final d = st.importData;
+    final bool running = st.isWaiting || st.isPolling;
+    final bool done = d?.isDone == true || d?.finishedAt != null;
+    final bool hasError = (st.error?.isNotEmpty ?? false) || (d?.hasError ?? false);
 
-  String text;
-  Color bg;
-  Color fg = Colors.white;
+    String text;
+    Color bg;
+    const Color fg = Colors.white;
 
-  if (running) {
+if (running) {
     // ✅ โชว์ % เฉพาะช่วงโพลล์ และต้อง > 0
     final bool showPct = st.isPolling && percent > 0;
-    text = showPct ? 'กำลังดึง… $percent%' : 'กำลังดึง…';
+    text = showPct ? 'Getting… $percent%' : 'Getting…';
     bg = AppColors.colorBrand;
 
   } else if (d != null && (d.isDone || d.finishedAt != null)) {
     if (hasError) {
       final msg = (st.error?.isNotEmpty ?? false)
           ? st.error!
-          : ((d.errors.isNotEmpty) ? d.errors.first : 'ล้มเหลว');
+          : ((d.errors.isNotEmpty) ? d.errors.first : 'Failed');
       text = _truncate(msg, 24);
       bg = AppColors.colorAlert1;
     } else {
-      text = 'สำเร็จ';
+      text = 'Success';
       bg = AppColors.colorSuccess1;
     }
 
-  } else if (hasError) {
-    text = _truncate(st.error!, 24);
-    bg = AppColors.colorAlert1;
-
   } else {
-    text = 'พร้อม';
+    text = 'Ready';
     bg = Colors.grey.shade500;
   }
 
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-    decoration: BoxDecoration(
-      color: bg,
-      borderRadius: BorderRadius.circular(999),
-    ),
-    child: Text(
-      text,
-      style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w600),
-      overflow: TextOverflow.ellipsis,
-    ),
-  );
-}
 
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w600),
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
 
   String _truncate(String s, int max) {
     if (s.length <= max) return s;
     return '${s.substring(0, max - 1)}…';
   }
 }
-

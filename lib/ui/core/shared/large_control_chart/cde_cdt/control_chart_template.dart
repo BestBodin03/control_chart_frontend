@@ -1,16 +1,19 @@
-import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
-import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
-import 'package:control_chart/domain/models/chart_data_point.dart';
-import 'package:control_chart/domain/models/control_chart_stats.dart';
-import 'package:control_chart/ui/core/design_system/app_color.dart';
-import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/control_chart_component.dart';
-import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/control_chart_component.dart' as ctrl;
+import 'package:control_chart/ui/core/shared/large_control_chart/cde_cdt/mr_chart_component.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../../domain/types/chart_component.dart';
-import 'control_chart_component/control_chart_component.dart';
-import 'mr_chart_component.dart' as mr;
+import 'package:control_chart/ui/core/design_system/app_color.dart';
+import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
+import 'package:control_chart/data/bloc/search_chart_details/extension/search_state_extension.dart';
+import 'package:control_chart/domain/models/control_chart_stats.dart';
+import 'package:control_chart/domain/models/chart_data_point.dart';
+import 'package:control_chart/domain/types/chart_component.dart';
+
+// CDE/CDT chart parts
+import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/control_chart_component.dart'
+    as ctrl;
+import 'package:control_chart/ui/core/shared/medium_control_chart/cde_cdt/mr_chart_component.dart'
+    as mr;
 
 class ControlChartTemplateCdeCdtLarge extends StatefulWidget {
   final String xAxisLabel;
@@ -113,6 +116,7 @@ class _ControlChartTemplateCdeCdtLargeState
         DateTime? end = widget.xEnd;
 
         if ((start == null || end == null) && dataPoints.isNotEmpty) {
+          // ensure chronological for fallback
           dataPoints.sort((a, b) => a.collectDate.compareTo(b.collectDate));
           start ??= dataPoints.first.collectDate;
           end ??= dataPoints.last.collectDate;
@@ -121,7 +125,7 @@ class _ControlChartTemplateCdeCdtLargeState
           return const Center(child: Text('ช่วงเวลาไม่ถูกต้อง'));
         }
 
-        final useI = ctrl.ControlChartComponent(
+        final iChart = ctrl.ControlChartComponent(
           dataPoints: dataPoints,
           controlChartStats: stats,
           dataLineColor: widget.dataLineColor,
@@ -132,7 +136,7 @@ class _ControlChartTemplateCdeCdtLargeState
           xEnd: end,
         );
 
-        final useMr = mr.MrChartComponentLarge(
+        final mrChart = mr.MrChartComponent(
           dataPoints: dataPoints,
           controlChartStats: stats,
           dataLineColor: widget.dataLineColor,
@@ -143,10 +147,11 @@ class _ControlChartTemplateCdeCdtLargeState
           xEnd: end,
         );
 
-        final Widget selectedWidget = widget.isMovingRange ? useMr : useI;
+        final Widget selectedWidget = widget.isMovingRange ? mrChart : iChart;
 
-        const legendRightPad = 24.0;
-        const legendHeight = 32.0;
+        // match Surface template constants
+        const legendRightPad = 32.0;
+        const legendHeight = 28.0;
         const gapLegendToChart = 4.0;
 
         return SizedBox(
@@ -159,11 +164,15 @@ class _ControlChartTemplateCdeCdtLargeState
               border: Border.all(color: Colors.grey.shade300),
             ),
             child: Padding(
+              // keep left = 16, right = 16, bottom = 8
               padding: const EdgeInsets.fromLTRB(16, 0, legendRightPad, 8),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Legend
+                  // Top spacing to force "top = 4"
+                  const SizedBox(height: 4),
+
+                  // Legend: fixed height = 28, aligned left (so left = 16 visually)
                   SizedBox(
                     height: legendHeight,
                     child: Align(
@@ -171,9 +180,11 @@ class _ControlChartTemplateCdeCdtLargeState
                       child: (selectedWidget as ChartComponent).buildLegend(context),
                     ),
                   ),
+
+                  // Gap between legend and chart = 4
                   const SizedBox(height: gapLegendToChart),
 
-                  // chart
+                  // Chart body
                   Expanded(child: selectedWidget),
                 ],
               ),

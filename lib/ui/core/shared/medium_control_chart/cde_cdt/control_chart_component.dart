@@ -133,210 +133,210 @@ class ControlChartComponent extends StatefulWidget implements ChartComponent {
 class _ControlChartComponentState extends State<ControlChartComponent> {
   final GlobalKey _chartKey = GlobalKey();
 
-double? _cachedMinY;
-double? _cachedMaxY;
-double? _cachedInterval;
+  double? _cachedMinY;
+  double? _cachedMaxY;
+  double? _cachedInterval;
 
-double _niceStepCeil(double x) {
-  int left = 0, right = niceSteps.length - 1;
-  while (left < right) {
-    final mid = (left + right) >> 1;
-    if (niceSteps[mid] >= x) {
-      right = mid;
-    } else {
-      left = mid + 1;
-    }
-  }
-  return niceSteps[left];
-}
-
-double _nextNiceStep(double step) {
-  int left = 0, right = niceSteps.length - 1;
-  while (left < right) {
-    final mid = (left + right) >> 1;
-    if (niceSteps[mid] > step) {
-      right = mid;
-    } else {
-      left = mid + 1;
-    }
-  }
-  return niceSteps[left];
-}
-
-void _ensureYScale() {
-  if (_cachedInterval != null) return;
-
-  const divisions = 5;
-  const epsilon = 1e-9;
-
-  final specUsl = widget.controlChartStats.sel(
-    widget.controlChartStats?.specAttribute?.cdeUpperSpec,
-    widget.controlChartStats?.specAttribute?.cdtUpperSpec,
-    widget.controlChartStats?.specAttribute?.compoundLayerUpperSpec,
-  );
-
-  final target = widget.controlChartStats.sel(
-    widget.controlChartStats?.specAttribute?.cdeTarget,
-    widget.controlChartStats?.specAttribute?.cdtTarget,
-    widget.controlChartStats?.specAttribute?.compoundLayerTarget,
-  );
-
-  final avg = widget.controlChartStats.sel(
-    widget.controlChartStats?.cdeAverage,
-    widget.controlChartStats?.cdtAverage,
-    widget.controlChartStats?.compoundLayerAverage,
-  );
-
-  final ucl = widget.controlChartStats.sel(
-    widget.controlChartStats?.cdeControlLimitIChart?.ucl,
-    widget.controlChartStats?.cdtControlLimitIChart?.ucl,
-    widget.controlChartStats?.compoundLayerControlLimitIChart?.ucl,
-  );
-
-  final lcl = widget.controlChartStats.sel(
-    widget.controlChartStats?.cdeControlLimitIChart?.lcl,
-    widget.controlChartStats?.cdtControlLimitIChart?.lcl,
-    widget.controlChartStats?.compoundLayerControlLimitIChart?.lcl,
-  );
-
-  final specLsl = widget.controlChartStats.sel(
-    widget.controlChartStats?.specAttribute?.cdeLowerSpec,
-    widget.controlChartStats?.specAttribute?.cdtLowerSpec,
-    widget.controlChartStats?.specAttribute?.compoundLayerLowerSpec,
-  );
-
-  final minSel = widget.controlChartStats.sel(
-    widget.controlChartStats?.yAxisRange?.minYcdeControlChart ?? 0.0,
-    widget.controlChartStats?.yAxisRange?.minYcdtControlChart ?? 0.0,
-    widget.controlChartStats?.yAxisRange?.minYcompoundLayerControlChart ?? 0.0,
-  );
-  final maxSel = widget.controlChartStats.sel(
-    widget.controlChartStats?.yAxisRange?.maxYcdeControlChart ?? 0.0,
-    widget.controlChartStats?.yAxisRange?.maxYcdtControlChart ?? 0.0,
-    widget.controlChartStats?.yAxisRange?.maxYcompoundLayerControlChart ?? 0.0,
-  );
-
-  if (maxSel! <= minSel!) {
-    _cachedMinY = minSel;
-    _cachedMaxY = minSel + divisions;
-    _cachedInterval = 1.0;
-    return;
-  }
-
-  // Collect all pins
-    final pins = <double?>[specLsl, specUsl, lcl, ucl];
-    final activePins = pins
-        .where((p) => p != null && p!.abs() > 0) // ใช้ abs() เผื่อค่าติดลบ 0.0
-        .cast<double>()
-        .toList();
-
-  debugPrint('Initial range: [$minSel, $maxSel]');
-  debugPrint('Active pins: $activePins');
-
-  // Expand initial range to avoid pins on boundaries
-  double workingMin = minSel;
-  double workingMax = maxSel;
-
-  for (final pin in activePins) {
-    if ((pin - workingMin).abs() < epsilon) {
-      workingMin = pin - 0.1;
-    }
-    if ((pin - workingMax).abs() < epsilon) {
-      workingMax = pin + 0.1;
-    }
-  }
-
-  debugPrint('Adjusted working range: [$workingMin, $workingMax]');
-
-  // Calculate ideal interval
-  final ideal = (workingMax - workingMin) / divisions;
-  double interval = _niceStepCeil(ideal);
-
-  debugPrint('Initial interval: $interval (from ideal: $ideal)');
-
-  // Track tried intervals to detect infinite loop
-  final Set<double> triedIntervals = {interval};
-
-  // Align to grid
-  double minY = (workingMin / interval).floor() * interval;
-  double maxY = minY + divisions * interval;
-
-  // Ensure coverage of workingMax
-  while (maxY < workingMax - epsilon) {
-    final oldInterval = interval;
-    interval = _nextNiceStep(interval);
-    
-    if (interval == oldInterval || interval >= niceSteps.last) {
-      debugPrint('⚠️ Reached end of niceSteps during coverage check');
-      maxY = workingMax + interval;
-      break;
-    }
-    
-    minY = (workingMin / interval).floor() * interval;
-    maxY = minY + divisions * interval;
-  }
-
-  debugPrint('After coverage check: minY=$minY, maxY=$maxY, interval=$interval');
-
-  // Check and avoid collisions with minY and maxY only
-  bool hasCollision = true;
-  
-  while (hasCollision) {
-    hasCollision = false;
-
-    for (final pin in activePins) {
-      // Check if pin collides with minY or maxY
-      if ((pin - minY).abs() < epsilon || (pin - maxY).abs() < epsilon) {
-        debugPrint('Pin $pin collides with boundary (minY=$minY or maxY=$maxY)');
-        
-        final oldInterval = interval;
-        interval = _nextNiceStep(interval);
-        
-        // Check if we've tried this interval before or reached the end
-        if (triedIntervals.contains(interval) || interval == oldInterval || interval >= niceSteps.last) {
-          debugPrint('⚠️ Cannot find collision-free interval, using current: $interval');
-          hasCollision = false;
-          break;
-        }
-        
-        triedIntervals.add(interval);
-        debugPrint('Trying new interval: $interval');
-        
-        // Recalculate grid with new interval
-        minY = (workingMin / interval).floor() * interval;
-        maxY = minY + divisions * interval;
-        
-        // Ensure coverage with new interval
-        while (maxY < workingMax - epsilon) {
-          final coverageInterval = _nextNiceStep(interval);
-          if (coverageInterval == interval || coverageInterval >= niceSteps.last) {
-            maxY = workingMax + interval;
-            break;
-          }
-          interval = coverageInterval;
-          triedIntervals.add(interval);
-          minY = (workingMin / interval).floor() * interval;
-          maxY = minY + divisions * interval;
-        }
-        
-        hasCollision = true;
-        break;
+  double _niceStepCeil(double x) {
+    int left = 0, right = niceSteps.length - 1;
+    while (left < right) {
+      final mid = (left + right) >> 1;
+      if (niceSteps[mid] >= x) {
+        right = mid;
+      } else {
+        left = mid + 1;
       }
     }
+    return niceSteps[left];
   }
 
-  // Final snap
-  double _snap(double val, double step) => (val / step).roundToDouble() * step;
-  minY = _snap(minY, interval);
-  maxY = minY + divisions * interval;
+  double _nextNiceStep(double step) {
+    int left = 0, right = niceSteps.length - 1;
+    while (left < right) {
+      final mid = (left + right) >> 1;
+      if (niceSteps[mid] > step) {
+        right = mid;
+      } else {
+        left = mid + 1;
+      }
+    }
+    return niceSteps[left];
+  }
 
-  debugPrint('Final: minY=$minY, maxY=$maxY, interval=$interval');
-  debugPrint('Tried intervals: $triedIntervals');
+  void _ensureYScale() {
+    if (_cachedInterval != null) return;
 
-  _cachedMinY = minY;
-  _cachedMaxY = maxY;
-  _cachedInterval = interval;
-}
+    const divisions = 5;
+    const epsilon = 1e-9;
+
+    final specUsl = widget.controlChartStats.sel(
+      widget.controlChartStats?.specAttribute?.cdeUpperSpec,
+      widget.controlChartStats?.specAttribute?.cdtUpperSpec,
+      widget.controlChartStats?.specAttribute?.compoundLayerUpperSpec,
+    );
+
+    final target = widget.controlChartStats.sel(
+      widget.controlChartStats?.specAttribute?.cdeTarget,
+      widget.controlChartStats?.specAttribute?.cdtTarget,
+      widget.controlChartStats?.specAttribute?.compoundLayerTarget,
+    );
+
+    final avg = widget.controlChartStats.sel(
+      widget.controlChartStats?.cdeAverage,
+      widget.controlChartStats?.cdtAverage,
+      widget.controlChartStats?.compoundLayerAverage,
+    );
+
+    final ucl = widget.controlChartStats.sel(
+      widget.controlChartStats?.cdeControlLimitIChart?.ucl,
+      widget.controlChartStats?.cdtControlLimitIChart?.ucl,
+      widget.controlChartStats?.compoundLayerControlLimitIChart?.ucl,
+    );
+
+    final lcl = widget.controlChartStats.sel(
+      widget.controlChartStats?.cdeControlLimitIChart?.lcl,
+      widget.controlChartStats?.cdtControlLimitIChart?.lcl,
+      widget.controlChartStats?.compoundLayerControlLimitIChart?.lcl,
+    );
+
+    final specLsl = widget.controlChartStats.sel(
+      widget.controlChartStats?.specAttribute?.cdeLowerSpec,
+      widget.controlChartStats?.specAttribute?.cdtLowerSpec,
+      widget.controlChartStats?.specAttribute?.compoundLayerLowerSpec,
+    );
+
+    final minSel = widget.controlChartStats.sel(
+      widget.controlChartStats?.yAxisRange?.minYcdeControlChart ?? 0.0,
+      widget.controlChartStats?.yAxisRange?.minYcdtControlChart ?? 0.0,
+      widget.controlChartStats?.yAxisRange?.minYcompoundLayerControlChart ?? 0.0,
+    );
+    final maxSel = widget.controlChartStats.sel(
+      widget.controlChartStats?.yAxisRange?.maxYcdeControlChart ?? 0.0,
+      widget.controlChartStats?.yAxisRange?.maxYcdtControlChart ?? 0.0,
+      widget.controlChartStats?.yAxisRange?.maxYcompoundLayerControlChart ?? 0.0,
+    );
+
+    if (maxSel! <= minSel!) {
+      _cachedMinY = minSel;
+      _cachedMaxY = minSel + divisions;
+      _cachedInterval = 1.0;
+      return;
+    }
+
+    // Collect all pins
+      final pins = <double?>[specLsl, specUsl, lcl, ucl];
+      final activePins = pins
+          .where((p) => p != null && p!.abs() > 0) // ใช้ abs() เผื่อค่าติดลบ 0.0
+          .cast<double>()
+          .toList();
+
+    debugPrint('Initial range: [$minSel, $maxSel]');
+    debugPrint('Active pins: $activePins');
+
+    // Expand initial range to avoid pins on boundaries
+    double workingMin = minSel;
+    double workingMax = maxSel;
+
+    for (final pin in activePins) {
+      if ((pin - workingMin).abs() < epsilon) {
+        workingMin = pin - 0.1;
+      }
+      if ((pin - workingMax).abs() < epsilon) {
+        workingMax = pin + 0.1;
+      }
+    }
+
+    debugPrint('Adjusted working range: [$workingMin, $workingMax]');
+
+    // Calculate ideal interval
+    final ideal = (workingMax - workingMin) / divisions;
+    double interval = _niceStepCeil(ideal);
+
+    debugPrint('Initial interval: $interval (from ideal: $ideal)');
+
+    // Track tried intervals to detect infinite loop
+    final Set<double> triedIntervals = {interval};
+
+    // Align to grid
+    double minY = (workingMin / interval).floor() * interval;
+    double maxY = minY + divisions * interval;
+
+    // Ensure coverage of workingMax
+    while (maxY < workingMax - epsilon) {
+      final oldInterval = interval;
+      interval = _nextNiceStep(interval);
+      
+      if (interval == oldInterval || interval >= niceSteps.last) {
+        debugPrint('⚠️ Reached end of niceSteps during coverage check');
+        maxY = workingMax + interval;
+        break;
+      }
+      
+      minY = (workingMin / interval).floor() * interval;
+      maxY = minY + divisions * interval;
+    }
+
+    debugPrint('After coverage check: minY=$minY, maxY=$maxY, interval=$interval');
+
+    // Check and avoid collisions with minY and maxY only
+    bool hasCollision = true;
+    
+    while (hasCollision) {
+      hasCollision = false;
+
+      for (final pin in activePins) {
+        // Check if pin collides with minY or maxY
+        if ((pin - minY).abs() < epsilon || (pin - maxY).abs() < epsilon) {
+          debugPrint('Pin $pin collides with boundary (minY=$minY or maxY=$maxY)');
+          
+          final oldInterval = interval;
+          interval = _nextNiceStep(interval);
+          
+          // Check if we've tried this interval before or reached the end
+          if (triedIntervals.contains(interval) || interval == oldInterval || interval >= niceSteps.last) {
+            debugPrint('⚠️ Cannot find collision-free interval, using current: $interval');
+            hasCollision = false;
+            break;
+          }
+          
+          triedIntervals.add(interval);
+          debugPrint('Trying new interval: $interval');
+          
+          // Recalculate grid with new interval
+          minY = (workingMin / interval).floor() * interval;
+          maxY = minY + divisions * interval;
+          
+          // Ensure coverage with new interval
+          while (maxY < workingMax - epsilon) {
+            final coverageInterval = _nextNiceStep(interval);
+            if (coverageInterval == interval || coverageInterval >= niceSteps.last) {
+              maxY = workingMax + interval;
+              break;
+            }
+            interval = coverageInterval;
+            triedIntervals.add(interval);
+            minY = (workingMin / interval).floor() * interval;
+            maxY = minY + divisions * interval;
+          }
+          
+          hasCollision = true;
+          break;
+        }
+      }
+    }
+
+    // Final snap
+    double _snap(double val, double step) => (val / step).roundToDouble() * step;
+    minY = _snap(minY, interval);
+    maxY = minY + divisions * interval;
+
+    debugPrint('Final: minY=$minY, maxY=$maxY, interval=$interval');
+    debugPrint('Tried intervals: $triedIntervals');
+
+    _cachedMinY = minY;
+    _cachedMaxY = maxY;
+    _cachedInterval = interval;
+  }
 
 
 

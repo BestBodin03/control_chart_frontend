@@ -156,12 +156,10 @@ class _ControlChartComponentState extends State<ControlChartComponent> {
   void _ensureYScale() {
     if (_cachedInterval != null) return;
 
-    const divisions = 3;
+    const divisions = 5;
     const epsilon = 1e-9;
 
     final specUsl = widget.controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
-    final target = widget.controlChartStats?.specAttribute?.surfaceHardnessTarget;
-    final avg = widget.controlChartStats?.average;
     final ucl = widget.controlChartStats?.controlLimitIChart?.ucl;
     final lcl = widget.controlChartStats?.controlLimitIChart?.lcl;
     final specLsl = widget.controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;

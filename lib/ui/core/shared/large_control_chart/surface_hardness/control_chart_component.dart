@@ -49,7 +49,7 @@ class ControlChartComponentLarge extends StatefulWidget implements ChartComponen
     return Wrap(
       spacing: 12,
       runSpacing: 4,
-      direction: Axis.horizontal,
+      // direction: Axis.horizontal,
       alignment: WrapAlignment.spaceEvenly,
       children: [
         if (fmt(controlChartStats?.specAttribute?.surfaceHardnessUpperSpec) != 'N/A')
@@ -131,15 +131,40 @@ class _ControlChartComponentLargeState extends State<ControlChartComponentLarge>
   double? _cachedMaxY;
   double? _cachedInterval;
 
+
+  double _niceStepCeil(double x) {
+    int left = 0, right = niceSteps.length - 1;
+    while (left < right) {
+      final mid = (left + right) >> 1;
+      if (niceSteps[mid] >= x) {
+        right = mid;
+      } else {
+        left = mid + 1;
+      }
+    }
+    return niceSteps[left];
+  }
+
+  double _nextNiceStep(double step) {
+    int left = 0, right = niceSteps.length - 1;
+    while (left < right) {
+      final mid = (left + right) >> 1;
+      if (niceSteps[mid] > step) {
+        right = mid;
+      } else {
+        left = mid + 1;
+      }
+    }
+    return niceSteps[left];
+  }
+
   void _ensureYScale() {
     if (_cachedInterval != null) return;
 
-    const divisions = 3;
+    const divisions = 5;
     const epsilon = 1e-9;
 
     final specUsl = widget.controlChartStats?.specAttribute?.surfaceHardnessUpperSpec;
-    final target = widget.controlChartStats?.specAttribute?.surfaceHardnessTarget;
-    final avg = widget.controlChartStats?.average;
     final ucl = widget.controlChartStats?.controlLimitIChart?.ucl;
     final lcl = widget.controlChartStats?.controlLimitIChart?.lcl;
     final specLsl = widget.controlChartStats?.specAttribute?.surfaceHardnessLowerSpec;
@@ -160,8 +185,8 @@ class _ControlChartComponentLargeState extends State<ControlChartComponentLarge>
         .cast<double>()
         .toList();
 
-    debugPrint('Initial range: [$minSel, $maxSel]');
-    debugPrint('Active pins: $activePins');
+    // debugPrint('Initial range: [$minSel, $maxSel]');
+    // debugPrint('Active pins: $activePins');
 
     // Expand initial range to avoid pins on boundaries
     double workingMin = minSel;
@@ -197,7 +222,7 @@ class _ControlChartComponentLargeState extends State<ControlChartComponentLarge>
       interval = _nextNiceStep(interval);
       
       if (interval == oldInterval || interval >= niceSteps.last) {
-        debugPrint('⚠️ Reached end of niceSteps during coverage check');
+        // debugPrint('⚠️ Reached end of niceSteps during coverage check');
         maxY = workingMax + interval;
         break;
       }
@@ -206,7 +231,7 @@ class _ControlChartComponentLargeState extends State<ControlChartComponentLarge>
       maxY = minY + divisions * interval;
     }
 
-    debugPrint('After coverage check: minY=$minY, maxY=$maxY, interval=$interval');
+    // debugPrint('After coverage check: minY=$minY, maxY=$maxY, interval=$interval');
 
     // Check and avoid collisions with minY and maxY only
     bool hasCollision = true;
@@ -217,20 +242,20 @@ class _ControlChartComponentLargeState extends State<ControlChartComponentLarge>
       for (final pin in activePins) {
         // Check if pin collides with minY or maxY
         if ((pin - minY).abs() < epsilon || (pin - maxY).abs() < epsilon) {
-          debugPrint('Pin $pin collides with boundary (minY=$minY or maxY=$maxY)');
+          // debugPrint('Pin $pin collides with boundary (minY=$minY or maxY=$maxY)');
           
           final oldInterval = interval;
           interval = _nextNiceStep(interval);
           
           // Check if we've tried this interval before or reached the end
           if (triedIntervals.contains(interval) || interval == oldInterval || interval >= niceSteps.last) {
-            debugPrint('⚠️ Cannot find collision-free interval, using current: $interval');
+            // debugPrint('⚠️ Cannot find collision-free interval, using current: $interval');
             hasCollision = false;
             break;
           }
           
           triedIntervals.add(interval);
-          debugPrint('Trying new interval: $interval');
+          // debugPrint('Trying new interval: $interval');
           
           // Recalculate grid with new interval
           minY = (workingMin / interval).floor() * interval;
@@ -260,8 +285,8 @@ class _ControlChartComponentLargeState extends State<ControlChartComponentLarge>
     minY = _snap(minY, interval);
     maxY = minY + divisions * interval;
 
-    debugPrint('Final: minY=$minY, maxY=$maxY, interval=$interval');
-    debugPrint('Tried intervals: $triedIntervals');
+    // debugPrint('Final: minY=$minY, maxY=$maxY, interval=$interval');
+    // debugPrint('Tried intervals: $triedIntervals');
 
     _cachedMinY = minY;
     _cachedMaxY = maxY;
@@ -784,96 +809,20 @@ Widget build(BuildContext context) {
       },
     );
   }
-
-
-  /// คืนค่า step ที่เล็กที่สุดซึ่ง >= x
-  double _niceStepCeil(double x) {
-    int left = 0;
-    int right = niceSteps.length - 1;
-
-    while (left < right) {
-      int mid = (left + right) >> 1; // หาร 2 แบบ integer
-      if (niceSteps[mid] >= x) {
-        right = mid;
-      } else {
-        left = mid + 1;
-      }
-    }
-    return niceSteps[left];
-  }
-
-  /// คืนค่า step ถัดไป (strictly bigger than step)
-  double _nextNiceStep(double step) {
-    int left = 0;
-    int right = niceSteps.length - 1;
-
-    while (left < right) {
-      int mid = (left + right) >> 1;
-      if (niceSteps[mid] > step) {
-        right = mid;
-      } else {
-        left = mid + 1;
-      }
-    }
-    return niceSteps[left];
-  }
-
-
-  double _getMinY(double minSel) {
+  // ---------- getters ที่อ่านจาก cache เท่านั้น ----------
+  double _getMinY(double _) {
     if (_cachedInterval == null) _ensureYScale();
-    double minY = _cachedMinY ?? 0.0;
-    final interval = _cachedInterval ?? 1.0;
-
-    // ถ้า minSel เท่ากับ minY (หรือใกล้กว่า threshold) → ขยับลง 1 step
-    if ((minSel - minY).abs() < interval * 0.5) {
-      minY = (minY - interval).clamp(0.0, double.infinity);
-    }
-    return minY;
+    return _cachedMinY ?? 0.0;
   }
 
-  double _getMaxY(double maxSel) {
+  double _getMaxY(double __) {
     if (_cachedInterval == null) _ensureYScale();
-    double maxY = _cachedMaxY ?? 0.0;
-    final interval = _cachedInterval ?? 1.0;
-
-    if ((maxSel - maxY).abs() < interval * 0.5) {
-      maxY = maxY + interval;
-    }
-    return maxY;
+    return _cachedMaxY ?? 0.0;
   }
-
 
   double _getInterval() {
-    const divisions = 5; // -> 6 ticks
-    final spec = widget.controlChartStats?.yAxisRange;
-    final spotMin = spec?.minYsurfaceHardnessControlChart
-    ?? 0.0;
-    final spotMax = spec?.maxYsurfaceHardnessControlChart
-    ?? spotMin;
-
-    if (spotMax <= spotMin) {
-      _cachedMinY = spotMin;
-      _cachedMaxY = spotMin + divisions;
-      _cachedInterval = 1.0;
-      return _cachedInterval!;
-    }
-
-    final ideal = (spotMax - spotMin) / divisions;
-    double interval = _niceStepCeil(ideal);
-
-    double minY = (spotMin / interval).floor() * interval;
-    double maxY = minY + divisions * interval;
-
-    while (maxY < spotMax - 1e-12) {
-      interval = _nextNiceStep(interval);
-      minY = (spotMin / interval).floor() * interval;
-      maxY = minY + divisions * interval;
-    }
-
-    _cachedMinY = minY;
-    _cachedMaxY = maxY;
-    _cachedInterval = interval;
-    return interval;
+    if (_cachedInterval == null) _ensureYScale();
+    return _cachedInterval!;
   }
 
   // ---------------------------- HELPERS ----------------------------

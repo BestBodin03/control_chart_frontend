@@ -16,7 +16,7 @@ Widget legendItem(BuildContext context, String label, Color color, String value)
       Text(
         label,
         style: TextStyle(
-          fontSize: 12,
+          fontSize: 10,
           color: AppColors.colorBlack,
           fontWeight: FontWeight.bold,
         ),
@@ -25,7 +25,7 @@ Widget legendItem(BuildContext context, String label, Color color, String value)
       Text(
         value,
         style: TextStyle(
-          fontSize: 12,
+          fontSize: 10,
           color: AppColors.colorBlack,
           fontWeight: FontWeight.bold,
         ),

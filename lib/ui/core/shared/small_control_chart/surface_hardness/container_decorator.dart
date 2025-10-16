@@ -33,7 +33,7 @@ class _SmallCard extends StatefulWidget {
 }
 
 class _SmallCardState extends State<_SmallCard> {
-  static const double _chartH = 248; // fixed height ต่อหนึ่งกราฟ
+  static const double _chartH = 360; // fixed height ต่อหนึ่งกราฟ
   static const double _gapV = 8;
 
   bool _showLegend = false;

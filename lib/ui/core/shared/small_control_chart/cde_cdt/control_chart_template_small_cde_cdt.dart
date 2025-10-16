@@ -160,8 +160,8 @@ Widget _buildFromData({
 
         final ChartComponent selectedWidget = widget.isMovingRange ? useMr : useI;
 
-        const legendRightPad = 24.0;
-        const legendHeight = 16.0;
+        const legendRightPad = 16.0;
+        const legendHeight = 28.0;
         const gapLegendToChart = 4.0;
 
         return SizedBox(
@@ -174,7 +174,7 @@ Widget _buildFromData({
               border: Border.all(color: Colors.grey.shade300),
             ),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, legendRightPad, 8),
+              padding: const EdgeInsets.fromLTRB(16, 8, legendRightPad, 8),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
