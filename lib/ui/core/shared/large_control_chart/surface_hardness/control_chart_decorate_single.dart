@@ -79,10 +79,10 @@ class _LargeContainer extends StatelessWidget {
       );
     }
     if (state.status == SearchStatus.failure) {
-      return const _SmallError();
+      return const _Error();
     }
     if (state.controlChartStats == null || state.chartDetails.isEmpty) {
-      return const _SmallNoData();
+      return const _Empty();
     }
 
     return Container(
@@ -417,22 +417,6 @@ Widget _buildSingleChart({
   );
 }
 
-class _SmallError extends StatelessWidget {
-  const _SmallError();
-  @override
-  Widget build(BuildContext context) => const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 16, color: Colors.red),
-            SizedBox(height: 4),
-            Text('จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
-                style: TextStyle(fontSize: 10, color: Colors.red)),
-          ],
-        ),
-      );
-}
-
 List<ViolationItem> _buildViolationsFromState(SearchState state) {
   final spots = state.controlChartStats?.controlChartSpots?.surfaceHardness ?? [];
   if (spots.isEmpty) return [];
@@ -476,13 +460,6 @@ List<ViolationItem> _buildViolationsFromState(SearchState state) {
   return violations;
 }
 
-class _SmallNoData extends StatelessWidget {
-  const _SmallNoData();
-  @override
-  Widget build(BuildContext context) =>
-      const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล', style: TextStyle(fontSize: 12, color: Colors.grey)));
-}
-
 double getXInterval(PeriodType periodType, double startMs, double endMs) {
   const double dayMs = 86400000.0;
 
@@ -503,5 +480,26 @@ double getXInterval(PeriodType periodType, double startMs, double endMs) {
       break;
   }
   return stepDays * dayMs;
+}
+
+class _Error extends StatelessWidget {
+  const _Error();
+  @override
+  Widget build(BuildContext context) => const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 16, color: Colors.red),
+          SizedBox(height: 4),
+          Text('Not enough data. Need at least 5 records',
+              style: TextStyle(fontSize: 18, color: Colors.red)),
+        ],
+      );
+}
+
+class _Empty extends StatelessWidget {
+  const _Empty();
+  @override
+  Widget build(BuildContext context) =>
+      const Text('No data to display!', style: TextStyle(fontSize: 18, color: AppColors.colorAlert1));
 }
 

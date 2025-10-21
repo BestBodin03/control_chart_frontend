@@ -14,6 +14,7 @@ import '../../common/chart/small_chart_height_scaler.dart';
 import '../../common/info_content.dart';
 import '../../common/info_overlay.dart';
 import '../../spec_validation.dart';
+import '../shared.dart';
 
 /// ----------------------------------------------------------------------------
 /// Public builder
@@ -61,6 +62,15 @@ class _SmallCardState extends State<_SmallCard> {
     final hasSpec  = isValidSpec(lowerSpec) || isValidSpec(upperSpec);
     final hasSpecL = isValidSpec(lowerSpec) && !isValidSpec(upperSpec);
     final hasSpecU = !isValidSpec(lowerSpec) && isValidSpec(upperSpec);
+
+    final violations = searchState.controlChartStats?.surfaceHardnessViolations;
+    final bgColor = getViolationBgColor(
+      violations?.beyondControlLimitLower ?? 0,
+      violations?.beyondControlLimitUpper ?? 0,
+      violations?.beyondSpecLimitLower ?? 0,
+      violations?.beyondSpecLimitUpper ?? 0,
+      violations?.trend ?? 0,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -115,9 +125,9 @@ class _SmallCardState extends State<_SmallCard> {
         // Blue card (charts only)
         DecoratedBox(
           decoration: BoxDecoration(
-            color: AppColors.colorBrandTp.withValues(alpha: 0.15),
+            color: bgColor.withValues(alpha: 0.15),
             border: Border.all(
-              color: AppColors.colorBrandTp.withValues(alpha: 0.35),
+              color: bgColor.withValues(alpha: 0.35),
               width: 1,
             ),
             borderRadius: BorderRadius.circular(8),
@@ -450,8 +460,8 @@ class _Error extends StatelessWidget {
         children: [
           Icon(Icons.error_outline, size: 16, color: Colors.red),
           SizedBox(height: 4),
-          Text('จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
-              style: TextStyle(fontSize: 12, color: Colors.red)),
+          Text('Not enough data. Need at least 5 records',
+              style: TextStyle(fontSize: 18, color: Colors.red)),
         ],
       );
 }
@@ -460,5 +470,5 @@ class _Empty extends StatelessWidget {
   const _Empty();
   @override
   Widget build(BuildContext context) =>
-      const Text('ไม่มีข้อมูลสำหรับแสดงผล', style: TextStyle(fontSize: 12, color: Colors.grey));
+      const Text('No data to display!', style: TextStyle(fontSize: 18, color: AppColors.colorAlert1));
 }

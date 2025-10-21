@@ -40,7 +40,7 @@ class TopBar extends StatelessWidget {
                 children: [
                   Icon(Icons.dashboard_customize, size: 18),
                   SizedBox(width: 6),
-                  Text('โปรไฟล์ตั้งค่า'),
+                  Text('Display Profile'),
                 ],
               ),
             ),
@@ -50,7 +50,7 @@ class TopBar extends StatelessWidget {
                 children: [
                   Icon(Icons.data_saver_on_rounded, size: 18),
                   SizedBox(width: 6),
-                  Text('นำเข้าข้อมูล'),
+                  Text('Data'),
                 ],
               ),
             ),

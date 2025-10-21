@@ -120,10 +120,10 @@ class _MediumContainerCdeCdt extends StatelessWidget {
       );
     }
     if (state.status == SearchStatus.failure) {
-      return const _SmallError();
+      return const _Error();
     }
     if (state.controlChartStats == null || state.chartDetails.isEmpty) {
-      return const _SmallNoData();
+      return const _Empty();
     }
 
     final allPoints = state.chartDataPointsCdeCdt;
@@ -139,73 +139,84 @@ class _MediumContainerCdeCdt extends StatelessWidget {
     final xEnd = q.endDate;
 
     // ---- Violation counts (selected chart only) ----
-    final int vOverControl = _sel(
-          (state.controlChartStats?.compoundLayerViolations?.beyondControlLimitLower ?? 0) +
-              (state.controlChartStats?.compoundLayerViolations?.beyondControlLimitUpper ?? 0),
-          (state.controlChartStats?.cdeViolations?.beyondControlLimitLower ?? 0) +
-              (state.controlChartStats?.cdeViolations?.beyondControlLimitUpper ?? 0),
-          (state.controlChartStats?.cdtViolations?.beyondControlLimitLower ?? 0) +
-              (state.controlChartStats?.cdtViolations?.beyondControlLimitUpper ?? 0),
-        ) ?? 0;
+  final stats = searchState.controlChartStats;
 
-    final int vOverSpec = _sel(
-          (state.controlChartStats?.compoundLayerViolations?.beyondSpecLimitLower ?? 0) +
-              (state.controlChartStats?.compoundLayerViolations?.beyondSpecLimitUpper ?? 0),
-          (state.controlChartStats?.cdeViolations?.beyondSpecLimitLower ?? 0) +
-              (state.controlChartStats?.cdeViolations?.beyondSpecLimitUpper ?? 0),
-          (state.controlChartStats?.cdtViolations?.beyondSpecLimitLower ?? 0) +
-              (state.controlChartStats?.cdtViolations?.beyondSpecLimitUpper ?? 0),
-        ) ?? 0;
+  final int vOverControl = stats.sel<int?>(
+    (stats?.cdeViolations?.beyondControlLimitLower ?? 0) +
+        (stats?.cdeViolations?.beyondControlLimitUpper ?? 0),
+    (stats?.cdtViolations?.beyondControlLimitLower ?? 0) +
+        (stats?.cdtViolations?.beyondControlLimitUpper ?? 0),
+    (stats?.compoundLayerViolations?.beyondControlLimitLower ?? 0) +
+        (stats?.compoundLayerViolations?.beyondControlLimitUpper ?? 0),
+  ) ?? 0;
 
-    final int vTrend = _sel(
-          state.controlChartStats?.compoundLayerViolations?.trend,
-          state.controlChartStats?.cdeViolations?.trend,
-          state.controlChartStats?.cdtViolations?.trend,
-        ) ?? 0;
+  final int vOverSpec = stats.sel<int?>(
+    (stats?.cdeViolations?.beyondSpecLimitLower ?? 0) +
+        (stats?.cdeViolations?.beyondSpecLimitUpper ?? 0),
+    (stats?.cdtViolations?.beyondSpecLimitLower ?? 0) +
+        (stats?.cdtViolations?.beyondSpecLimitUpper ?? 0),
+    (stats?.compoundLayerViolations?.beyondSpecLimitLower ?? 0) +
+        (stats?.compoundLayerViolations?.beyondSpecLimitUpper ?? 0),
+  ) ?? 0;
 
-    final int vUpperControl = _sel(
-          state.controlChartStats?.compoundLayerViolations?.beyondControlLimitUpper,
-          state.controlChartStats?.cdeViolations?.beyondControlLimitUpper,
-          state.controlChartStats?.cdtViolations?.beyondControlLimitUpper,
-        ) ?? 0;
+  final int vTrend = stats.sel<int?>(
+    stats?.cdeViolations?.trend,
+    stats?.cdtViolations?.trend,
+    stats?.compoundLayerViolations?.trend,
+  ) ?? 0;
 
-    final int vLowerControl = _sel(
-          state.controlChartStats?.compoundLayerViolations?.beyondControlLimitLower,
-          state.controlChartStats?.cdeViolations?.beyondControlLimitLower,
-          state.controlChartStats?.cdtViolations?.beyondControlLimitLower,
-        ) ?? 0;
+  final int vUpperControl = stats.sel<int?>(
+    stats?.cdeViolations?.beyondControlLimitUpper,
+    stats?.cdtViolations?.beyondControlLimitUpper,
+    stats?.compoundLayerViolations?.beyondControlLimitUpper,
+  ) ?? 0;
 
-    final int vUpperSpec = _sel(
-          state.controlChartStats?.compoundLayerViolations?.beyondSpecLimitUpper,
-          state.controlChartStats?.cdeViolations?.beyondSpecLimitUpper,
-          state.controlChartStats?.cdtViolations?.beyondSpecLimitUpper,
-        ) ?? 0;
+  final int vLowerControl = stats.sel<int?>(
+    stats?.cdeViolations?.beyondControlLimitLower,
+    stats?.cdtViolations?.beyondControlLimitLower,
+    stats?.compoundLayerViolations?.beyondControlLimitLower,
+  ) ?? 0;
 
-    final int vLowerSpec = _sel(
-          state.controlChartStats?.compoundLayerViolations?.beyondSpecLimitLower,
-          state.controlChartStats?.cdeViolations?.beyondSpecLimitLower,
-          state.controlChartStats?.cdtViolations?.beyondSpecLimitLower,
-        ) ?? 0;
+  final int vUpperSpec = stats.sel<int?>(
+    stats?.cdeViolations?.beyondSpecLimitUpper,
+    stats?.cdtViolations?.beyondSpecLimitUpper,
+    stats?.compoundLayerViolations?.beyondSpecLimitUpper,
+  ) ?? 0;
 
-    final bgColor = _getViolationBgColor(vLowerSpec, vUpperSpec, vLowerControl, vUpperControl, vTrend);
-    final borderColor = _getViolationBorderColor(vLowerSpec, vUpperSpec, vLowerControl, vUpperControl, vTrend);
+  final int vLowerSpec = stats.sel<int?>(
+    stats?.cdeViolations?.beyondSpecLimitLower,
+    stats?.cdtViolations?.beyondSpecLimitLower,
+    stats?.compoundLayerViolations?.beyondSpecLimitLower,
+  ) ?? 0;
 
-    const sectionLabelH = 20.0;
-    const gapV = 8.0;
-    final stats = searchState.controlChartStats;
+  final bgColor = _getViolationBgColor(vLowerControl, vUpperControl, vLowerSpec, vUpperSpec, vTrend);
+  final borderColor = _getViolationBorderColor(vLowerControl, vUpperControl, vLowerSpec, vUpperSpec, vTrend);
 
-    double? _upperSpec(ControlChartStats? s) =>
-        s.sel<double?>(s?.specAttribute?.cdeUpperSpec, s?.specAttribute?.cdtUpperSpec, s?.specAttribute?.compoundLayerUpperSpec);
+const sectionLabelH = 20.0;
+const gapV = 8.0;
+// `stats` already defined above
 
-    double? _lowerSpec(ControlChartStats? s) =>
-        s.sel<double?>(s?.specAttribute?.cdeLowerSpec, s?.specAttribute?.cdtLowerSpec, s?.specAttribute?.compoundLayerLowerSpec);
-    
-    CapabilityProcess? _capabilityProcess(ControlChartStats? s) =>
-        s.sel<CapabilityProcess?>(
-          (s?.cdeCapabilityProcess?.std ?? 0) != 0 ? s?.cdeCapabilityProcess : null,
-          (s?.cdtCapabilityProcess?.std ?? 0) != 0 ? s?.cdtCapabilityProcess : null,
-          (s?.compoundLayerCapabilityProcess?.std ?? 0) != 0 ? s?.compoundLayerCapabilityProcess : null,
-        );
+double? _upperSpec(ControlChartStats? s) =>
+    s.sel<double?>(
+      s?.specAttribute?.cdeUpperSpec,
+      s?.specAttribute?.cdtUpperSpec,
+      s?.specAttribute?.compoundLayerUpperSpec,
+    );
+
+double? _lowerSpec(ControlChartStats? s) =>
+    s.sel<double?>(
+      s?.specAttribute?.cdeLowerSpec,
+      s?.specAttribute?.cdtLowerSpec,
+      s?.specAttribute?.compoundLayerLowerSpec,
+    );
+
+CapabilityProcess? _capabilityProcess(ControlChartStats? s) =>
+    s.sel<CapabilityProcess?>(
+      (s?.cdeCapabilityProcess?.std ?? 0) != 0 ? s?.cdeCapabilityProcess : null,
+      (s?.cdtCapabilityProcess?.std ?? 0) != 0 ? s?.cdtCapabilityProcess : null,
+      (s?.compoundLayerCapabilityProcess?.std ?? 0) != 0 ? s?.compoundLayerCapabilityProcess : null,
+    );
+
 
 
     final hasSpec  = isValidSpec((_lowerSpec(stats))) || isValidSpec((_upperSpec(stats)));
@@ -477,22 +488,6 @@ int overSpecLower, int overSpecUpper, int trend) {
   return AppColors.colorBrandTp.withValues(alpha: 0.70);
 }
 
-class _SmallError extends StatelessWidget {
-  const _SmallError();
-  @override
-  Widget build(BuildContext context) => const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 16, color: Colors.red),
-            SizedBox(height: 4),
-            Text('จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
-                style: TextStyle(fontSize: 10, color: Colors.red)),
-          ],
-        ),
-      );
-}
-
 List<ViolationItem> _buildViolationsFromStateCdeCdt(SearchState state) {
   final sel = state.controlChartStats?.secondChartSelected;
   if (sel == null) return [];
@@ -527,9 +522,23 @@ List<ViolationItem> _buildViolationsFromStateCdeCdt(SearchState state) {
   return violations;
 }
 
-class _SmallNoData extends StatelessWidget {
-  const _SmallNoData();
+class _Error extends StatelessWidget {
+  const _Error();
+  @override
+  Widget build(BuildContext context) => const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 16, color: Colors.red),
+          SizedBox(height: 4),
+          Text('Not enough data. Need at least 5 records',
+              style: TextStyle(fontSize: 18, color: Colors.red)),
+        ],
+      );
+}
+
+class _Empty extends StatelessWidget {
+  const _Empty();
   @override
   Widget build(BuildContext context) =>
-      const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล', style: TextStyle(fontSize: 12, color: Colors.grey)));
+      const Text('No data to display!', style: TextStyle(fontSize: 18, color: AppColors.colorAlert1));
 }

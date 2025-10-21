@@ -153,9 +153,6 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
     UpdateDateRange event,
     Emitter<SearchState> emit,
   ) async {
-    print('🔄 SearchBloc received UpdateDateRange');
-    print('Start: ${event.startDate}');
-    print('End: ${event.endDate}');
 
     await _updateQueryAndFetch(
       emit,

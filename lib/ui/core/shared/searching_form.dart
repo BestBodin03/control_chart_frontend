@@ -186,12 +186,12 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                   constraints: const BoxConstraints(),
                                   splashRadius: 16,
                                   onPressed: () {
-                                    context.read<FiltersCubit>().setPeriod('1 month', start: dateOneM, end: dateNow);
+                                    // context.read<FiltersCubit>().setPeriod('1 month', start: dateOneM, end: dateNow);
                                     context.read<SearchBloc>().add(LoadFilteredChartData(
-                                      startDate: dateOneM,
-                                      endDate: dateNow
+                                      startDate: sDate,
+                                      endDate: eDate
                                     ));
-                                    searchPeriodType = '1 month';
+                                    // searchPeriodType = '1 month';
                                     // context.read<FiltersCubit>().setPeriod('1 month', start: oneMonthAgo(dateNow), end: dateNow);
                                   },
                                   icon: const Icon(Icons.refresh_rounded, size: 24, color: AppColors.colorBrand),

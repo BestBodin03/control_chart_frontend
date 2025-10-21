@@ -1,7 +1,7 @@
 import 'package:control_chart/apis/settings/setting_apis.dart';
 import 'package:control_chart/domain/types/chart_atrribute.dart';
 import 'package:control_chart/domain/types/period_duration.dart';
-import 'package:control_chart/ui/core/shared/large_control_chart/surface_hardness/help.dart';
+import 'package:control_chart/ui/core/shared/large_control_chart/surface_hardness/control_chart_decorate_single.dart';
 import 'package:control_chart/ui/core/shared/searching_form_horizon.dart';
 import 'package:flutter/material.dart';
 import 'package:control_chart/data/bloc/search_chart_details/search_bloc.dart';
@@ -9,9 +9,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../../../domain/models/control_chart_stats.dart';
 import '../../design_system/app_color.dart';
-import '../large_control_chart/cde_cdt/help.dart';
-import '../large_control_chart/cde_cdt/help_double.dart';
-import '../large_control_chart/surface_hardness/help_double.dart' show buildChartsSectionSurfaceHardnessLargeDouble;
+import '../large_control_chart/cde_cdt/control_chart_decorate_single.dart';
+import '../large_control_chart/cde_cdt/control_chart_decorate_double.dart';
+import '../large_control_chart/surface_hardness/control_chart_decorate_double.dart' show buildChartsSectionSurfaceHardnessLargeDouble;
 import 'display_selector.dart';
 
 class InfoContent extends StatefulWidget {

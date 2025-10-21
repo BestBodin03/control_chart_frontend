@@ -129,7 +129,7 @@ class _ProfileCardState extends State<ProfileCard> {
                 const SizedBox(height: 8),
 
                 Text(
-                  'ประเภทการแสดงผล: ${widget.profile.displayType}',
+                  'Display Type: ${widget.profile.displayType}',
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: const Color(0xFF475569),
                         height: 1.45,
@@ -143,7 +143,7 @@ class _ProfileCardState extends State<ProfileCard> {
                 Row(
                   children: [
                     Text(
-                      'แสดงผล ${widget.profile.specifics?.length ?? 0} หน้า',
+                      'Show ${widget.profile.specifics?.length ?? 0} Page',
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(color: const Color(0xFF64748B)),
                     ),
                     const Spacer(),
@@ -165,8 +165,13 @@ class _ProfileCardState extends State<ProfileCard> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   duration: Duration(seconds: 1),
-                                  content: Text('สามารถใช้งานได้เพียง 1 โปรไฟล์เท่านั้น'),
+                                  content: Text('Can use only one profile.',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold
+                                    ),),
                                   backgroundColor: Colors.orange,
+                                  behavior: SnackBarBehavior.floating,
                                 ),
                               );
                               return;
@@ -198,8 +203,13 @@ class _ProfileCardState extends State<ProfileCard> {
 
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
-                                  content: Text('บันทึกข้อมูลเรียบร้อยแล้ว'),
+                                  content: Text('Profile saved',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold
+                                    )),
                                   backgroundColor: Colors.green,
+                                  behavior: SnackBarBehavior.floating,
                                 ),
                               );
                             } else {
@@ -209,8 +219,14 @@ class _ProfileCardState extends State<ProfileCard> {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   duration: Duration(seconds: 1),
-                                  content: Text('สามารถใช้งานได้เพียง 1 โปรไฟล์เท่านั้น'),
+                                  content: Text(
+                                    'Can use only one profile.',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold
+                                    ),),
                                   backgroundColor: Colors.orange,
+                                  behavior: SnackBarBehavior.floating,
                                 ),
                               );
                             }

@@ -130,9 +130,6 @@ class ControlChartComponentSmallCdeCdt extends StatefulWidget implements ChartCo
     );
   }
 
-
-
-  // ===== ChartComponent (ไม่ใช้ในเส้นทางนี้ แต่คง interface) =====
   @override
   FlBorderData buildBorderData() => FlBorderData(show: false);
   @override

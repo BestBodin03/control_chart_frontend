@@ -22,7 +22,7 @@ Widget buildHeaderTable() {
         'Furnace No.',
         'Material No.',
         'Part Name',
-        'จำนวนครั้ง',
+        'Times',
       ], isHeader: true),
     ),
   );
@@ -36,7 +36,10 @@ Widget buildDataTable(SearchState searchState) {
   if (chartDetails.isEmpty) {
     return const SizedBox(
       height: 200,
-      child: Center(child: Text('ไม่มีข้อมูล')),
+      child: Center(child: 
+      Text('No data to display!',
+      style: TextStyle(fontSize: 16,
+      color: AppColors.colorAlert1),)),
     );
   }
 

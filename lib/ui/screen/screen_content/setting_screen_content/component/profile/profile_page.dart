@@ -183,14 +183,23 @@ class _ProfilesPageState extends State<ProfilesPage> {
                                     });
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('ลบโปรไฟล์เรียบร้อยแล้ว'),
+                                        content: Text('Profile deleted',
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold
+                                        )),
                                         backgroundColor: Colors.green,
                                       ),
                                     );
                                   } else {
-                                    final err = formCubit.state.error ?? 'ลบโปรไฟล์ไม่สำเร็จ';
+                                    final err = formCubit.state.error ?? 'Profile not deleted';
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(err), backgroundColor: Colors.red),
+                                      SnackBar(content: Text(err,
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold
+                                        )
+                                      ), backgroundColor: Colors.red),
                                     );
                                   }
                                 // }
@@ -271,17 +280,24 @@ class _ProfilesPageState extends State<ProfilesPage> {
                                   });
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('ลบโปรไฟล์เรียบร้อยแล้ว'),
+                                      content: Text('Profile deleted',
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold
+                                        )),
                                       backgroundColor: Colors.green,
                                     ),
                                   );
                                 } else {
-                                  final err = formCubit.state.error ?? 'ลบโปรไฟล์ไม่สำเร็จ';
+                                  final err = formCubit.state.error ?? 'Profile not delete';
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(err), backgroundColor: Colors.red),
+                                    SnackBar(content: Text(err,
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold
+                                        )), backgroundColor: Colors.red),
                                   );
                                 }
-                              // }
                             },
                     ),
                   ],

@@ -21,7 +21,11 @@ class ImportScreen extends StatelessWidget {
           if (state.error != null && state.error!.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.error!),
+                content: Text(state.error!,
+                style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold
+                  )),
                 backgroundColor: AppColors.colorAlert1,
                 duration: Duration(seconds: 3),
                 behavior: SnackBarBehavior.floating

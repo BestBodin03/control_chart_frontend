@@ -92,7 +92,7 @@ class _SettingContentState extends State<SettingContent> {
                               onPressed: () => context
                                   .read<SettingProfileBloc>()
                                   .add(const LoadAllSettingProfiles()),
-                              child: const Text('ลองใหม่'),
+                              child: const Text('Try Again!'),
                             ),
                           ],
                         ),

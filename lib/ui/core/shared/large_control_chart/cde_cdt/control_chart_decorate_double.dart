@@ -94,10 +94,10 @@ class _LargeContainerCdeCdt extends StatelessWidget {
       );
     }
     if (state.status == SearchStatus.failure) {
-      return const _SmallError();
+      return const _Error();
     }
     if (state.controlChartStats == null || state.chartDetails.isEmpty) {
-      return const _SmallNoData();
+      return const _Empty();
     }
 
     final stats = state.controlChartStats!;
@@ -562,26 +562,23 @@ List<ViolationItem> _buildViolationsFromStateCdeCdt(SearchState state) {
 //     ),
 //   );
 // }
-
-class _SmallError extends StatelessWidget {
-  const _SmallError();
+class _Error extends StatelessWidget {
+  const _Error();
   @override
-  Widget build(BuildContext context) => const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 16, color: Colors.red),
-            SizedBox(height: 4),
-            Text('จำนวนข้อมูลไม่เพียงพอ ต้องการข้อมูลอย่างน้อย 5 รายการ',
-                style: TextStyle(fontSize: 10, color: Colors.red)),
-          ],
-        ),
+  Widget build(BuildContext context) => const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 16, color: Colors.red),
+          SizedBox(height: 4),
+          Text('Not enough data. Need at least 5 records',
+              style: TextStyle(fontSize: 18, color: Colors.red)),
+        ],
       );
 }
 
-class _SmallNoData extends StatelessWidget {
-  const _SmallNoData();
+class _Empty extends StatelessWidget {
+  const _Empty();
   @override
   Widget build(BuildContext context) =>
-      const Center(child: Text('ไม่มีข้อมูลสำหรับแสดงผล', style: TextStyle(fontSize: 12, color: Colors.grey)));
+      const Text('No data to display!', style: TextStyle(fontSize: 18, color: AppColors.colorAlert1));
 }

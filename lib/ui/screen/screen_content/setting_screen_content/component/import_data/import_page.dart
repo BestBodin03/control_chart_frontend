@@ -35,11 +35,16 @@ class ImportPage extends StatelessWidget {
               children: [
                 Icon(
                   st.snackIsError ? Icons.error_outline : Icons.check_circle_outline,
-                  size: 18,
+                  size: 24,
                   color: Colors.white,
                 ),
                 const SizedBox(width: 8),
-                Expanded(child: Text(st.snackMsg!)),
+                Expanded(child: Text(
+                  st.snackMsg!,
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold
+                  ))),
               ],
             ),
             behavior: SnackBarBehavior.floating,

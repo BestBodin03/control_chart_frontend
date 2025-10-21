@@ -93,7 +93,7 @@ class FurnaceReportLayout extends StatelessWidget {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            Text('Error: ${searchState.errorMessage ?? 'เกิดข้อผิดพลาด'}'),
+            Text(searchState.errorMessage ?? 'Unexpected error!'),
             const SizedBox(height: 8),
             ElevatedButton(
               onPressed: () {
