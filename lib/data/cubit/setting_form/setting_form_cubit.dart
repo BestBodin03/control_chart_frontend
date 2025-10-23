@@ -475,25 +475,25 @@ List<String> validateFormWithChartDetails(List<ChartDetail> chartDetails) {
   
   // ✅ 1. Validate ข้อมูลทั่วไป (ไม่อยู่ใน loop)
   if (state.settingProfileName.trim().isEmpty) {
-    errors.add('โปรดตั้งชื่อโปรไฟล์');
+    errors.add('Please set profile name.');
   } else {
     final name = state.settingProfileName.trim();
     final nameRegex = RegExp(r'^[A-Za-z0-9ก-๙\s_.()&-,]+$');
     if (!nameRegex.hasMatch(name)) {
-      errors.add('ชื่อต้องเป็นตัวอักษร ตัวเลข ช่องว่าง หรือ _.()&-, เท่านั้น');
+      errors.add('Name must be letters, numbers, spaces, or _.()&-, only.');
     } else if (name.length > 100) {  // ✅ แก้จาก <= เป็น >
-      errors.add('ชื่อต้องไม่เกิน 100 อักขระ');
+      errors.add('Name must not exceed 100 characters.');
     }
   }
   
   if (state.chartChangeInterval < 20) {
-    errors.add('ระยะเวลาเปลี่ยนหน้าจอต้องมากกว่า 20 วินาที');
+    errors.add('Chart change interval must be more than 20 seconds.');
   } else if (state.chartChangeInterval > 3600) {
-    errors.add('ระยะเวลาเปลี่ยนหน้าจอต้องไม่เกิน 3,600 วินาที');
+    errors.add('Chart change interval must not more 3,600 seconds.');
   }
   
   if (state.specifics.isEmpty) {
-    errors.add('โปรดกรอกข้อมูลอย่างน้อย 1 ชุด');
+    errors.add('Please fill in at least 1 page.');
   }
 
   // ✅ 2. Validate แต่ละ specific (loop เดียว)
@@ -502,40 +502,40 @@ List<String> validateFormWithChartDetails(List<ChartDetail> chartDetails) {
     final blockNum = i + 1;
     
     if (sp.periodType == null) {
-      errors.add('โปรดกรอกรูปแบบระยะเวลาของชุดข้อมูลที่ $blockNum');
+      errors.add('Please fill in the time period format for page $blockNum.');
     }
     
     if (sp.startDate == null) {
-      errors.add('โปรดกรอกวันที่เริ่มต้นของชุดข้อมูลที่ $blockNum');
+      errors.add('Please fill in the start date for page $blockNum.');
     }
     
     if (sp.endDate == null) {
-      errors.add('โปรดกรอกวันที่สิ้นสุดของชุดข้อมูลที่ $blockNum');
+      errors.add('Please fill in the end date for page $blockNum.');
     }
 
     if (sp.startDate != null && sp.endDate != null) {
       if (sp.startDate!.isAfter(sp.endDate!)) {
-        errors.add('วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุดของชุดข้อมูลที่ $blockNum');
+        errors.add('Start date must not be after end date for page $blockNum.');
       }
     }
 
     if (state.displayType == DisplayType.FURNACE ||
         state.displayType == DisplayType.FURNACE_CP) {
       if (sp.furnaceNo == null) {
-        errors.add('โปรดเลือก Furnace No. ของชุดข้อมูลที่ $blockNum');
+        errors.add('Please select Furnace No. for page $blockNum.');
       }
     }
     
     if (state.displayType == DisplayType.CP ||
         state.displayType == DisplayType.FURNACE_CP) {
       if ((sp.cpNo ?? '').trim().isEmpty) {
-        errors.add('โปรดเลือก Material No. ของชุดข้อมูลที่ $blockNum');
+        errors.add('Please select Material No. for page $blockNum.');
       }
     }
 
     final recordCount = getRecordCountFromChartDetails(sp, chartDetails);
     if (recordCount < 5) {
-      errors.add('ชุดข้อมูลที่ $blockNum ต้องมีข้อมูลอย่างน้อย 5 รายการ (ปัจจุบันมี $recordCount รายการ)');
+      errors.add('Page $blockNum must have at least 5 records (currently has $recordCount records)');
     }
   }
   
@@ -687,7 +687,7 @@ Future<bool> removeSettingProfile({
   if (profileIds.isEmpty) {
     emit(state.copyWith(
       status: SubmitStatus.failure,
-      error: 'โปรดเลือกโปรไฟล์อย่างน้อย 1 รายการ',
+      error: 'Please select at least 1 profile',
     ));
     return false;
   }
@@ -706,7 +706,7 @@ Future<bool> removeSettingProfile({
       emit(state.copyWith(status: SubmitStatus.success));
       return true;
     } else {
-      emit(state.copyWith(status: SubmitStatus.failure, error: msg ?? 'ลบโปรไฟล์ไม่สำเร็จ'));
+      emit(state.copyWith(status: SubmitStatus.failure, error: msg ?? 'Cannot delete profiles'));
       return false;
     }
   } on DioException catch (e) {

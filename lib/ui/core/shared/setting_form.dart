@@ -767,7 +767,7 @@ if (validationErrors.isNotEmpty) {
 
                                         if (savedSuccess) {
                                           await _showToastOnSaveButton(
-                                            'บันทึกข้อมูลเรียบร้อยแล้ว',
+                                            'Data already saved.',
                                             kind: ToastKind.success,
                                           );
                                           if (!context.mounted) return;
@@ -883,7 +883,7 @@ Future<void> _showErrorDialog(BuildContext context, List<String> errors) async {
             ),
             const SizedBox(width: 12),
             const Text(
-              'ข้อมูลไม่ถูกต้อง',
+              'Data Validation Errors',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -897,7 +897,7 @@ Future<void> _showErrorDialog(BuildContext context, List<String> errors) async {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'กรุณาแก้ไขข้อมูลดังนี้:',
+                'Please correct the following data:',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -950,7 +950,7 @@ Future<void> _showErrorDialog(BuildContext context, List<String> errors) async {
               ),
               onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text(
-                'ตกลง',
+                'Close',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
