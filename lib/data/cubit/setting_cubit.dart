@@ -49,7 +49,7 @@ class DeleteProfilesCubit extends Cubit<DeleteProfilesState> {
         emit(const DeleteProfilesState(status: SubmitStatus.success));
         return true;
       } else {
-        emit(state.copyWith(status: SubmitStatus.failure, error: msg ?? 'ลบโปรไฟล์ไม่สำเร็จ'));
+        emit(state.copyWith(status: SubmitStatus.failure, error: msg ?? 'Failed to delete profile.'));
         return false;
       }
     } on DioException catch (e) {

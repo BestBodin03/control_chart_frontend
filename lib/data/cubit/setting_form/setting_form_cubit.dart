@@ -298,7 +298,7 @@ Future<void> preloadCounts(Profile profile, List<ChartDetail> details) async {
     if (!state.isValid) {
       emit(state.copyWith(
         status: SubmitStatus.failure,
-        error: 'โปรดกรอกข้อมูลให้ครบถ้วน',
+        error: 'Please fill out all required fields.',
       ));
       return false;
     }
@@ -382,7 +382,7 @@ Future<void> preloadCounts(Profile profile, List<ChartDetail> details) async {
       // จับเคสต่อเซิร์ฟเวอร์ไม่ได้ให้ข้อความอ่านง่าย
       if (e.type == DioExceptionType.connectionError &&
           (msg.contains('ECONNREFUSED') || msg.contains('Connection refused'))) {
-        msg = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ (connection refused)';
+        msg = 'Unable to connect to the server. (Connection refused)';
       }
 
       // debugPrint('[saveForm] DioException HTTP $status : $msg');

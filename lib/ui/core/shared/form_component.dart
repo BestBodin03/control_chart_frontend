@@ -136,6 +136,7 @@ Widget buildTextField({
     return SizedBox(
       height: 42.0,
       child: DropdownButtonFormField<String>(
+        isExpanded: true,
         value: (value != null && items.contains(value)) ? value : null, // ตรวจสอบว่า value อยู่ใน items
         hint: hint != null ? Text(hint) : null, // แสดง hint เมื่อไม่มีค่าเลือก
         items: items.map((String item) {

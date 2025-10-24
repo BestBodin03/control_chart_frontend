@@ -100,6 +100,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
 
       final (chartDetails, searchTables) = await detailsF;
       final chartStatistics = await statsF;
+      debugPrint(newQuery.materialNo);
 
       emit(state.copyWith(
         status: () => SearchStatus.success,

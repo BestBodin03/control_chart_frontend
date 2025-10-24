@@ -161,8 +161,8 @@ class _SettingFormState extends State<SettingForm> {
             LoadFilteredChartData(
               startDate: defaultStart,
               endDate: now,
-              furnaceNo: null,
-              materialNo: null,
+              // furnaceNo: null,
+              // materialNo: null,
             ),
           );
       return;
@@ -172,8 +172,8 @@ class _SettingFormState extends State<SettingForm> {
           LoadFilteredChartData(
             startDate: startDate,
             endDate: endDate,
-            furnaceNo: null,
-            materialNo: null,
+            // furnaceNo: null,
+            // materialNo: null,
           ),
         );
   }
@@ -471,244 +471,113 @@ class _SettingFormState extends State<SettingForm> {
                           child: BlocBuilder<SettingFormCubit, SettingFormState>(
                             builder: (context, state) {
                               final cubit = context.read<SettingFormCubit>();
-                              final chartDetails = context.watch<SearchBloc>().state.chartDetails;
-
-                              // int _getChartDetailCountFor(SpecificSettingState sp) {
-                              //   if (chartDetails.isEmpty) return 0;
-                              //   final filtered = chartDetails.where((c) {
-                              //     final matchFurnace =
-                              //         sp.furnaceNo == null ||
-                              //             c.chartGeneralDetail.furnaceNo ==
-                              //                 sp.furnaceNo;
-                              //     final matchCp =
-                              //         sp.cpNo == null || c.cpNo == sp.cpNo;
-                              //     return matchFurnace && matchCp;
-                              //   });
-                              //   return filtered.length;
-                              // }
 
                               return Column(
-                                children:
-                                    List.generate(state.specifics.length, (i) {
-                                  final sp = state.specifics[i];
-                                  final recordCount = cubit.getRecordCountFromChartDetails(
-                                    sp,
-                                    chartDetails, // ส่ง chartDetails ที่มีใน scope นี้
-                                  );
-
-                                  return Container(
-                                    key: ValueKey(sp.id ?? 'spec_$i'),
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        border: Border(
-                                          top: BorderSide(
-                                            color: Colors.grey.shade300,
-                                            width: 1,
-                                          ),
+                                children: List.generate(state.specifics.length, (i) {
+                                  // ✅ Capture the current index, not the sp object
+                                  return Builder(
+                                    builder: (innerContext) {
+                                      // ✅ Get fresh sp from current state inside the builder
+                                      final currentSp = state.specifics[i];
+                                      
+                                      final recordCount = innerContext.select<SearchBloc, int>(
+                                        (bloc) => cubit.getRecordCountFromChartDetails(
+                                          currentSp,  // ✅ Use the fresh sp
+                                          bloc.state.chartDetails,
                                         ),
-                                      ),
-                                      child: Padding(
-                                        padding:
-                                            const EdgeInsets.only(top: 16.0),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
+                                      );
+
+                                      return Container(
+                                        key: ValueKey(currentSp.id ?? 'spec_$i'),
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            border: Border(
+                                              top: BorderSide(
+                                                color: Colors.grey.shade300,
+                                                width: 1,
+                                              ),
+                                            ),
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(top: 16.0),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
                                                 Row(
+                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                   children: [
-                                                    buildSectionTitle(
-                                                        'Page ${i + 1}'),
-                                                    const SizedBox(width: 8),
-                                                    Text(
-                                                      '($recordCount records)',
-                                                      style: const TextStyle(
-                                                        fontSize: 14,
-                                                        color:
-                                                            AppColors.colorBlack,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
+                                                    Row(
+                                                      children: [
+                                                        buildSectionTitle('Page ${i + 1}'),
+                                                        const SizedBox(width: 8),
+                                                        Text(
+                                                          '($recordCount records)',
+                                                          style: const TextStyle(
+                                                            fontSize: 14,
+                                                            color: AppColors.colorBlack,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
+                                                    // ... rest of your buttons
                                                   ],
                                                 ),
-                                                SizedBox(
-                                                  height: 36,
-                                                  child: DecoratedBox(
-                                                    decoration: BoxDecoration(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              8),
-                                                      border: Border.all(
-                                                        color: Colors
-                                                            .grey.shade300,
-                                                      ),
-                                                    ),
-                                                    child: Padding(
-                                                      padding: const EdgeInsets
-                                                          .symmetric(
-                                                          horizontal: 6),
-                                                      child: Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          IconButton(
-                                                            tooltip:
-                                                                'New Page',
-                                                            onPressed:
-                                                                () async {
-                                                              final cubit = context
-                                                                  .read<
-                                                                      SettingFormCubit>();
-                                                              final newIndex =
-                                                                  cubit
-                                                                      .addSpecificSetting();
-                                                              await cubit
-                                                                  .loadDropdownOptions(
-                                                                      index:
-                                                                          newIndex);
-                                                            },
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .all(4),
-                                                            constraints:
-                                                                const BoxConstraints(),
-                                                            iconSize: 24,
-                                                            icon: const Icon(
-                                                              Icons
-                                                                  .add_circle_rounded,
-                                                              color: AppColors
-                                                                  .colorBrand,
-                                                            ),
-                                                          ),
-                                                          const SizedBox(
-                                                              width: 6),
-                                                          SizedBox(
-                                                            width: 1,
-                                                            height: 20,
-                                                            child:
-                                                                DecoratedBox(
-                                                              decoration:
-                                                                  BoxDecoration(
-                                                                color: Colors
-                                                                    .grey
-                                                                    .shade300,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          const SizedBox(
-                                                              width: 6),
-                                                          IconButton(
-                                                            tooltip:
-                                                                'Delete Page ${i + 1}',
-                                                            onPressed: state
-                                                                        .specifics
-                                                                        .length <=
-                                                                    1
-                                                                ? null
-                                                                : () => cubit
-                                                                    .removeSpecificSetting(
-                                                                        i),
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .all(4),
-                                                            constraints:
-                                                                const BoxConstraints(),
-                                                            iconSize: 24,
-                                                            icon: Icon(
-                                                              Icons
-                                                                  .remove_circle_outline_rounded,
-                                                              color: state
-                                                                          .specifics
-                                                                          .length <=
-                                                                      1
-                                                                  ? Colors.grey
-                                                                      .shade300
-                                                                  : AppColors
-                                                                      .colorAlert1,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
+                                                const SizedBox(height: 16),
+                                                if (selectedDisplayType == 'FURNACE' ||
+                                                    selectedDisplayType == 'FURNACE_CP') ...[
+                                                  buildSectionTitle('Furnace No.'),
+                                                  const SizedBox(height: 8),
+                                                  buildDropdownField(
+                                                    key: ValueKey('furnace_$i'),
+                                                    context: context,
+                                                    value: currentSp.furnaceNo?.toString() ?? 'All Furnaces',
+                                                    items: _getFurnaceNumbersByIndex(state, i),
+                                                    hint: 'All Furnaces',
+                                                    onChanged: (selected) {
+                                                      final val = (selected == 'All Furnaces')
+                                                          ? null
+                                                          : int.tryParse(selected ?? '');
+                                                      cubit.updateFurnaceNo(i, val);
+                                                      cubit.loadDropdownOptions(
+                                                        index: i,
+                                                        furnaceNo: val?.toString(),
+                                                        cpNo: null,
+                                                      );
+                                                    },
                                                   ),
-                                                ),
+                                                  const SizedBox(height: 16),
+                                                ],
+                                                if (selectedDisplayType == 'CP' ||
+                                                    selectedDisplayType == 'FURNACE_CP') ...[
+                                                  buildSectionTitle('Material No.'),
+                                                  const SizedBox(height: 8),
+                                                  buildDropdownField(
+                                                    key: ValueKey('cp_$i'),
+                                                    context: context,
+                                                    value: currentSp.cpNo ?? 'All Material Nos.',
+                                                    items: _getMatNumbersByIndex(state, i),
+                                                    hint: 'All Material Nos.',
+                                                    onChanged: (selected) {
+                                                      final val = selected == 'All Material Nos.'
+                                                          ? null
+                                                          : selected;
+                                                      cubit.updateCpNo(i, val);
+                                                      cubit.loadDropdownOptions(
+                                                        index: i,
+                                                        furnaceNo: state.specifics[i].furnaceNo?.toString(),
+                                                        cpNo: val,
+                                                      );
+                                                    },
+                                                  ),
+                                                  const SizedBox(height: 48),
+                                                ],
                                               ],
                                             ),
-                                            const SizedBox(height: 16),
-                                            if (selectedDisplayType ==
-                                                    'FURNACE' ||
-                                                selectedDisplayType ==
-                                                    'FURNACE_CP') ...[
-                                              buildSectionTitle('Furnace No.'),
-                                              const SizedBox(height: 8),
-                                              buildDropdownField(
-                                                key: ValueKey('furnace_$i'),
-                                                context: context,
-                                                value: sp.furnaceNo
-                                                        ?.toString() ??
-                                                    'All Furnaces',
-                                                items: _getFurnaceNumbersByIndex(
-                                                    state, i),
-                                                hint: 'All Furnaces',
-                                                onChanged: (selected) {
-                                                  final val = (selected ==
-                                                          'All Furnaces')
-                                                      ? null
-                                                      : int.tryParse(
-                                                          selected ?? '');
-                                                  cubit.updateFurnaceNo(
-                                                      i, val);
-                                                  cubit.loadDropdownOptions(
-                                                    index: i,
-                                                    furnaceNo: val?.toString(),
-                                                    cpNo: null,
-                                                  );
-                                                },
-                                              ),
-                                              const SizedBox(height: 16),
-                                            ],
-                                            if (selectedDisplayType == 'CP' ||
-                                                selectedDisplayType ==
-                                                    'FURNACE_CP') ...[
-                                              buildSectionTitle(
-                                                  'Material No.'),
-                                              const SizedBox(height: 8),
-                                              buildDropdownField(
-                                                key: ValueKey('cp_$i'),
-                                                context: context,
-                                                value: sp.cpNo ??
-                                                    'All Material Nos.',
-                                                items:
-                                                    _getMatNumbersByIndex(
-                                                        state, i),
-                                                hint: 'All Material Nos.',
-                                                onChanged: (selected) {
-                                                  final val = selected ==
-                                                          'All Material Nos.'
-                                                      ? null
-                                                      : selected;
-                                                  cubit.updateCpNo(i, val);
-                                                  cubit.loadDropdownOptions(
-                                                    index: i,
-                                                    furnaceNo: state
-                                                        .specifics[i]
-                                                        .furnaceNo
-                                                        ?.toString(),
-                                                    cpNo: val,
-                                                  );
-                                                },
-                                              ),
-                                              const SizedBox(height: 48),
-                                            ],
-                                          ],
+                                          ),
                                         ),
-                                      ),
-                                    ),
+                                      );
+                                    },
                                   );
                                 }),
                               );
@@ -751,11 +620,11 @@ class _SettingFormState extends State<SettingForm> {
                                         final chartDetails = context.read<SearchBloc>().state.chartDetails;
                                         
                                         // Validate form with chart details
-final validationErrors = cubit.validateFormWithChartDetails(chartDetails);
-if (validationErrors.isNotEmpty) {
-  await _showErrorDialog(context, validationErrors);
-  return;
-}
+                                      final validationErrors = cubit.validateFormWithChartDetails(chartDetails);
+                                      if (validationErrors.isNotEmpty) {
+                                        await _showErrorDialog(context, validationErrors);
+                                        return;
+                                      }
 
                                         debugPrint('The ID Value To save $profileId');
 

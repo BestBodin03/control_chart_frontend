@@ -300,13 +300,18 @@ class _SearchingFormBodyState extends State<_SearchingFormBody> {
                                 final allLabel = 'All Furnaces';
                                 final furnaces = [
                                   allLabel,
-                                  ...opts.lastFetchedFurnaces
-                                      .map((e) => e.toString())
-                                      .where((e) => e.isNotEmpty && e != allLabel)
-                                      .toSet()
-                                      .toList()
-                                    ..sort(),
+                                  ...(
+                                    opts.lastFetchedFurnaces
+                                        .map((e) => e.toString())
+                                        .where((s) => s.isNotEmpty && s != allLabel)
+                                        .map((s) => num.tryParse(s)) // parse to number
+                                        .whereType<num>()            // drop non-numeric
+                                        .toSet()                     // unique
+                                        .toList()
+                                          ..sort()                   // numeric sort
+                                  ).map((n) => n.toString()),        // back to string
                                 ];
+
 
                                 String? current = searchState.currentFurnaceUiValue.isEmpty
                                     ? allLabel

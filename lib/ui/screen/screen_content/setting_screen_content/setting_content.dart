@@ -36,11 +36,18 @@ class _SettingContentState extends State<SettingContent> {
   final String _dropdown1 = '';
   final String _dropdown2 = '';
 
-  Profile _toProfile(Setting s) {
+  // Profile _toProfile(Setting s) {
+  //   const displayTypeMap = {
+  //     'FURNACE': 'เตา',
+  //     'FURNACE_CP': 'เตา/เลขแมต',
+  //     'CP': 'เลขแมต',
+  //   };
+
+    Profile _toProfile(Setting s) {
     const displayTypeMap = {
-      'FURNACE': 'เตา',
-      'FURNACE_CP': 'เตา/เลขแมต',
-      'CP': 'เลขแมต',
+      'FURNACE': 'Furnace',
+      'FURNACE_CP': 'Furnace/Material No.',
+      'CP': 'Material No.',
     };
 
     return Profile(
