@@ -1,7 +1,9 @@
 import 'package:dio/dio.dart';
 
+import 'constant.dart';
+
 class ApiConfig {
-  final Dio _dio = Dio(BaseOptions(baseUrl: ""));
+  final Dio _dio = Dio(BaseOptions(baseUrl: serverUrl));
 
   Future<T> get<T>(String endpoint) async {
     final response = await _dio.get(endpoint);

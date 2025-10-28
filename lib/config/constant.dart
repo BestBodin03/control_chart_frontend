@@ -1,0 +1,1 @@
+const serverUrl = "http://172.23.10.32:14000/api/v1";
