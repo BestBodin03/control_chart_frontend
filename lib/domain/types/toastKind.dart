@@ -1,0 +1,1 @@
+enum ToastKind { info, success, error }

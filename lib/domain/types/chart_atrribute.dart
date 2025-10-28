@@ -1,0 +1,1 @@
+enum ChartAttribute { SURFACE_HARDNESS, OTHERS}
