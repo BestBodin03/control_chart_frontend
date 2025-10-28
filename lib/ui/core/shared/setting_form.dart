@@ -518,6 +518,109 @@ class _SettingFormState extends State<SettingForm> {
                                                             fontWeight: FontWeight.bold,
                                                           ),
                                                         ),
+                                                        const SizedBox(width: 32,),
+
+                                                        SizedBox(
+                                                          height: 36,
+                                                          child: DecoratedBox(
+                                                            decoration: BoxDecoration(
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                      8),
+                                                              border: Border.all(
+                                                                color: Colors
+                                                                    .grey.shade300,
+                                                              ),
+                                                            ),
+                                                            child: Padding(
+                                                              padding: const EdgeInsets
+                                                                  .symmetric(
+                                                                  horizontal: 6),
+                                                              child: Row(
+                                                                mainAxisSize:
+                                                                    MainAxisSize.min,
+                                                                children: [
+                                                                  IconButton(
+                                                                    tooltip:
+                                                                        'New Page',
+                                                                    onPressed:
+                                                                        () async {
+                                                                      final cubit = context
+                                                                          .read<
+                                                                              SettingFormCubit>();
+                                                                      final newIndex =
+                                                                          cubit
+                                                                              .addSpecificSetting();
+                                                                      await cubit
+                                                                          .loadDropdownOptions(
+                                                                              index:
+                                                                                  newIndex);
+                                                                    },
+                                                                    padding:
+                                                                        const EdgeInsets
+                                                                            .all(4),
+                                                                    constraints:
+                                                                        const BoxConstraints(),
+                                                                    iconSize: 24,
+                                                                    icon: const Icon(
+                                                                      Icons
+                                                                          .add_circle_rounded,
+                                                                      color: AppColors
+                                                                          .colorBrand,
+                                                                    ),
+                                                                  ),
+                                                                  const SizedBox(
+                                                                      width: 6),
+                                                                  SizedBox(
+                                                                    width: 1,
+                                                                    height: 20,
+                                                                    child:
+                                                                        DecoratedBox(
+                                                                      decoration:
+                                                                          BoxDecoration(
+                                                                        color: Colors
+                                                                            .grey
+                                                                            .shade300,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                  const SizedBox(
+                                                                      width: 6),
+                                                                  IconButton(
+                                                                    tooltip:
+                                                                        'Delete Page ${i + 1}',
+                                                                    onPressed: state
+                                                                                .specifics
+                                                                                .length <=
+                                                                            1
+                                                                        ? null
+                                                                        : () => cubit
+                                                                            .removeSpecificSetting(
+                                                                                i),
+                                                                    padding:
+                                                                        const EdgeInsets
+                                                                            .all(4),
+                                                                    constraints:
+                                                                        const BoxConstraints(),
+                                                                    iconSize: 24,
+                                                                    icon: Icon(
+                                                                      Icons
+                                                                          .remove_circle_outline_rounded,
+                                                                      color: state
+                                                                                  .specifics
+                                                                                  .length <=
+                                                                              1
+                                                                          ? Colors.grey
+                                                                              .shade300
+                                                                          : AppColors
+                                                                              .colorAlert1,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
                                                       ],
                                                     ),
                                                     // ... rest of your buttons
