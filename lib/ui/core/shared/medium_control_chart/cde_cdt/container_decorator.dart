@@ -503,19 +503,19 @@ List<ViolationItem> _buildViolationsFromStateCdeCdt(SearchState state) {
   final List<ViolationItem> violations = [];
   for (final s in spots) {
     if (s.isViolatedR1BeyondLCL == true) {
-      violations.add(ViolationItem(fgNo: fgNoLast4(s.fgNo), value: s.value ?? 0,
+      violations.add(ViolationItem(fgNo: s.fgNo, value: s.value ?? 0,
           type: "Over Control (L)", color: Colors.orange));
     }
     if (s.isViolatedR1BeyondUCL == true) {
-      violations.add(ViolationItem(fgNo: fgNoLast4(s.fgNo), value: s.value ?? 0,
+      violations.add(ViolationItem(fgNo: s.fgNo, value: s.value ?? 0,
           type: "Over Control (U)", color: Colors.orange));
     }
     if (s.isViolatedR1BeyondLSL == true) {
-      violations.add(ViolationItem(fgNo: fgNoLast4(s.fgNo), value: s.value ?? 0,
+      violations.add(ViolationItem(fgNo: s.fgNo, value: s.value ?? 0,
           type: "Over Spec (L)", color: Colors.red));
     }
     if (s.isViolatedR1BeyondUSL == true) {
-      violations.add(ViolationItem(fgNo: fgNoLast4(s.fgNo), value: s.value ?? 0,
+      violations.add(ViolationItem(fgNo: s.fgNo, value: s.value ?? 0,
           type: "Over Spec (U)", color: Colors.red));
     }
   }

@@ -501,8 +501,8 @@ List<ViolationItem> _buildViolationsFromState(SearchState state) {
     if (s.isViolatedR1BeyondLCL == true) {
       violations.add(
         ViolationItem(
-          fgNo: fgNoLast4(s.fgNo),
-          value: s.value ?? 0,
+          fgNo: s.fgNo,
+          value: s.value,
           type: "Over Control (L)",
           color: Colors.orange,
         ),
@@ -513,8 +513,8 @@ List<ViolationItem> _buildViolationsFromState(SearchState state) {
     if (s.isViolatedR1BeyondUCL == true) {
       violations.add(
         ViolationItem(
-          fgNo: fgNoLast4(s.fgNo),
-          value: s.value ?? 0,
+          fgNo: s.fgNo,
+          value: s.value,
           type: "Over Control (U)",
           color: Colors.orange,
         ),
@@ -525,8 +525,8 @@ List<ViolationItem> _buildViolationsFromState(SearchState state) {
     if (s.isViolatedR1BeyondLSL == true) {
       violations.add(
         ViolationItem(
-          fgNo: fgNoLast4(s.fgNo),
-          value: s.value ?? 0,
+          fgNo: s.fgNo,
+          value: s.value,
           type: "Over Spec (L)",
           color: Colors.red,
         ),
@@ -537,7 +537,7 @@ List<ViolationItem> _buildViolationsFromState(SearchState state) {
     if (s.isViolatedR1BeyondUSL == true) {
       violations.add(
         ViolationItem(
-          fgNo: fgNoLast4(s.fgNo),
+          fgNo: s.fgNo,
           value: s.value ?? 0,
           type: "Over Spec (U)",
           color: Colors.red,

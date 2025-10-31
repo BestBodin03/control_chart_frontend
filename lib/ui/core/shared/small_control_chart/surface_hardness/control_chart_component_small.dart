@@ -741,7 +741,7 @@ Widget build(BuildContext context) {
           title: nearestPoint.fullLabel,
           rows: [
             MapEntry('Value', s.y.toStringAsFixed(3)),
-            MapEntry('FG No.', nearestPoint.fgNo ?? '-')
+            MapEntry('Lot No.', nearestPoint.fgNo ?? '-')
           ],
           chips: chips,
           accent: hoverColor,

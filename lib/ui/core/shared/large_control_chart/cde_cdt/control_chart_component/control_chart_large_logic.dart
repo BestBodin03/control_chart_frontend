@@ -311,7 +311,7 @@ YScaleResult computeYScale(YAxisSpec spec, {int divisions = 5}) {
       title: nearest.title ?? '',
       rows: [
         MapEntry('Value', hoveredY.toStringAsFixed(3)),
-        MapEntry('FG No.', nearest.fgNo ?? '-'),
+        MapEntry('Lot No.', nearest.fgNo ?? '-'),
       ],
       chips: chips,
     );

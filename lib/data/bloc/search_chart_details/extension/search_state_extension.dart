@@ -41,7 +41,8 @@ extension SearchStateExtension on SearchState {
       return ChartDataPoint(
         collectDate: dt,
         label: DateFormat('dd/MM').format(dt),
-        fgNo: fgNoLast4(chartDetail.fgNo),
+        // fgNo: fgNoLast4(chartDetail.fgNo),
+        fgNo: chartDetail.fgNo,
         fullLabel:
             "${dt.day.toString().padLeft(2, '0')}/"
             "${dt.month.toString().padLeft(2, '0')}/"
@@ -144,7 +145,8 @@ List<ChartDataPointCdeCdt> get chartDataPointsCdeCdt {
 
     return ChartDataPointCdeCdt(
       collectDate: dt,
-      fgNo: fgNoLast4(d.fgNo),
+      // fgNo: fgNoLast4(d.fgNo),
+      fgNo: d.fgNo,
       label: DateFormat('dd/MM').format(dt),
       fullLabel:
           "${dt.day.toString().padLeft(2, '0')}/"
